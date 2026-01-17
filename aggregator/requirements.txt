@@ -1,0 +1,16 @@
+# Core cryptographic dependencies
+tinyec==0.4.0
+ecdsa>=0.18.0
+pycryptodome>=3.19.0  # Keccak256 for Algorithm 2.2 key derivation (has Windows wheels)
+
+# HTTP and environment
+requests>=2.31
+python-dotenv>=1.0.0
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Testing (optional)
+pytest>=7.0.0
+
+# Note: web3 dependencies removed to avoid compilation issues
+# Install web3 separately if needed: pip install web3 --no-deps

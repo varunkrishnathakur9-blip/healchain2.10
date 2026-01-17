@@ -1,0 +1,5 @@
+{
+  "type": "chestxray",
+  "samples": 100,
+  "classes": 2
+}

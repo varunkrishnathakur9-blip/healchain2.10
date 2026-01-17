@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================
+// ENUM DEFINITIONS
+// =========================
+
+enum TaskStatus {
+  CREATED
+  OPEN
+  COMMIT_CLOSED
+  REVEAL_OPEN
+  REVEAL_CLOSED
+  AGGREGATING
+  VERIFIED
+  REWARDED
+  CANCELLED
+}
+
+enum GradientStatus {
+  COMMITTED
+  REVEALED
+  VERIFIED
+  REJECTED
+}
+
+enum BlockStatus {
+  PENDING
+  FINALIZED
+}
+
+// =========================
+// MODELS
+// =========================
+
+model Task {
+  id                String     @id @default(cuid())
+  taskID            String     @unique
+  publisher         String
+  commitHash        String
+  nonceTP           String
+  deadline          BigInt
+  status            TaskStatus @default(CREATED)
+  dataset           String     @default("chestxray") // D: Dataset requirements (Algorithm 1)
+  initialModelLink  String?    @db.Text // L: Initial model link (Algorithm 1)
+  aggregatorAddress String? // M2: Selected aggregator
+  minMiners         Int        @default(3) // Minimum miners required for PoS aggregator selection
+  maxMiners         Int        @default(5) // Maximum miners allowed for PoS aggregator selection
+
+  publishTx             String?
+  escrowContractAddress String? // Contract address where escrow is locked (for frontend to read correct contract)
+
+  miners        Miner[]
+  gradients     Gradient[]
+  block         Block?
+  keyDeliveries KeyDelivery[]
+  verifications Verification[]
+  rewards       Reward[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Miner {
+  id            String  @id @default(cuid())
+  taskID        String
+  address       String
+  publicKey     String? @db.Text // M2: Public key for key derivation
+  stake         BigInt? @default(0) // M2: Stake for PoS selection
+  proof         String? @db.Text // M2: Miner proof (IPFS link or system proof) - Algorithm 2 requirement
+  proofVerified Boolean @default(false) // M2: Proof verification status
+
+  task          Task           @relation(fields: [taskID], references: [taskID])
+  gradients     Gradient[]
+  verifications Verification[]
+  rewards       Reward[]
+
+  @@unique([taskID, address])
+}
+
+model Gradient {
+  id           String @id @default(cuid())
+  taskID       String
+  minerAddress String
+
+  scoreCommit   String
+  encryptedHash String
+  ciphertext    String?        @db.Text // Encrypted gradient (NDD-FE ciphertext as JSON array of EC points)
+  signature     String?        @db.Text // Miner signature for submission verification
+  status        GradientStatus @default(COMMITTED)
+  createdAt     DateTime       @default(now())
+
+  task  Task  @relation(fields: [taskID], references: [taskID])
+  miner Miner @relation(fields: [taskID, minerAddress], references: [taskID, address])
+
+  @@index([taskID, minerAddress])
+}
+
+model Block {
+  id        String      @id @default(cuid())
+  taskID    String      @unique
+  modelHash String
+  accuracy  BigInt
+  status    BlockStatus @default(PENDING)
+
+  task Task @relation(fields: [taskID], references: [taskID])
+}
+
+// M2: Key Delivery for secure skFE transmission
+model KeyDelivery {
+  id                String   @id @default(cuid())
+  taskID            String
+  aggregatorAddress String
+  encryptedKey      String   @db.Text // Encrypted skFE
+  deliveredAt       DateTime @default(now())
+
+  task Task @relation(fields: [taskID], references: [taskID])
+
+  @@unique([taskID, aggregatorAddress])
+}
+
+// M5: Miner Verification Votes
+model Verification {
+  id           String   @id @default(cuid())
+  taskID       String
+  minerAddress String
+  verdict      String // "VALID" or "INVALID"
+  signature    String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  task  Task  @relation(fields: [taskID], references: [taskID])
+  miner Miner @relation(fields: [taskID, minerAddress], references: [taskID, address])
+
+  @@unique([taskID, minerAddress])
+}
+
+// M7: Reward Distribution Records
+model Reward {
+  id           String   @id @default(cuid())
+  taskID       String
+  minerAddress String
+  score        BigInt // Revealed score
+  amountETH    String // Distributed amount
+  txHash       String? // On-chain transaction hash
+  status       String   @default("CALCULATED") // CALCULATED | DISTRIBUTED
+  createdAt    DateTime @default(now())
+
+  task  Task  @relation(fields: [taskID], references: [taskID])
+  miner Miner @relation(fields: [taskID, minerAddress], references: [taskID, address])
+
+  @@index([taskID])
+}

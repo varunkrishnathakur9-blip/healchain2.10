@@ -1,0 +1,131 @@
+# ============================================
+# DEPENDENCY & ENVIRONMENT
+# ============================================
+node_modules/
+venv/
+env/
+.venv/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ============================================
+# BUILD & DIST
+# ============================================
+dist/
+build/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# ============================================
+# ENVIRONMENT & SECRETS
+# ============================================
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
+
+# ============================================
+# IDE & EDITOR
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.classpath
+.c9/
+*.sublime-workspace
+*.sublime-project
+
+# ============================================
+# OS & SYSTEM
+# ============================================
+Thumbs.db
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# ============================================
+# PROJECT SPECIFIC
+# ============================================
+
+# FL Client
+fl_client/models/
+fl_client/local_data/
+fl_client/*.pt
+fl_client/*.pth
+fl_client/miner_state.json
+fl_client/.pytest_cache/
+
+# Aggregator
+aggregator/*.pyc
+aggregator/__pycache__/
+aggregator/model_artifacts/
+aggregator/logs/
+
+# Backend
+backend/node_modules/
+backend/dist/
+backend/.turbo/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+
+# Contracts
+contracts/node_modules/
+contracts/artifacts/
+contracts/cache/
+contracts/coverage/
+
+# ============================================
+# TESTING & COVERAGE
+# ============================================
+.coverage
+htmlcov/
+.pytest_cache/
+.nyc_output/
+coverage/
+
+# ============================================
+# LARGE FILES
+# ============================================
+*.pdf
+*.zip
+*.tar.gz
+*.7z
+*.rar
+
+# ============================================
+# LOGS & TEMP
+# ============================================
+*.log
+logs/
+tmp/
+temp/
+.tmp/
+
+# ============================================
+# DEVELOPMENT
+# ============================================
+.eslintcache
+.turbo/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
