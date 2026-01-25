@@ -44,7 +44,7 @@ export default function TaskDetailPage() {
     abi: ESCROW_ABI,
     functionName: 'escrowBalance',
     args: [taskID],
-    query: { 
+    query: {
       enabled: !!escrowAddress && !!task,
       refetchInterval: 5000, // Refetch every 5 seconds to catch updates
       retry: false, // Don't retry if it fails - likely means contract doesn't exist
@@ -57,7 +57,7 @@ export default function TaskDetailPage() {
     abi: ESCROW_ABI,
     functionName: 'tasks',
     args: [taskID],
-    query: { 
+    query: {
       enabled: !!escrowAddress && !!task,
       refetchInterval: 5000,
     },
@@ -67,10 +67,10 @@ export default function TaskDetailPage() {
   useEffect(() => {
     if (taskID && escrowAddress) {
       const errorMsg = escrowBalanceError?.message || '';
-      const isContractError = errorMsg.includes('returned no data') || 
-                             errorMsg.includes('not a contract') ||
-                             errorMsg.includes('does not have the function');
-      
+      const isContractError = errorMsg.includes('returned no data') ||
+        errorMsg.includes('not a contract') ||
+        errorMsg.includes('does not have the function');
+
       console.log('Escrow balance check:', {
         taskID,
         escrowAddress: escrowAddress,
@@ -135,11 +135,11 @@ export default function TaskDetailPage() {
   const taskExistsOnChain = contractTask && contractTask[1] && contractTask[1] !== '0x0000000000000000000000000000000000000000';
   const isLegacyTask = task?.status === 'CREATED'; // Legacy tasks created before escrow verification
   const needsEscrow = isPublisher && task && isLegacyTask && (!escrowBalance || escrowBalance === 0n) && !taskExistsOnChain;
-  
+
   // If task exists on-chain but balance is 0, there might be an issue
   // This could happen if the transaction reverted or if there's a mismatch
   const hasIssue = taskExistsOnChain && (!escrowBalance || escrowBalance === 0n);
-  
+
   // Debug: Log the actual values
   console.log('Escrow status check:', {
     taskID,
@@ -151,14 +151,21 @@ export default function TaskDetailPage() {
   });
 
   // Check if deadline has passed and task is not completed
-  const deadlinePassed = task?.deadline 
+  const deadlinePassed = task?.deadline
     ? Number(task.deadline) * 1000 < Date.now()
     : false;
-  
-  const canRefund = isPublisher && deadlinePassed && 
-    task?.status !== 'REWARDED' && 
+
+  const canRefund = isPublisher && deadlinePassed &&
+    task?.status !== 'REWARDED' &&
     task?.status !== 'COMPLETED' &&
     task?.status !== 'CANCELLED';
+
+  // Check for critical state mismatch: Database says Publisher X, Blockchain says Publisher Y (or 0x0)
+  const onChainPublisher = contractTask ? String(contractTask[1]) : undefined;
+  // Check if onChainPublisher is the zero address (implies task doesn't exist on this contract)
+  const isOnChainMissing = onChainPublisher === '0x0000000000000000000000000000000000000000';
+  const isPublisherMismatch = onChainPublisher && task?.publisher &&
+    onChainPublisher.toLowerCase() !== task.publisher.toLowerCase();
 
   if (loading) {
     return (
@@ -217,7 +224,7 @@ export default function TaskDetailPage() {
   const handleRefundEscrow = async () => {
     if (!task?.taskID) return;
     try {
-      await refundEscrow(task.taskID);
+      await refundEscrow(task.taskID, task.publisher);
       // Refresh task data after refund
       refresh?.();
     } catch (err) {
@@ -378,7 +385,36 @@ export default function TaskDetailPage() {
                   <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
                     Task deadline has passed. You can refund the escrow if the task was not completed.
                   </p>
-                  <Button variant="primary" onClick={handleRefundEscrow}>
+
+                  {/* Critical Mismatch Warning */}
+                  {(isOnChainMissing || isPublisherMismatch) && (
+                    <div className="mb-3 p-2 bg-red-100 dark:bg-red-900/40 border-l-4 border-red-500 text-xs">
+                      <p className="font-bold text-red-800 dark:text-red-200">⚠️ CRITICAL STATE MISMATCH IDENTIFIED</p>
+                      <p className="mt-1 text-red-700 dark:text-red-300">
+                        The "Only publisher" error is caused by a difference between your Database and the Blockchain.
+                      </p>
+                      <ul className="mt-2 list-disc list-inside space-y-1 text-red-700 dark:text-red-300 font-mono">
+                        <li>Database Publisher: {task.publisher}</li>
+                        <li>On-Chain Publisher: {onChainPublisher || 'Loading...'}</li>
+                        {isOnChainMissing && (
+                          <li className="font-bold">Result: Task does not exist on this contract deployment.</li>
+                        )}
+                      </ul>
+                      <p className="mt-2 text-red-700 dark:text-red-300">
+                        <strong>Reason:</strong> You likely restarted your blockchain node (Ganache/Hardhat) or redeployed contracts, which wiped the on-chain tasks, but your Backend Database Task #25 still exists.
+                      </p>
+                      <p className="mt-1 text-red-700 dark:text-red-300">
+                        <strong>Solution:</strong> You cannot refund money that doesn't exist on this chain. You should create a new task.
+                      </p>
+                    </div>
+                  )}
+
+                  <Button
+                    variant="primary"
+                    onClick={handleRefundEscrow}
+                    disabled={isOnChainMissing || isPublisherMismatch}
+                    className={(isOnChainMissing || isPublisherMismatch) ? "opacity-50 cursor-not-allowed" : ""}
+                  >
                     Refund Escrow
                   </Button>
                 </div>

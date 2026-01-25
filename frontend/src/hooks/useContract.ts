@@ -54,7 +54,7 @@ export function useContract() {
     if (rewardWei === 0n) {
       throw new Error('Reward must be greater than 0');
     }
-    
+
     const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
     if (deadline <= currentTimestamp) {
       throw new Error('Deadline must be in the future');
@@ -73,18 +73,18 @@ export function useContract() {
     } catch (simError: any) {
       // Extract revert reason from simulation error
       // Check multiple possible locations for the revert reason
-      let revertReason = simError?.details || 
-                        simError?.cause?.details ||
-                        simError?.cause?.reason || 
-                        simError?.cause?.data?.message ||
-                        simError?.shortMessage ||
-                        simError?.message ||
-                        'Transaction would revert';
-      
+      let revertReason = simError?.details ||
+        simError?.cause?.details ||
+        simError?.cause?.reason ||
+        simError?.cause?.data?.message ||
+        simError?.shortMessage ||
+        simError?.message ||
+        'Transaction would revert';
+
       // Extract revert reason from "revert X" format
       // Try multiple patterns to capture the full revert reason
       let extractedReason = null;
-      
+
       // Pattern 1: "VM Exception while processing transaction: revert Task exists\nVersion..."
       let match = revertReason.match(/VM Exception while processing transaction:\s*revert\s+([^\n]+)/i);
       if (match && match[1]) {
@@ -99,11 +99,11 @@ export function useContract() {
           extractedReason = revertReason.trim();
         }
       }
-      
+
       if (extractedReason) {
         revertReason = extractedReason;
       }
-      
+
       // Create a more descriptive error with the revert reason
       const error = new Error(`Transaction simulation failed: ${revertReason}`);
       (error as any).cause = simError;
@@ -180,9 +180,13 @@ export function useContract() {
   };
 
   // Refund escrow if task deadline passed and not completed
-  const refundEscrow = async (taskID: string) => {
+  const refundEscrow = async (taskID: string, expectedPublisher?: string) => {
     if (!chainConfig) throw new Error('Chain not configured');
     if (!address) throw new Error('Wallet not connected');
+
+    if (expectedPublisher && address.toLowerCase() !== expectedPublisher.toLowerCase()) {
+      throw new Error(`Wallet mismatch: Connected as ${address}, but task publisher is ${expectedPublisher}`);
+    }
 
     return writeContract({
       address: chainConfig.contracts.escrow as `0x${string}`,
