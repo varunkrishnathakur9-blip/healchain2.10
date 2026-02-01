@@ -1,4 +1,5 @@
 from dataset.loader import load_local_dataset
+from model.loader import load_model_from_task
 from training.model import SimpleModel
 from training.trainer import local_train
 from training.gradient import compute_gradient
@@ -13,10 +14,29 @@ from utils.quantize_gradients import quantize_gradients
 from config.gradient_bounds import QUANTIZATION_SCALE, MAX_GRAD_MAGNITUDE
 
 def run_task(task, miner_addr):
-    model = SimpleModel()
-    loader = load_local_dataset()
+    task_id = task["taskID"]
+    print(f"\n[M3] Starting real FL training for {task_id}")
 
+    # Step 1: Load Initial Model
+    print(f"[M3] Loading initial model...")
+    try:
+        model = load_model_from_task(task)
+        print(f"[M3] ✅ Initial model loaded")
+    except Exception as e:
+        print(f"[M3] ❌ Failed to load model: {e}")
+        print(f"[M3] Falling back to local SimpleModel")
+        model = SimpleModel()
+
+    # Step 2: Load Dataset
+    print(f"[M3] Loading local dataset...")
+    dataset_type = task.get("dataset", "chestxray")
+    loader = load_local_dataset(dataset_type)
+    print(f"[M3] ✅ Dataset loaded: {dataset_type}")
+
+    # Step 3: Train
+    print(f"[M3] Training locally...")
     model = local_train(model, loader, LOCAL_EPOCHS)
+    print(f"[M3] ✅ Training complete")
     grad = compute_gradient(model)
     delta_p = dgc_compress(grad, DGC_THRESHOLD, MAX_GRAD_MAGNITUDE)
     

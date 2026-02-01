@@ -8,6 +8,8 @@ build/
 develop-eggs/
 dist/
 downloads/
+models/
+local_data/
 eggs/
 .eggs/
 lib/

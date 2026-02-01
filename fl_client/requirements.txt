@@ -14,3 +14,6 @@ flask-cors>=4.0.0
 
 # Note: web3 dependencies removed to avoid compilation issues
 # Install web3 separately if needed: pip install web3 --no-deps
+
+# Image processing
+Pillow>=10.0.0
