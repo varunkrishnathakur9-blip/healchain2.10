@@ -33,7 +33,7 @@ export interface TrainingStatus {
 export async function triggerTraining(
   taskID: string,
   minerAddress: string
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; suggestion?: string }> {
   // Validate miner is registered for this task
   const miner = await prisma.miner.findUnique({
     where: {
@@ -85,7 +85,7 @@ export async function triggerTraining(
   }
 
   // Use stored FL client URL, fallback to localhost if not provided
-  const flClientServiceUrl = miner?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
+  const flClientServiceUrl = (miner as any)?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
 
   console.log(`[triggerTraining] Using FL client URL for miner ${minerAddress}: ${flClientServiceUrl}`);
 
@@ -247,7 +247,7 @@ export async function getTrainingStatus(
   });
 
   // Use stored FL client URL, fallback to localhost if not provided
-  const flClientServiceUrl = miner?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
+  const flClientServiceUrl = (miner as any)?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
 
   try {
     const response = await axios.get(
@@ -257,7 +257,7 @@ export async function getTrainingStatus(
           taskID,
           minerAddress: minerAddress.toLowerCase()
         },
-        timeout: 3000
+        timeout: 10000
       }
     );
 
@@ -287,7 +287,7 @@ export async function triggerSubmission(
   taskID: string,
   minerAddress: string,
   walletAuth?: { address: string; message: string; signature: string }
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; suggestion?: string }> {
   // Validate miner is registered for this task
   const miner = await prisma.miner.findUnique({
     where: {
@@ -321,7 +321,7 @@ export async function triggerSubmission(
   }
 
   // Use stored FL client URL, fallback to localhost if not provided
-  const flClientServiceUrl = miner?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
+  const flClientServiceUrl = (miner as any)?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
 
   try {
     // Pass wallet auth if provided so FL client service can authenticate with backend

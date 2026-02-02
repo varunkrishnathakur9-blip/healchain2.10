@@ -18,7 +18,8 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Routes
 app.use("/tasks", taskRoutes);
@@ -38,7 +39,7 @@ app.use(
     if (err instanceof AppError) {
       return res.status(err.statusCode).json({ error: err.message });
     }
-    
+
     // Log full error for debugging
     console.error("Error details:", {
       message: err?.message,
@@ -46,14 +47,14 @@ app.use(
       name: err?.name,
       code: err?.code
     });
-    
+
     // Return more detailed error in development
     const isDevelopment = process.env.NODE_ENV !== 'production';
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Internal server error",
-      ...(isDevelopment && { 
+      ...(isDevelopment && {
         details: err?.message,
-        type: err?.name 
+        type: err?.name
       })
     });
   }
