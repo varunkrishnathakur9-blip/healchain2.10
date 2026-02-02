@@ -15,6 +15,7 @@ Security-critical.
 """
 
 from typing import Tuple
+import os
 import binascii
 import logging
 

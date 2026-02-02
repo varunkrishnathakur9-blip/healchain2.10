@@ -88,6 +88,9 @@ def collect_feedback(
 
         for fb in batch:
             try:
+                # Inject candidate_hash since backend doesn't store/return it
+                fb["candidate_hash"] = candidate_hash
+                
                 _validate_feedback_structure(fb, candidate_hash)
 
                 miner_pk = fb["miner_pk"]
@@ -178,12 +181,13 @@ def _canonical_feedback_message(fb: Dict) -> bytes:
     Deterministic encoding of feedback message for signature verification.
     """
 
-    parts = [
-        fb["task_id"],
-        fb["candidate_hash"],
-        fb["verdict"],
-        fb["reason"],
-        fb["miner_pk"],
-    ]
+    # Match FL Client message format:
+    # f"HealChain Verification\nTask: {task_id}\nVerdict: {verdict}\nMiner: {miner_address}"
+    message = (
+        f"HealChain Verification\n"
+        f"Task: {fb['task_id']}\n"
+        f"Verdict: {fb['verdict']}\n"
+        f"Miner: {fb['miner_pk']}"
+    )
 
-    return "|".join(parts).encode("utf-8")
+    return message.encode("utf-8")

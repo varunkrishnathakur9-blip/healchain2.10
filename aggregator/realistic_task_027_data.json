@@ -1,0 +1,42 @@
+[
+  {
+    "miner_pk": "0xc94d50e736d29c8390f460d649d1a036a5b42815dcf30884d814fe5efc061db3,0xab13bfb76f7882507563e3ff2811398b3b59a9bb571afda8886566155aab08ef",
+    "score_commit": "0xCommit_1",
+    "signature": "b63ecd0de0a58db96c16ae7009314f5272e9471e711d8302aae86a9a32cca35adb69f1555d8945b1687f8a0e63f15c6d192579587602fd3d511bf638a1ade34e",
+    "ciphertext": [
+      "0xmockpoint1,0xmockpoint2",
+      "0xmockpoint3,0xmockpoint4"
+    ],
+    "miner_address": "0xbe884ed9ea8bddba74f661c363f182eff6e30248"
+  },
+  {
+    "miner_pk": "0x6437d120e9ea94a0aa84e02bf629f05560cd3dcb89eac437aaf7c4016eee5ec1,0x80022a67e93f0040dd83776512de03d398520569fdd4abc03093f5bb01116da0",
+    "score_commit": "0xCommit_2",
+    "signature": "1cdb90f5c24e771f8f5bde5e1d436849cb20d9812b4ffa80ebec8b7cb8f99541175fb7ed1b3c679df91d61e9c1df92e84de69a3d3b6d01cbcb62f51c0f56c48f",
+    "ciphertext": [
+      "0xmockpoint1,0xmockpoint2",
+      "0xmockpoint3,0xmockpoint4"
+    ],
+    "miner_address": "0x88525bde5e667ab53c499702b72c9bda119ec85b"
+  },
+  {
+    "miner_pk": "0x20deac3e5f821c072cac2509d52e37dc526bcfa904548033fc5bbdd7c0061fba,0x9c5a1d18c6a940c617f4df08709ea0e60487285e49be66d3ea065d6fc3c80fac",
+    "score_commit": "0xCommit_3",
+    "signature": "8be1e63c017c9c05dedacbeb962671e82d3e7cc8d8b2f006234d0b0925874bda0e4d9851989204c7a1d9ac1469145ad697e7f9521d30f9a907a4a6fdfffedb2d",
+    "ciphertext": [
+      "0xmockpoint1,0xmockpoint2",
+      "0xmockpoint3,0xmockpoint4"
+    ],
+    "miner_address": "0x2cf0e11b0d406af92666c567641012ec19aecc95"
+  },
+  {
+    "miner_pk": "0x42f2396401283838ad93e155529f626ce9410ae52bd7c1a38d0d20bfd8b43364,0xe4417e1a82c16789fd42a83e31b9e185788691fb013b28b3978c9aeb62ede57e",
+    "score_commit": "0xCommit_4",
+    "signature": "8a61a5e817feb5ef9e33465a3c541875d5c26b8c22237d2ee953290f1785b7fe1d7bbfba9e6eda09a8755231fa3c43ad40775e34d92aff2760d42e306a34cf60",
+    "ciphertext": [
+      "0xmockpoint1,0xmockpoint2",
+      "0xmockpoint3,0xmockpoint4"
+    ],
+    "miner_address": "0xa4d20280bad6d03816129377b1ff6b38e1c5bf52"
+  }
+]

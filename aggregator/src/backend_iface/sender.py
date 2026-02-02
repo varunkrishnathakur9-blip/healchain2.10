@@ -53,12 +53,23 @@ class BackendSender:
         success : bool
         """
 
-        endpoint = f"{self.base_url}/aggregator/{self.task_id}/candidate"
+        endpoint = f"{self.base_url}/aggregator/submit-candidate"
+
+        # Normalize fields for backend (camelCase + scaled accuracy for BigInt)
+        normalized_payload = {
+            "taskID": candidate_block.get("task_id"),
+            "modelHash": candidate_block.get("model_hash"),
+            "accuracy": int(candidate_block.get("accuracy", 0) * 1000000), # Scale to 6 decimal places for BigInt
+            "miners": candidate_block.get("participants", []),
+            "scoreCommits": candidate_block.get("score_commits", []),
+            "aggregatorPK": candidate_block.get("aggregator_pk"),
+            "hash": candidate_block.get("hash")
+        }
 
         try:
             resp = requests.post(
                 endpoint,
-                json=candidate_block,
+                json=normalized_payload,
                 timeout=5,
             )
 
@@ -94,12 +105,21 @@ class BackendSender:
         success : bool
         """
 
-        endpoint = f"{self.base_url}/aggregator/{self.task_id}/publish"
+        endpoint = f"{self.base_url}/aggregator/publish"
+
+        # Normalize fields for backend
+        normalized_payload = {
+            "taskID": payload.get("task_id"),
+            "modelHash": payload.get("model_hash"),
+            "accuracy": int(payload.get("accuracy", 0) * 1000000),
+            "miners": payload.get("participants", []),
+            "verification": payload.get("verification")
+        }
 
         try:
             resp = requests.post(
                 endpoint,
-                json=payload,
+                json=normalized_payload,
                 timeout=5,
             )
 

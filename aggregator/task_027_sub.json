@@ -1,0 +1,16 @@
+{
+  "taskID": "task_027",
+  "task_id": "task_027",
+  "miner_address": "0xbe884ed9ea8bddba04a7806b94b14ceac852bd09",
+  "miner_pk": "be143c627aeb8e2349aef3384ffea5022dfb8b0807f951599904fab427eb8973,eb80142674f835e134dbc09e35624dd7ae0ee449b14642347e2df25114bf2503",
+  "ciphertext": [
+    "0xmockpoint1,0xmockpoint2",
+    "0xmockpoint3,0xmockpoint4"
+  ],
+  "encrypted_hash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+  "encryptedHash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+  "score_commit": "cfbc6d4f661c363f18260278a43ae096985f3c7d7394e925d91c56ca7a1530ec",
+  "scoreCommit": "cfbc6d4f661c363f18260278a43ae096985f3c7d7394e925d91c56ca7a1530ec",
+  "signature": "aec2dfccb81b3ee8932cb08080477cf988a7aaae0cbe8398ce9e606d307124dda224e41491c7ecf031e4f75fcd945a247eff6e30248f21267fe69f6060ba94d5",
+  "submitted_at": "2026-02-01T15:53:04.400Z"
+}

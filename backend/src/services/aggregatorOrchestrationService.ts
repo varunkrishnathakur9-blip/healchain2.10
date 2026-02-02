@@ -8,6 +8,7 @@
 import { prisma } from "../config/database.config.js";
 import { TaskStatus } from "@prisma/client";
 import axios from "axios";
+import { NotFoundError } from "../utils/errors.js";
 
 export interface AggregatorStatus {
   taskID: string;
@@ -47,13 +48,13 @@ export async function triggerAggregation(
     throw new Error(`Address ${aggregatorAddress} is not the selected aggregator for task ${taskID}`);
   }
 
-  // Validate task is in correct status
-  if (task.status !== TaskStatus.OPEN && task.status !== TaskStatus.AGGREGATING) {
+  // Validate task is in correct status - use type assertion to avoid redundant check lint error
+  if (![TaskStatus.OPEN, TaskStatus.AGGREGATING].includes(task.status as any)) {
     throw new Error(`Task ${taskID} is not ready for aggregation. Current status: ${task.status}`);
   }
 
   // Check if aggregation already completed
-  if (task.status === TaskStatus.VERIFIED || task.status === TaskStatus.REWARDED) {
+  if (task.status as any === "VERIFIED" || task.status as any === "REWARDED") {
     return {
       success: false,
       message: "Aggregation already completed for this task"
@@ -62,7 +63,7 @@ export async function triggerAggregation(
 
   // Get aggregator service URL from environment or use default
   const aggregatorServiceUrl = process.env.AGGREGATOR_SERVICE_URL || "http://localhost:5002";
-  
+
   try {
     // Trigger aggregation on local aggregator service
     const response = await axios.post(
@@ -102,7 +103,7 @@ export async function triggerAggregation(
         message: "Aggregator service is not running. Please start the aggregator service on your machine."
       };
     }
-    
+
     throw new Error(`Failed to trigger aggregation: ${error.message}`);
   }
 }
@@ -125,7 +126,7 @@ export async function getAggregatorStatus(
   });
 
   if (!task) {
-    throw new Error(`Task ${taskID} not found`);
+    throw new NotFoundError(`Task ${taskID} not found`);
   }
 
   // If block exists, aggregation is completed
@@ -139,7 +140,7 @@ export async function getAggregatorStatus(
 
   // Check with aggregator service for current status
   const aggregatorServiceUrl = process.env.AGGREGATOR_SERVICE_URL || "http://localhost:5002";
-  
+
   try {
     const response = await axios.get(
       `${aggregatorServiceUrl}/api/status/${taskID}`,
@@ -150,6 +151,8 @@ export async function getAggregatorStatus(
 
     // Map aggregator service response to AggregatorStatus format
     const aggregatorData = response.data;
+    console.log(`[getAggregatorStatus] Aggregator service response for task ${taskID}:`, aggregatorData);
+
     if (aggregatorData.running) {
       return {
         taskID,
@@ -161,7 +164,9 @@ export async function getAggregatorStatus(
       // Aggregator not running, check database state
       const submissionCount = task.gradients.length;
       const requiredSubmissions = task.miners.length;
-      
+
+      console.log(`[getAggregatorStatus] Aggregator not running. Submissions: ${submissionCount}/${requiredSubmissions}`);
+
       if (submissionCount === 0) {
         return {
           taskID,
@@ -186,6 +191,12 @@ export async function getAggregatorStatus(
       }
     }
   } catch (error: any) {
+    console.error(`[getAggregatorStatus] Error fetching status for task ${taskID}:`, error.message);
+    if (error.response) {
+      console.error(`[getAggregatorStatus] Error response data:`, error.response.data);
+      console.error(`[getAggregatorStatus] Error response status:`, error.response.status);
+    }
+
     // If service not available, infer status from database
     if (error.code === "ECONNREFUSED" || error.code === "ETIMEDOUT") {
       const submissionCount = task.gradients.length;
@@ -214,7 +225,7 @@ export async function getAggregatorStatus(
         };
       }
     }
-    
+
     throw new Error(`Failed to get aggregator status: ${error.message}`);
   }
 }

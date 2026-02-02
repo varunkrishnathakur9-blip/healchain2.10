@@ -83,7 +83,7 @@ class BackendReceiver:
         List of feedback dicts (possibly empty)
         """
 
-        endpoint = f"{self.base_url}/aggregator/{self.task_id}/feedback"
+        endpoint = f"{self.base_url}/verification/{self.task_id}"
 
         try:
             resp = requests.get(endpoint, timeout=5)
@@ -101,7 +101,20 @@ class BackendReceiver:
                 )
                 return []
 
-            return data
+            # Normalize backend feedback to aggregator format
+            normalized_batch = []
+            for fb in data:
+                normalized = {
+                    "task_id": fb.get("taskID"),
+                    "miner_pk": fb.get("minerAddress"),
+                    "verdict": fb.get("verdict"),
+                    "signature": fb.get("signature"),
+                    "candidate_hash": None, # Backend doesn't store this, will be injected by collector
+                    "reason": "MVP Verification" # Placeholder
+                }
+                normalized_batch.append(normalized)
+
+            return normalized_batch
 
         except Exception as e:
             logger.error(f"[BackendReceiver] Error fetching feedback: {e}")

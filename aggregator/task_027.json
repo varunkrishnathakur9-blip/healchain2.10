@@ -1,0 +1,59 @@
+{
+  "id": "cml22ydo80000va703rt8sr2a",
+  "taskID": "task_027",
+  "publisher": "0x88525BdE5e667Ab53C499702B72c9Bda119EC85B",
+  "commitHash": "0x4e8829f923249538b6678704bae410036ac8820962699043ea989e12960650d4",
+  "nonceTP": "083628a2a69a065620a61f5bd2764d81a22fb4f8b5e0e0eeddf214112160c4f5",
+  "deadline": "1770109020",
+  "status": "OPEN",
+  "dataset": "chestxray",
+  "initialModelLink": "https://bafybeieolx2blv4pqmc3wvmpn32nqwfaivqjkrqecrqbxiijvjhsb5os4q.ipfs.dweb.link",
+  "aggregatorAddress": "0x02d75461b742cc8f6b82dad6b86cb5c4a4287f89",
+  "minMiners": 4,
+  "maxMiners": 6,
+  "publishTx": "0xf0bbc786a886473a1dda4e0ef3e3d1a7ee8411c0871970c7eae729eb026ff61b",
+  "escrowContractAddress": "0x29b0aAF216C372d71c78B48964cEba0704DF5831",
+  "miners": [
+    {
+      "address": "0x5d9488ac7a9a7729add46c0007534390217c223a",
+      "id": "cml29fbg00002va70d2f3hakz"
+    },
+    {
+      "address": "0x02d75461b742cc8f6b82dad6b86cb5c4a4287f89",
+      "id": "cml29m3ze0004va70c1v49wrg"
+    },
+    {
+      "address": "0xbe884ed9ea8bddba04a7806b94b14ceac852bd09",
+      "id": "cml29pwho0006va70q97sosf1"
+    },
+    {
+      "address": "0xeb365b5d30f7daeaf70d7a50b98b262140cb7111",
+      "id": "cml29vas90008va70csndzyaj"
+    }
+  ],
+  "gradients": [
+    {
+      "minerAddress": "0xbe884ed9ea8bddba04a7806b94b14ceac852bd09",
+      "status": "COMMITTED"
+    },
+    {
+      "minerAddress": "0x5d9488ac7a9a7729add46c0007534390217c223a",
+      "status": "COMMITTED"
+    },
+    {
+      "minerAddress": "0x02d75461b742cc8f6b82dad6b86cb5c4a4287f89",
+      "status": "COMMITTED"
+    },
+    {
+      "minerAddress": "0xeb365b5d30f7daeaf70d7a50b98b262140cb7111",
+      "status": "COMMITTED"
+    }
+  ],
+  "_count": {
+    "miners": 4,
+    "gradients": 4
+  },
+  "createdAt": "2026-01-31T08:58:54.776Z",
+  "updatedAt": "2026-01-31T12:12:28.583Z",
+  "aggregator": "0x02d75461b742cc8f6b82dad6b86cb5c4a4287f89"
+}

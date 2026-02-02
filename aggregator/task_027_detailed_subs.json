@@ -1,0 +1,66 @@
+[
+  {
+    "taskID": "task_027",
+    "task_id": "task_027",
+    "miner_address": "0xbe884ed9ea8bddba04a7806b94b14ceac852bd09",
+    "miner_pk": "be143c627aeb8e2349aef3384ffea5022dfb8b0807f951599904fab427eb8973,eb80142674f835e134dbc09e35624dd7ae0ee449b14642347e2df25114bf2503",
+    "ciphertext": [
+      "0xmockpoint1,0xmockpoint2",
+      "0xmockpoint3,0xmockpoint4"
+    ],
+    "encrypted_hash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+    "encryptedHash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+    "score_commit": "cfbc6d4f661c363f18260278a43ae096985f3c7d7394e925d91c56ca7a1530ec",
+    "scoreCommit": "cfbc6d4f661c363f18260278a43ae096985f3c7d7394e925d91c56ca7a1530ec",
+    "signature": "aec2dfccb81b3ee8932cb08080477cf988a7aaae0cbe8398ce9e606d307124dda224e41491c7ecf031e4f75fcd945a247eff6e30248f21267fe69f6060ba94d5",
+    "submitted_at": "2026-02-01T15:53:04.400Z"
+  },
+  {
+    "taskID": "task_027",
+    "task_id": "task_027",
+    "miner_address": "0x5d9488ac7a9a7729add46c0007534390217c223a",
+    "miner_pk": "6266af319d78e52879dd5eb86b2c6db7884a72d4416cab6cbc3eb54c63ff2e07,19a09e0a745846ca1e5c1584b7c9a99ff6fe8cb77e8350152056cbf2a04f6fa3",
+    "ciphertext": [
+      "0xmockpoint1,0xmockpoint2",
+      "0xmockpoint3,0xmockpoint4"
+    ],
+    "encrypted_hash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+    "encryptedHash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+    "score_commit": "7564f2e9f3490df736b3aa11621e3f4a6e8f14941f572d0b919f97af2c51a6dc",
+    "scoreCommit": "7564f2e9f3490df736b3aa11621e3f4a6e8f14941f572d0b919f97af2c51a6dc",
+    "signature": "9cb456717dadd970b12604b28ca5914700cdfeba5eac463c1e24cc9ebc10214c35df08d2c9d2d39b89bbedcbc50543e781fe185c7004043b9ce468c49c86a4ef",
+    "submitted_at": "2026-02-01T16:56:56.955Z"
+  },
+  {
+    "taskID": "task_027",
+    "task_id": "task_027",
+    "miner_address": "0x02d75461b742cc8f6b82dad6b86cb5c4a4287f89",
+    "miner_pk": "7dd5669b8d4ae2b30eabf1b2d8b88720add3aa3946c758eea6713199075f2c66,d996fc7ae07e08a0c958e0691bf2814fabcbb2c02d03618fdf47b658100d6b91",
+    "ciphertext": [
+      "0xmockpoint1,0xmockpoint2",
+      "0xmockpoint3,0xmockpoint4"
+    ],
+    "encrypted_hash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+    "encryptedHash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+    "score_commit": "5bc3ffc74cc2e91075b096745957825ae9bb262cda4e6b7719902c60a565e7e1",
+    "scoreCommit": "5bc3ffc74cc2e91075b096745957825ae9bb262cda4e6b7719902c60a565e7e1",
+    "signature": "93efdfe12dded78e38568c786031aee3b45c27bc9a3e824ab361c987e59f8680ec2bcbba906ba936e2da276b0bdf432bdc4d1f75f52ca1d9c4360dac0b6e3860",
+    "submitted_at": "2026-02-01T17:05:51.349Z"
+  },
+  {
+    "taskID": "task_027",
+    "task_id": "task_027",
+    "miner_address": "0xeb365b5d30f7daeaf70d7a50b98b262140cb7111",
+    "miner_pk": "299d4b37a3588084be5de50a42e20fcbb882415a9d9359b7df64ad8df766b29b,282861e3205a3852bbd637e8fb3febac417e3138615c52ba0f3bde278fd411b8",
+    "ciphertext": [
+      "0xmockpoint1,0xmockpoint2",
+      "0xmockpoint3,0xmockpoint4"
+    ],
+    "encrypted_hash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+    "encryptedHash": "7692ebb219d4c0ad941224e7cec153def0d9f6104987eaead6d060004900347f",
+    "score_commit": "d7519cf74b09a6e43c71bda71d1edbb440637c988dd2e974ee45e7df41845c63",
+    "scoreCommit": "d7519cf74b09a6e43c71bda71d1edbb440637c988dd2e974ee45e7df41845c63",
+    "signature": "10e009ee0d4be2a7160ef136ea8ab9312929969051c7fe868fedffbb511e5f91ba481ddf0585f265561fad7e5d1b0b6630fc34de6222e5990410d181449e9244",
+    "submitted_at": "2026-02-01T17:14:58.018Z"
+  }
+]
