@@ -12,6 +12,7 @@ from state.local_store import load_state, save_state
 from config.settings import LOCAL_EPOCHS, DGC_THRESHOLD
 from utils.quantize_gradients import quantize_gradients
 from config.gradient_bounds import QUANTIZATION_SCALE, MAX_GRAD_MAGNITUDE
+from crypto.keys import derive_public_key
 
 def run_task(task, miner_addr):
     task_id = task["taskID"]
@@ -104,18 +105,22 @@ def run_task(task, miner_addr):
     if not miner_private_key:
         raise ValueError("MINER_PRIVATE_KEY not set in environment. Please set it in .env file.")
     
+    # Derive real ECDSA public key for signature verification (x,y format)
+    real_miner_pk = derive_public_key(miner_private_key)
+    print(f"[M3] Using derived public key for signature: {real_miner_pk}")
+
     signature, canonical_msg = generate_miner_signature(
         task_id=task["taskID"],
         ciphertext=ciphertext_concat,
         score_commit=commit,
-        miner_pk=miner_addr,
+        miner_pk=real_miner_pk,
         miner_private_key=miner_private_key
     )
     
     # Compute encryptedHash (hash of ciphertext for backend storage)
     import hashlib
     encrypted_hash = hashlib.sha256(ciphertext_concat.encode('utf-8')).hexdigest()
-
+    
     # Build full payload for submission
     payload = {
         "taskID": task["taskID"],
@@ -125,7 +130,7 @@ def run_task(task, miner_addr):
         "scoreCommit": commit,
         "signature": signature,
         "message": canonical_msg,  # Canonical message that was signed
-        "miner_pk": miner_addr,
+        "miner_pk": real_miner_pk,
         "minerAddress": miner_addr,  # Backend expects this field name
         "quantization_scale": scale
     }
