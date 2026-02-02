@@ -84,9 +84,11 @@ export async function triggerTraining(
     };
   }
 
-  // Get FL client service URL from environment or use default
-  const flClientServiceUrl = process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
-  
+  // Use stored FL client URL, fallback to localhost if not provided
+  const flClientServiceUrl = miner?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
+
+  console.log(`[triggerTraining] Using FL client URL for miner ${minerAddress}: ${flClientServiceUrl}`);
+
   try {
     // Fetch public keys for NDD-FE encryption from backend
     let tpPublicKey = "";
@@ -107,7 +109,7 @@ export async function triggerTraining(
       // Continue without keys - FL client service will try to get them from task details
     }
 
-    // Trigger training on local FL client service
+    // Trigger training on FL client service (local or remote)
     // Pass all necessary configuration so FL client service doesn't need .env updates
     const response = await axios.post(
       `${flClientServiceUrl}/api/train`,
@@ -150,7 +152,7 @@ export async function triggerTraining(
         message: "FL client service is not running. Please start the FL client service on your machine (default: http://localhost:5001)."
       };
     }
-    
+
     // Handle 404 from FL client service
     if (error.response?.status === 404) {
       return {
@@ -158,7 +160,7 @@ export async function triggerTraining(
         message: "FL client service endpoint not found. Please ensure the FL client service is running and has the /api/train endpoint."
       };
     }
-    
+
     // For other errors, return a user-friendly message instead of throwing
     return {
       success: false,
@@ -205,8 +207,8 @@ export async function getTrainingStatus(
     let submittedAtTimestamp: number;
     try {
       if (gradient.createdAt) {
-        const createdAtDate = gradient.createdAt instanceof Date 
-          ? gradient.createdAt 
+        const createdAtDate = gradient.createdAt instanceof Date
+          ? gradient.createdAt
           : new Date(gradient.createdAt);
         // Validate the date is valid
         if (isNaN(createdAtDate.getTime())) {
@@ -223,7 +225,7 @@ export async function getTrainingStatus(
       console.warn(`[getTrainingStatus] Error parsing createdAt for task ${taskID}:`, e);
       submittedAtTimestamp = Math.floor(Date.now() / 1000);
     }
-    
+
     return {
       taskID,
       minerAddress: minerAddress.toLowerCase(),
@@ -234,9 +236,19 @@ export async function getTrainingStatus(
     };
   }
 
-  // Check with FL client service for current status
-  const flClientServiceUrl = process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
-  
+  // Get miner's FL client service URL from database (for distributed status check)
+  const miner = await prisma.miner.findUnique({
+    where: {
+      taskID_address: {
+        taskID,
+        address: minerAddress.toLowerCase()
+      }
+    }
+  });
+
+  // Use stored FL client URL, fallback to localhost if not provided
+  const flClientServiceUrl = miner?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
+
   try {
     const response = await axios.get(
       `${flClientServiceUrl}/api/train/status`,
@@ -260,7 +272,7 @@ export async function getTrainingStatus(
         status: "IDLE"
       };
     }
-    
+
     // Only throw error for unexpected errors (not 404)
     throw new Error(`Failed to get training status: ${error.message}`);
   }
@@ -308,20 +320,20 @@ export async function triggerSubmission(
     };
   }
 
-  // Get FL client service URL
-  const flClientServiceUrl = process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
-  
+  // Use stored FL client URL, fallback to localhost if not provided
+  const flClientServiceUrl = miner?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
+
   try {
     // Pass wallet auth if provided so FL client service can authenticate with backend
     const requestBody: any = {
       taskID,
       minerAddress: minerAddress.toLowerCase()
     };
-    
+
     if (walletAuth) {
       requestBody.walletAuth = walletAuth;
     }
-    
+
     const response = await axios.post(
       `${flClientServiceUrl}/api/submit`,
       requestBody,
@@ -350,13 +362,13 @@ export async function triggerSubmission(
         message: "FL client service is not running. Please start the FL client service on your machine."
       };
     }
-    
+
     if (error.response?.status === 404) {
       // Extract error message and suggestion from FL client service
       const errorData = error.response?.data || {};
       const errorMessage = errorData.error || errorData.message || "";
       const suggestion = errorData.suggestion || "";
-      
+
       // Check if it's a missing payload with old training data
       if (errorMessage.includes("submission payload is missing") || errorMessage.includes("payload may have been lost") || errorData.action === "RETRAIN") {
         return {
@@ -365,7 +377,7 @@ export async function triggerSubmission(
           suggestion: suggestion || "Click 'Retry Training' on the training dashboard, then click 'Submit Gradient' after training completes."
         };
       }
-      
+
       // Use suggestion from FL client service if available
       if (suggestion) {
         return {
@@ -374,13 +386,13 @@ export async function triggerSubmission(
           suggestion: suggestion
         };
       }
-      
+
       return {
         success: false,
         message: errorMessage || "No training payload found. Please complete training first."
       };
     }
-    
+
     // Handle 400 errors (bad request) - might be missing wallet auth or other validation errors
     if (error.response?.status === 400) {
       const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message;
@@ -389,7 +401,7 @@ export async function triggerSubmission(
         message: errorMessage || "Submission failed due to invalid request. Please check your wallet connection and try again."
       };
     }
-    
+
     return {
       success: false,
       message: `Failed to submit gradient: ${error.message || 'Unknown error'}`

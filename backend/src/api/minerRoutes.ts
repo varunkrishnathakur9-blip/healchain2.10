@@ -23,15 +23,15 @@ router.post(
   requireWalletAuth,
   async (req, res, next) => {
     try {
-      const { taskID, address, publicKey, stake, proof } = req.body;
-      
+      const { taskID, address, publicKey, stake, proof, flClientUrl } = req.body;
+
       // Validate proof is provided (Algorithm 2 requirement)
       if (!proof || proof.trim() === '') {
-        return res.status(400).json({ 
-          error: "Miner proof is required (Algorithm 2). Please provide IPFS link or system proof." 
+        return res.status(400).json({
+          error: "Miner proof is required (Algorithm 2). Please provide IPFS link or system proof."
         });
       }
-      
+
       // Use the verified address from auth middleware
       const verifiedAddress = (req as any).walletAddress || address;
 
@@ -41,8 +41,8 @@ router.post(
         try {
           stakeBigInt = typeof stake === 'string' ? BigInt(stake) : BigInt(Number(stake));
         } catch (err) {
-          return res.status(400).json({ 
-            error: `Invalid stake value: ${stake}. Must be a valid number.` 
+          return res.status(400).json({
+            error: `Invalid stake value: ${stake}. Must be a valid number.`
           });
         }
       }
@@ -52,7 +52,8 @@ router.post(
         verifiedAddress,
         publicKey, // Optional: miner's public key for key derivation
         stakeBigInt, // Optional: miner's stake for PoS selection
-        proof        // Algorithm 2: Miner proof (required)
+        proof,        // Algorithm 2: Miner proof (required)
+        flClientUrl  // Optional: FL Client service URL for distributed training
       );
 
       // Convert BigInt fields to strings for JSON serialization
@@ -84,10 +85,10 @@ router.get(
   async (req, res, next) => {
     try {
       const { address } = req.query;
-      
+
       if (!address || typeof address !== 'string') {
-        return res.status(400).json({ 
-          error: "Miner address is required" 
+        return res.status(400).json({
+          error: "Miner address is required"
         });
       }
 
@@ -152,7 +153,7 @@ router.post(
       }
 
       const result = await triggerTraining(taskID, verifiedAddress);
-      
+
       if (result.success) {
         res.json({ success: true, message: result.message });
       } else {
@@ -208,22 +209,22 @@ router.post(
     try {
       const { address, taskID } = req.params;
       const verifiedAddress = (req as any).walletAddress || address;
-      
+
       if (verifiedAddress.toLowerCase() !== address.toLowerCase()) {
         return res.status(403).json({
           error: "Address mismatch. You can only submit gradients for your own address."
         });
       }
-      
+
       // Pass wallet auth signature to FL client service so it can authenticate with backend
       const walletAuth = {
         address: verifiedAddress,
         message: req.body.message,
         signature: req.body.signature
       };
-      
+
       const result = await triggerSubmission(taskID, verifiedAddress, walletAuth);
-      
+
       if (result.success) {
         res.json({ success: true, message: result.message });
       } else {

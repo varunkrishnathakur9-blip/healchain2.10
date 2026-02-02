@@ -21,7 +21,8 @@ export async function registerMiner(
   address: string,
   publicKey?: string,
   stake?: bigint,
-  proof?: string  // Algorithm 2: Miner proof (IPFS link or system proof)
+  proof?: string,  // Algorithm 2: Miner proof (IPFS link or system proof)
+  flClientUrl?: string  // FL Client service URL for distributed training
 ) {
   // Check if task exists
   const task = await prisma.task.findUnique({
@@ -77,7 +78,7 @@ export async function registerMiner(
   // Check eligibility from StakeRegistry contract
   let onChainStake: bigint;
   let isEligible: boolean;
-  
+
   try {
     onChainStake = await getAvailableStake(address);
     isEligible = await isMinerEligible(address);
@@ -100,7 +101,7 @@ export async function registerMiner(
   }
 
   // Algorithm 2: Only create miner if proof is valid
-  // Create miner registration with public key, on-chain stake, and verified proof
+  // Create miner registration with public key, on-chain stake, verified proof, and FL client URL
   // Use on-chain stake for record-keeping (stake parameter is ignored, always use on-chain value)
   const miner = await prisma.miner.create({
     data: {
@@ -109,14 +110,15 @@ export async function registerMiner(
       publicKey: publicKey || null,
       stake: onChainStake,        // Use on-chain stake from StakeRegistry
       proof: proof,                // Algorithm 2: Store miner proof
-      proofVerified: true          // Algorithm 2: Mark proof as verified
+      proofVerified: true,         // Algorithm 2: Mark proof as verified
+      flClientUrl: flClientUrl || null  // Store FL client URL for distributed training
     }
   });
 
   // Algorithm 2: Only proceed with miner selection and key derivation after proof verification
   // Auto-finalize miners if we have enough (>= task.minMiners) with verified proofs
   const currentMiners = await prisma.miner.findMany({
-    where: { 
+    where: {
       taskID,
       proofVerified: true  // Only count miners with verified proofs
     }
@@ -164,7 +166,7 @@ export async function finalizeMiners(taskID: string) {
 
   // Algorithm 2: Only consider miners with verified proofs
   const miners = await prisma.miner.findMany({
-    where: { 
+    where: {
       taskID,
       proofVerified: true  // Algorithm 2: Only miners with verified proofs
     },
@@ -199,11 +201,11 @@ export async function finalizeMiners(taskID: string) {
   // Step 3: Derive NDD-FE key (Algorithm 2.2)
   let skFE: bigint | null = null;
   let keyDelivered = false;
-  
+
   if (canDeriveKey) {
     try {
       skFE = await deriveFunctionalEncryptionKey(taskID);
-      
+
       // Step 4: Secure key delivery (Algorithm 2.3)
       await secureDeliverKey(taskID, aggregatorAddress, skFE);
       keyDelivered = true;

@@ -23,22 +23,22 @@ router.post(
 
       // Validate commitHash and nonceTP are provided
       if (!commitHash || !nonceTP) {
-        return res.status(400).json({ 
-          error: "commitHash and nonceTP are required for Algorithm 1 compliance" 
+        return res.status(400).json({
+          error: "commitHash and nonceTP are required for Algorithm 1 compliance"
         });
       }
 
       // Validate escrowTxHash is provided
       if (!escrowTxHash) {
-        return res.status(400).json({ 
-          error: "escrowTxHash is required - escrow must be locked on-chain before creating task" 
+        return res.status(400).json({
+          error: "escrowTxHash is required - escrow must be locked on-chain before creating task"
         });
       }
 
       // Validate nonceTP is 64 hex characters (32 bytes)
       if (!/^[0-9a-fA-F]{64}$/.test(nonceTP)) {
-        return res.status(400).json({ 
-          error: "nonceTP must be 64 hex characters (32 bytes)" 
+        return res.status(400).json({
+          error: "nonceTP must be 64 hex characters (32 bytes)"
         });
       }
 
@@ -71,12 +71,29 @@ router.get("/:taskID/public-keys", async (req, res, next) => {
   try {
     const { taskID } = req.params;
     const task = await getTaskById(taskID);
-    
-    // Get aggregator public key (from aggregator or environment)
-    // For MVP: Return from environment or task metadata
-    const tpPublicKey = process.env.TP_PUBLIC_KEY || "";
-    const aggregatorPublicKey = process.env.AGGREGATOR_PK || "";
-    
+
+    // Fetch public keys from aggregator service
+    const aggregatorUrl = process.env.AGGREGATOR_URL || "http://localhost:5002";
+    let tpPublicKey = "";
+    let aggregatorPublicKey = "";
+
+    try {
+      const axios = (await import("axios")).default;
+      const response = await axios.get(`${aggregatorUrl}/api/public-keys`, {
+        timeout: 3000
+      });
+
+      if (response.data) {
+        tpPublicKey = response.data.tpPublicKey || "";
+        aggregatorPublicKey = response.data.aggregatorPublicKey || "";
+      }
+    } catch (error: any) {
+      console.warn(`[Public Keys] Failed to fetch from aggregator: ${error.message}`);
+      // Fallback to environment variables if aggregator is unavailable
+      tpPublicKey = process.env.TP_PUBLIC_KEY || "";
+      aggregatorPublicKey = process.env.AGGREGATOR_PK || "";
+    }
+
     res.json({
       taskID,
       tpPublicKey,
@@ -126,21 +143,21 @@ router.get("/:taskID", async (req, res, next) => {
 router.get("/", async (req, res, next) => {
   try {
     const { status, publisher, limit, offset } = req.query;
-    
+
     // Validate status if provided
     const validStatuses = ['CREATED', 'OPEN', 'COMMIT_CLOSED', 'REVEAL_OPEN', 'REVEAL_CLOSED', 'AGGREGATING', 'VERIFIED', 'REWARDED', 'CANCELLED'];
     const statusValue = status as string;
     if (statusValue && !validStatuses.includes(statusValue)) {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
-    
+
     const filters = {
       status: statusValue as any,
       publisher: publisher as string,
       limit: limit ? parseInt(limit as string) : undefined,
       offset: offset ? parseInt(offset as string) : undefined
     };
-    
+
     const tasks = await getAllTasks(filters);
     res.json(tasks);
   } catch (err) {
@@ -159,7 +176,7 @@ router.put(
     try {
       const { taskID } = req.params;
       const { status } = req.body;
-      
+
       const updatedTask = await updateTaskStatus(taskID, status);
       res.json(updatedTask);
     } catch (err) {
@@ -200,30 +217,30 @@ router.post("/:taskID/check-refund", async (req, res, next) => {
   try {
     const { taskID } = req.params;
     const { checkTaskRefundStatus } = await import("../services/refundDetectionService.js");
-    
+
     // Check specific task
     const refundStatus = await checkTaskRefundStatus(taskID);
-    
+
     // If refunded, update status
     if (refundStatus.isRefunded && refundStatus.backendStatus !== "CANCELLED") {
       const { updateTaskStatus } = await import("../services/taskService.js");
       await updateTaskStatus(taskID, "CANCELLED" as any);
       refundStatus.backendStatus = "CANCELLED" as any;
     }
-    
+
     let message = "";
     if (!refundStatus.existsOnChain) {
       message = "Task does not exist on-chain. This is normal for test tasks or tasks where escrow transaction failed.";
     } else if (refundStatus.isCompleted) {
       message = "Task is completed (rewards distributed). Escrow balance is zero due to successful reward distribution.";
     } else if (refundStatus.isRefunded) {
-      message = refundStatus.isFailed 
+      message = refundStatus.isFailed
         ? "Task was refunded on-chain (status: FAILED). Status updated to CANCELLED."
         : "Task escrow is zero after deadline (implicit refund). Status updated to CANCELLED.";
     } else {
       message = "Task is not refunded. Escrow balance is active.";
     }
-    
+
     res.json({
       taskID,
       ...refundStatus,

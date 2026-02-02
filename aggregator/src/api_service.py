@@ -56,6 +56,24 @@ def health_check():
     return jsonify({"status": "ok"})
 
 
+@app.route("/api/public-keys", methods=["GET"])
+def get_public_keys():
+    """
+    Get public keys for NDD-FE encryption.
+    Returns AGGREGATOR_PK and TP_PUBLIC_KEY from environment.
+    """
+    aggregator_pk = os.getenv("AGGREGATOR_PK", "")
+    tp_public_key = os.getenv("TP_PUBLIC_KEY", "")
+    
+    if not aggregator_pk or not tp_public_key:
+        logger.warning("[API] Public keys not configured in environment")
+    
+    return jsonify({
+        "aggregatorPublicKey": aggregator_pk,
+        "tpPublicKey": tp_public_key
+    })
+
+
 @app.route("/api/aggregate", methods=["POST"])
 def trigger_aggregate():
     """

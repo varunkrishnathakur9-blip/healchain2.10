@@ -28,6 +28,7 @@ from config.limits import MAX_MINERS, MAX_MODEL_DIMENSION
 
 from crypto.ndd_fe import ndd_fe_decrypt
 from crypto.bsgs import recover_vector, dequantize_vector
+from tinyec.ec import Point
 
 logger = get_logger("aggregation.aggregator")
 
