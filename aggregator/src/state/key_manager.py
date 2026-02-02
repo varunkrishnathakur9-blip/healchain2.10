@@ -24,7 +24,7 @@ NON-RESPONSIBILITIES:
 """
 
 import os
-from typing import Optional
+from typing import Optional, Dict
 
 from tinyec import registry
 from tinyec.ec import Point
@@ -60,7 +60,7 @@ class KeyManager:
     # Public API
     # ------------------------------------------------------------------
 
-    def load(self, backend_receiver=None, aggregator_address: str = None):
+    def load(self, backend_receiver=None, aggregator_address: str = None, metadata: Optional[Dict] = None):
         """
         Load all required keys from environment / secure storage.
         
@@ -79,6 +79,8 @@ class KeyManager:
             Backend receiver instance for fetching key derivation metadata (Algorithm 2.2)
         aggregator_address : str, optional
             Aggregator's wallet address (for verification)
+        metadata : Dict, optional
+            Pre-fetched metadata to avoid redundant backend calls
         """
 
         logger.info(f"[KeyManager] Loading keys for task {self.task_id}")
@@ -95,9 +97,11 @@ class KeyManager:
 
         # Functional Encryption key (Algorithm 2.2)
         # Derive from backend metadata (deterministic)
-        if backend_receiver:
+        if backend_receiver or metadata:
             try:
-                metadata = backend_receiver.fetch_key_derivation_metadata()
+                if not metadata and backend_receiver:
+                    metadata = backend_receiver.fetch_key_derivation_metadata()
+                
                 if metadata:
                     # Verify aggregator address matches (if provided)
                     backend_agg = metadata.get("aggregatorAddress", "").lower()

@@ -92,6 +92,22 @@ class HealChainAggregator:
         updated_model, acc = self._update_and_evaluate(aggregate)
 
         # =========================
+        # Algorithm 4: Accuracy Check (Lines 35-40)
+        # =========================
+        if acc < self.state.required_accuracy:
+            logger.warning(
+                f"[Aggregator] Accuracy {acc:.4f} < {self.state.required_accuracy:.4f}. "
+                f"Starting next round (current round: {self.state.round})."
+            )
+            if self.backend_tx.reset_round():
+                logger.info("[Aggregator] Round reset successful. Aggregator exiting.")
+                self.running = False
+                return
+            else:
+                logger.error("[Aggregator] Failed to trigger round reset in backend.")
+                raise RuntimeError("Round reset failed")
+
+        # =========================
         # M4: Candidate Formation
         # =========================
         candidate = self._form_candidate(updated_model, acc, submissions)
@@ -157,25 +173,29 @@ class HealChainAggregator:
         """
         import os
         
-        # Get aggregator address from environment (optional - will be verified from backend)
+        # Get aggregator address from environment
         aggregator_address = os.getenv("AGGREGATOR_ADDRESS")
         
-        # Load keys (skFE will be derived from backend if backend_receiver provided)
-        # Algorithm 2.2: Derive skFE deterministically from task metadata
-        self.keys.load(
-            backend_receiver=self.backend_rx,
-            aggregator_address=aggregator_address
-        )
-        self.state.load_metadata()
+        # Fetch metadata once to share between components
+        metadata = self.backend_rx.fetch_key_derivation_metadata()
+        if not metadata:
+            raise RuntimeError("Could not fetch task metadata from backend")
 
-        # Get task-specific min/max miners from backend metadata
-        # Fallback to constants if not available
+        # Load keys (skFE will be derived from backend using metadata)
+        self.keys.load(
+            aggregator_address=aggregator_address,
+            metadata=metadata
+        )
+        # Load state metadata
+        self.state.load_metadata(metadata=metadata)
+
         self.min_participants = self._get_min_participants()
         self.max_participants = self._get_max_participants()
 
         logger.info(
             f"[Aggregator] Keys and task metadata loaded | "
-            f"min_participants={self.min_participants}, max_participants={self.max_participants}"
+            f"round={self.state.round}, target_acc={self.state.required_accuracy}, "
+            f"min_participants={self.min_participants}"
         )
 
     # ------------------------------------------------------------------

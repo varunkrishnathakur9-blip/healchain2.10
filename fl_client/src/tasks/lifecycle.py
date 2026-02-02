@@ -83,7 +83,7 @@ def run_task(task, miner_addr):
     if pk_tp_hex and pk_agg_hex:
         ctr = 0  # Counter for randomness derivation
         ciphertext = encrypt_update(
-            delta_prime=delta_p_quantized,
+            delta_prime=delta_p_quantized.tolist(),
             pk_tp_hex=pk_tp_hex,
             pk_agg_hex=pk_agg_hex,
             sk_miner=sk_miner,

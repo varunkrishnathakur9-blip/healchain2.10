@@ -137,6 +137,26 @@ class BackendSender:
             logger.error(f"[BackendSender] Error publishing payload: {e}")
             return False
 
+    def reset_round(self) -> bool:
+        """
+        Trigger a new FL round in the backend (Algorithm 4 lines 35-40).
+        - Increments round counter
+        - Clears old gradients
+        """
+        endpoint = f"{self.base_url}/aggregator/{self.task_id}/reset-round"
+
+        try:
+            resp = requests.post(endpoint, timeout=5)
+            if resp.status_code == 200:
+                logger.info(f"[BackendSender] Round reset triggered successfully for {self.task_id}")
+                return True
+            else:
+                logger.warning(f"[BackendSender] Round reset failed: {resp.text}")
+                return False
+        except Exception as e:
+            logger.error(f"[BackendSender] Error triggering round reset: {e}")
+            return False
+
     # ------------------------------------------------------------------
     # Internal Helpers
     # ------------------------------------------------------------------

@@ -1,0 +1,30 @@
+[
+  {
+    "minerAddress": "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+    "publicKey": "01ea6bc2f12fdc6e964aa88f2d972465dbe9f12a2e4594fbeb30bb3550552d98,29bc24e6af221d6e2b1507dce1b5c939af173f11618a9d8c69eb7b3727de68ae",
+    "signature": "116e7f8c0f8e54705807ff97dbdd7110ae71062142cee47c029f84e5fac4a2aad3c259e5d080195d3fc738467ac551e8aaf2cea2686c168f3d98ca1aae87c496",
+    "ciphertext": "[\"0xmockpoint1,0xmockpoint2\", \"0xmockpoint3,0xmockpoint4\"]",
+    "scoreCommit": "0xmockcommit"
+  },
+  {
+    "minerAddress": "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    "publicKey": "3a433c92585e3d34d33fbb53a36a9047170595c39f5f9174a5cb4791d530a24a,532e82b555aa3bea5e38c0013ff12ee726baebfac070f78956dc52b8371fb6ec",
+    "signature": "da9bff974ea0cd9a3aa3018e11520d41625a0b0426375050c524deb2381678123b64b9b1e04263440bca76d7c7bdedfe411ec31593d7c4b896d8bac4077b88ad",
+    "ciphertext": "[\"0xmockpoint1,0xmockpoint2\", \"0xmockpoint3,0xmockpoint4\"]",
+    "scoreCommit": "0xmockcommit"
+  },
+  {
+    "minerAddress": "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
+    "publicKey": "6d858fe009a4b320fc2f98d78663d2189881e8ed057b0f175b9a586e847f91da,11655498e48a5dd994c9a19bca72c920af85304800e14086a0871dcd38510e10",
+    "signature": "9cca52fff3092e31afe5adc2bc9c115eb678ca0366ac7fd112086e2291ddf39ddc66a872dc43eca5d332b1d17beafec702e5884ac46472f63fe3c1efc217762d",
+    "ciphertext": "[\"0xmockpoint1,0xmockpoint2\", \"0xmockpoint3,0xmockpoint4\"]",
+    "scoreCommit": "0xmockcommit"
+  },
+  {
+    "minerAddress": "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
+    "publicKey": "e77ab14a1c04521a372b8a86eb6af8df9f519b01a4bf30ae00b4ef8d727c1949,44c5738061db10b74a91b2dcbd0c4fce1a15fbabc41fcd12c02381608853cbdc",
+    "signature": "2bae5b536d17c106dd98a0801e152f5ffe18ac93825661995d5f870bd87dd63c0164e2dc4ec1fef1eeabfc38dcaea12f843bc7a11802fccb5e20fc31073212f0",
+    "ciphertext": "[\"0xmockpoint1,0xmockpoint2\", \"0xmockpoint3,0xmockpoint4\"]",
+    "scoreCommit": "0xmockcommit"
+  }
+]

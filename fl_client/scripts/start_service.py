@@ -139,25 +139,47 @@ def update_env_file(miner_address: str, config: dict):
         print(f"[Service] Warning: Could not update .env file: {e}")
 
 
+import threading
+
+def training_worker(task, miner_address, effective_backend_url, task_id):
+    """
+    Background worker for running FL training.
+    """
+    try:
+        print(f"[Service] Background training started for task {task_id}")
+        payload = run_task(task, miner_address)
+        
+        # Store payload for manual submission (M3)
+        training_payloads[task_id] = {
+            "payload": payload,
+            "minerAddress": miner_address,
+            "backendUrl": effective_backend_url
+        }
+        
+        # Update status to COMPLETED
+        training_status[task_id].update({
+            "status": "COMPLETED",
+            "progress": 100,
+            "submitted": False,
+            "submissionStatus": "PENDING_MANUAL"
+        })
+        print(f"[Service] Background training completed for task {task_id}")
+        
+    except Exception as e:
+        print(f"[Service] Background training failed for task {task_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        training_status[task_id].update({
+            "status": "FAILED",
+            "error": str(e)
+        })
+
 @app.route("/api/train", methods=["POST"])
 def trigger_training():
     """
     Trigger training for a specific task.
     
-    Request body:
-    {
-        "taskID": "task_001",
-        "minerAddress": "0x...",
-        "config": {
-            "minerAddress": "0x...",
-            "backendUrl": "http://localhost:3000",
-            "tpPublicKey": "x_hex,y_hex",
-            "aggregatorPublicKey": "x_hex,y_hex"
-        }
-    }
-    
-    The service accepts dynamic configuration, so .env updates are not required.
-    If config is provided, it will be used and optionally saved to .env for persistence.
+    The service is now asynchronous to prevent timeouts.
     """
     try:
         data = request.get_json()
@@ -167,6 +189,10 @@ def trigger_training():
 
         if not task_id:
             return jsonify({"error": "taskID is required"}), 400
+
+        # Prevent concurrent training for the same task
+        if task_id in training_status and training_status[task_id]["status"] == "TRAINING":
+            return jsonify({"error": f"Training already in progress for task {task_id}"}), 400
 
         # Get miner address from request or config or .env
         if not miner_address:
@@ -181,26 +207,23 @@ def trigger_training():
 
         # Update configuration from request (if provided)
         if config:
-            # Store config for this miner
             miner_configs[miner_address] = {
                 "backendUrl": config.get("backendUrl", BACKEND_URL),
                 "tpPublicKey": config.get("tpPublicKey", ""),
                 "aggregatorPublicKey": config.get("aggregatorPublicKey", ""),
             }
-            
-            # Optionally update .env file for persistence
             update_env_file(miner_address, config)
 
         # Use stored config or defaults
         current_config = miner_configs.get(miner_address, {})
         effective_backend_url = current_config.get("backendUrl", BACKEND_URL)
 
-        # Fetch task details from backend (using effective backend URL)
+        # Fetch task details from backend
         task = get_task_details(task_id, effective_backend_url)
         if not task:
             return jsonify({"error": f"Task {task_id} not found"}), 404
 
-        # Inject public keys into task if available from config
+        # Inject public keys into task
         if current_config.get("tpPublicKey"):
             task["tpPublicKey"] = current_config["tpPublicKey"]
         if current_config.get("aggregatorPublicKey"):
@@ -212,7 +235,7 @@ def trigger_training():
                 "error": f"Task {task_id} is not acceptable (dataset mismatch or other validation failed)"
             }), 400
 
-        # Update status to TRAINING
+        # Initialize status as TRAINING
         training_status[task_id] = {
             "taskID": task_id,
             "minerAddress": miner_address,
@@ -220,62 +243,20 @@ def trigger_training():
             "progress": 0
         }
 
-        # Run training (this is synchronous, can be made async if needed)
-        try:
-            payload = run_task(task, miner_address)
-            
-            # M3: Automatically submit to aggregator via backend (Algorithm 3 requirement)
-            # Note: Automatic submission requires wallet authentication from frontend.
-            # Since training is triggered from backend (no frontend interaction), we skip
-            # automatic submission and let the user manually submit from the frontend.
-            # The payload is saved so manual submission can use it.
-            submission_result = {
-                "submitted": False,
-                "status": "PENDING_MANUAL",
-                "message": "Training completed. Please use the 'Submit Gradient' button on the training dashboard to submit with wallet signature.",
-                "note": "Automatic submission requires wallet authentication. The payload has been saved for manual submission."
-            }
-            print(f"[M3] ⚠️  Automatic submission skipped (requires wallet auth from frontend)")
-            print(f"[M3] 💡 Please use the 'Submit Gradient' button on the training dashboard to submit with your wallet signature.")
-            
-            # Store payload for potential resubmission
-            training_payloads[task_id] = {
-                "payload": payload,
-                "minerAddress": miner_address,
-                "backendUrl": effective_backend_url
-            }
-            
-            # Update status to COMPLETED with submission info
-            training_status[task_id] = {
-                "taskID": task_id,
-                "minerAddress": miner_address,
-                "status": "COMPLETED",
-                "progress": 100,
-                "submitted": submission_result["submitted"] if submission_result else False,
-                "submissionStatus": submission_result["status"] if submission_result else None,
-                "submissionError": submission_result.get("error") if submission_result else None
-            }
+        # Start training in background thread
+        thread = threading.Thread(
+            target=training_worker, 
+            args=(task, miner_address, effective_backend_url, task_id),
+            name=f"TrainingWorker-{task_id}"
+        )
+        thread.start()
 
-            return jsonify({
-                "success": True,
-                "message": "Training completed successfully",
-                "taskID": task_id,
-                "payload": payload,
-                "submission": submission_result
-            }), 200
-
-        except Exception as e:
-            # Update status to FAILED
-            training_status[task_id] = {
-                "taskID": task_id,
-                "minerAddress": miner_address,
-                "status": "FAILED",
-                "error": str(e)
-            }
-            return jsonify({
-                "success": False,
-                "error": f"Training failed: {str(e)}"
-            }), 500
+        return jsonify({
+            "success": True,
+            "message": "Training started successfully in the background",
+            "taskID": task_id,
+            "status": "TRAINING"
+        }), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

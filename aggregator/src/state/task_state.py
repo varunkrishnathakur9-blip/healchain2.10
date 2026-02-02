@@ -96,11 +96,12 @@ class TaskState:
             )
             return
 
-        self.publisher_pk = metadata.get("publisher_pk")
-        self.required_accuracy = metadata.get("required_accuracy")
+        self.publisher_pk = metadata.get("publisher_pk") or metadata.get("publisher")
+        self.required_accuracy = metadata.get("required_accuracy") or metadata.get("targetAccuracy", 0.8)
         self.max_rounds = metadata.get("max_rounds", 1)
+        self.round = metadata.get("currentRound", 1)
 
-        self.participants = metadata.get("participants", [])
+        self.participants = metadata.get("participants", []) or metadata.get("minerPublicKeys", [])
         self.weights = metadata.get("weights", [])
 
         self.current_model = metadata.get("initial_model")

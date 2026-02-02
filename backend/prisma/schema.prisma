@@ -52,6 +52,8 @@ model Task {
   aggregatorAddress String? // M2: Selected aggregator
   minMiners         Int        @default(3) // Minimum miners required for PoS aggregator selection
   maxMiners         Int        @default(5) // Maximum miners allowed for PoS aggregator selection
+  targetAccuracy    Float      @default(0.8) // T: Target accuracy for Algorithm 4
+  currentRound      Int        @default(1)   // R: Current training round
 
   publishTx             String?
   escrowContractAddress String? // Contract address where escrow is locked (for frontend to read correct contract)

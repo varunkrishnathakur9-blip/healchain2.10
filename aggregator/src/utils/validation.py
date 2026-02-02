@@ -91,10 +91,11 @@ def verify_signature(
     """
 
     try:
+        import hashlib
         vk = _parse_public_key(public_key)
         sig_bytes = _parse_signature(signature)
 
-        vk.verify(sig_bytes, message)
+        vk.verify(sig_bytes, message, hashfunc=hashlib.sha256)
         return True
 
     except BadSignatureError:

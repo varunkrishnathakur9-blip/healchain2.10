@@ -156,16 +156,16 @@ router.get(
       // Check if aggregator is selected
       if (!task.aggregatorAddress) {
         const minMinersRequired = task.minMiners || 3;
-        return res.status(400).json({ 
-          error: `Aggregator not selected yet. Need at least ${minMinersRequired} verified miners.` 
+        return res.status(400).json({
+          error: `Aggregator not selected yet. Need at least ${minMinersRequired} verified miners.`
         });
       }
 
       // Validate all miners have public keys
       const minersWithPKs = task.miners.filter(m => m.publicKey);
       if (minersWithPKs.length !== task.miners.length) {
-        return res.status(400).json({ 
-          error: "Some miners missing public keys. Cannot derive skFE." 
+        return res.status(400).json({
+          error: "Some miners missing public keys. Cannot derive skFE."
         });
       }
 
@@ -177,8 +177,10 @@ router.get(
         nonceTP: task.nonceTP,
         aggregatorAddress: task.aggregatorAddress,
         minerCount: task.miners.length,
-        minMiners: task.minMiners || 3,  // Task-specific min miners (default to 3 for legacy tasks)
-        maxMiners: task.maxMiners || 5   // Task-specific max miners (default to 5 for legacy tasks)
+        minMiners: task.minMiners || 3,
+        maxMiners: task.maxMiners || 5,
+        targetAccuracy: (task as any).targetAccuracy || 0.8,
+        currentRound: (task as any).currentRound || 1
       });
     } catch (err) {
       next(err);
@@ -205,14 +207,14 @@ router.post(
       }
 
       const result = await triggerAggregation(taskID, aggregatorAddress);
-      
+
       if (result.success) {
         res.json({ success: true, message: result.message });
       } else {
-        res.status(400).json({ 
-          success: false, 
+        res.status(400).json({
+          success: false,
           error: result.message,
-          message: result.message 
+          message: result.message
         });
       }
     } catch (err: any) {
@@ -259,7 +261,7 @@ router.get(
     try {
       const { taskID } = req.params;
       const { prisma } = await import("../config/database.config.js");
-      
+
       // Get task to verify aggregator
       const task = await prisma.task.findUnique({
         where: { taskID },
@@ -292,7 +294,7 @@ router.get(
           } catch (err: any) {
             console.warn(`Failed to finalize miners for task ${taskID}:`, err.message);
             // Don't fallback to first miner - return error instead
-            return res.status(400).json({ 
+            return res.status(400).json({
               error: "Aggregator not selected yet. PoS selection failed.",
               details: err.message
             });
@@ -301,7 +303,7 @@ router.get(
       }
 
       if (!aggregatorAddress) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: "Aggregator not selected yet for this task"
         });
       }
@@ -332,7 +334,7 @@ router.get(
             ciphertext = [ciphertext];
           }
         }
-        
+
         return {
           taskID: taskID, // Required by aggregator
           task_id: taskID, // Also include snake_case version
@@ -371,7 +373,7 @@ router.post(
     try {
       const { taskID } = req.params;
       const { prisma } = await import("../config/database.config.js");
-      
+
       // Get authenticated aggregator address from wallet auth
       const authenticatedAddress = (req as any).walletAddress;
       if (!authenticatedAddress) {
@@ -410,7 +412,7 @@ router.post(
           } catch (err: any) {
             console.warn(`Failed to finalize miners for task ${taskID}:`, err.message);
             // Don't fallback to first miner - return error instead
-            return res.status(400).json({ 
+            return res.status(400).json({
               error: "Aggregator not selected yet. PoS selection failed.",
               details: err.message
             });
@@ -420,9 +422,9 @@ router.post(
 
       // SECURITY: Verify authenticated address is the selected aggregator
       if (!aggregatorAddress || authenticatedAddress.toLowerCase() !== aggregatorAddress.toLowerCase()) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: "Unauthorized: Only the selected aggregator can access submissions",
-          message: aggregatorAddress 
+          message: aggregatorAddress
             ? `This endpoint is restricted to aggregator ${aggregatorAddress}. Your address: ${authenticatedAddress}`
             : "Aggregator not selected yet for this task"
         });
@@ -478,7 +480,7 @@ router.post(
     try {
       const { taskID } = req.params;
       const { prisma } = await import("../config/database.config.js");
-      
+
       // Get authenticated aggregator address from wallet auth
       const authenticatedAddress = (req as any).walletAddress;
       if (!authenticatedAddress) {
@@ -518,7 +520,7 @@ router.post(
           } catch (err: any) {
             console.warn(`Failed to finalize miners for task ${taskID}:`, err.message);
             // Don't fallback to first miner - return error instead
-            return res.status(400).json({ 
+            return res.status(400).json({
               error: "Aggregator not selected yet. PoS selection failed.",
               details: err.message
             });
@@ -541,7 +543,7 @@ router.post(
 
       // SECURITY: Verify authenticated address is the selected aggregator
       if (authenticatedAddress.toLowerCase() !== aggregatorAddress.toLowerCase()) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: "Unauthorized: Only the selected aggregator can access key derivation metadata",
           message: `This endpoint is restricted to aggregator ${aggregatorAddress}. Your address: ${authenticatedAddress}`
         });
@@ -582,6 +584,32 @@ router.post(
         derivationMethod: "Algorithm 2.2: H(publisher || minerPKs || taskID || nonceTP)"
       });
     } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * Algorithm 4 (Lines 35-40): Aggregator triggers a new round
+ * This happens if accuracy is below target.
+ * It clears previous gradients and increments the round counter.
+ */
+router.post(
+  "/:taskID/reset-round",
+  async (req, res, next) => {
+    try {
+      const { taskID } = req.params;
+      const { resetRound } = await import("../services/aggregationService.js");
+
+      const task = await resetRound(taskID);
+
+      res.json({
+        success: true,
+        message: `Task ${taskID} reset to round ${(task as any).currentRound}`,
+        currentRound: (task as any).currentRound,
+        status: task.status
+      });
+    } catch (err: any) {
       next(err);
     }
   }

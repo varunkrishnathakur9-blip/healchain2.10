@@ -5,6 +5,7 @@
 # =========================================
 
 from tinyec import registry
+from tinyec.ec import Point
 from hashlib import sha256
 
 # ---- Curve parameters (matches aggregator) ----
@@ -33,7 +34,7 @@ def load_public_key(pubkey_hex: str):
     pubkey_hex format: 'x_hex,y_hex'
     """
     x_hex, y_hex = pubkey_hex.split(",")
-    return curve.point(int(x_hex, 16), int(y_hex, 16))
+    return Point(curve, int(x_hex, 16), int(y_hex, 16))
 
 
 # ---------- Core NDD-FE Encryption ----------
