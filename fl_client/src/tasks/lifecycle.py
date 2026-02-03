@@ -23,6 +23,18 @@ def run_task(task, miner_addr):
     try:
         model = load_model_from_task(task)
         print(f"[M3] ✅ Initial model loaded")
+        # Inspect model input shape and first layer
+        try:
+            if hasattr(model, 'model'):
+                print("[DEBUG] Model input shape:", model.model.input_shape)
+                print("[DEBUG] Model summary:")
+                model.model.summary()
+            else:
+                print("[DEBUG] Model input shape:", model.input_shape)
+                print("[DEBUG] Model summary:")
+                model.summary()
+        except Exception as e:
+            print(f"[DEBUG] Could not print model summary: {e}")
     except Exception as e:
         print(f"[M3] ❌ Failed to load model: {e}")
         print(f"[M3] Falling back to local SimpleCNN")

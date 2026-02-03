@@ -6,7 +6,7 @@ def local_train(model, dataloader, epochs):
     """
     # Assume model is a Keras model
     optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
-    loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
 
     model.compile(optimizer=optimizer, loss=loss_fn)
 

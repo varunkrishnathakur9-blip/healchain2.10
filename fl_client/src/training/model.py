@@ -88,7 +88,7 @@ def SimpleCNN(input_shape=(64, 64, 1), num_classes=2):
     x = MaxPool2D(pool_size=(2, 2))(x)
     x = Flatten()(x)
     x = Dense(128, activation="relu")(x)
-    outputs = Dense(num_classes)(x)
+    outputs = Dense(1, activation="sigmoid")(x)
     model = Model(inputs=inputs, outputs=outputs)
     return model
 
@@ -133,7 +133,7 @@ def ResNet9(input_shape=(64, 64, 1), num_classes=2):
     x = ResidualBlock(x, 128, stride=1)
     
     x = GlobalAveragePooling2D()(x)
-    outputs = Dense(num_classes)(x)
+    outputs = Dense(1, activation="sigmoid")(x)
 
     model = Model(inputs=inputs, outputs=outputs)
     return model
