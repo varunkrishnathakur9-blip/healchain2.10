@@ -79,6 +79,38 @@ def serialize_point(pt: Point) -> str:
     return f"{pt.x},{pt.y}"
 
 
+def parse_hex_point(serialized: str) -> Point:
+    """
+    Parse an EC point from a hex-encoded string.
+    Format: "x_hex,y_hex"
+    """
+    try:
+        x_hex, y_hex = serialized.split(',')
+        x = int(x_hex, 16)
+        y = int(y_hex, 16)
+    except (ValueError, TypeError) as e:
+        raise ValueError(f"Invalid hex EC point encoding: {serialized}") from e
+
+    # Create the point first, which might trigger a warning if it's off-curve
+    pt = Point(curve, x, y)
+
+    # Then, perform an explicit check to raise a controlled exception
+    if not curve.on_curve(x, y):
+        raise ValueError(f"Point ({x}, {y}) is not on the secp256r1 curve.")
+
+    return pt
+
+
+def serialize_hex_point(pt: Point) -> str:
+    """
+    Serialize an EC point into a hex-encoded string.
+    Format: "x_hex,y_hex"
+    """
+    if pt is None:
+        raise ValueError("Cannot serialize a null EC point.")
+    return f"{pt.x:x},{pt.y:x}"
+
+
 # -------------------------------------------------------------------
 # EC Arithmetic Wrappers
 # -------------------------------------------------------------------

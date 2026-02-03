@@ -1,5 +1,4 @@
-import torch
-from torch.utils.data import DataLoader, TensorDataset
+import tensorflow as tf
 from pathlib import Path
 import json
 import numpy as np
@@ -10,8 +9,8 @@ def load_local_dataset(dataset_type: str = "chestxray"):
     """
     Load local dataset matching the task type.
     Tries real data first, falls back to structure dummy data.
+    Returns a tf.data.Dataset object.
     """
-    # Try loading real data first
     try:
         return load_real_local_dataset(str(LOCAL_DATA_DIR), dataset_type)
     except Exception as e:
@@ -20,20 +19,17 @@ def load_local_dataset(dataset_type: str = "chestxray"):
     # Temporary: Structured dummy data that matches task
     if dataset_type == "chestxray":
         # 100 samples of chest X-ray features (simplified)
-        X = torch.randn(100, 10)  # 10-dimensional feature vector
-        y = torch.randint(0, 2, (100,))  # Binary classification
+        X = np.random.randn(100, 10).astype(np.float32)  # 10-dimensional feature vector
+        y = np.random.randint(0, 2, 100).astype(np.int64)  # Binary classification
         batch_size = 16
     else:
         # Default for other tasks
-        X = torch.randn(100, 10)
-        y = torch.randint(0, 2, (100,))
+        X = np.random.randn(100, 10).astype(np.float32)
+        y = np.random.randint(0, 2, 100).astype(np.int64)
         batch_size = 16
     
-    return DataLoader(
-        TensorDataset(X, y),
-        batch_size=batch_size,
-        shuffle=True
-    )
+    dataset = tf.data.Dataset.from_tensor_slices((X, y))
+    return dataset.shuffle(buffer_size=len(X)).batch(batch_size)
 
 def load_real_local_dataset(dataset_path: str, dataset_type: str):
     """
@@ -44,21 +40,11 @@ def load_real_local_dataset(dataset_path: str, dataset_type: str):
     ├── chestxray/
     │   ├── images/
     │   │   ├── sample_0001.npy
-    │   │   ├── sample_0002.npy
     │   │   └── ...
     │   └── labels.json
-    │       {
-    │         "sample_0001": 0,
-    │         "sample_0002": 1,
-    │         ...
-    │       }
-    
-    Args:
-        dataset_path: Path to local data directory
-        dataset_type: Type of dataset (e.g., "chestxray")
     
     Returns:
-        DataLoader with real local data
+        A tf.data.Dataset object.
     """
     data_dir = Path(dataset_path) / dataset_type
     
@@ -81,19 +67,27 @@ def load_real_local_dataset(dataset_path: str, dataset_type: str):
     X = []
     y = []
     for img_file in image_files:
-        img = torch.from_numpy(np.load(img_file)).float()
+        img = np.load(img_file).astype(np.float32)
+        # Transpose if channel-first (1, 64, 64) to channel-last (64, 64, 1)
+        if img.shape == (1, 64, 64):
+            img = np.transpose(img, (1, 2, 0))
+        # If model expects 3 channels, convert grayscale to RGB
+        if img.shape == (64, 64, 1):
+            img = np.repeat(img, 3, axis=-1)  # (64, 64, 3)
         X.append(img)
-        
+
         label = labels_dict.get(img_file.stem)
         y.append(label)
     
-    X = torch.stack(X)
-    y = torch.tensor(y, dtype=torch.long)
-    
+
+    X = np.array(X)
+    y = np.array(y, dtype=np.int64)
+
+    # Ensure images are (num_samples, 64, 64, 3) for RGB models
+    if X.ndim == 4 and X.shape[-1] == 1:
+        X = np.repeat(X, 3, axis=-1)
+
     print(f"[Dataset] Loaded {len(X)} samples from {dataset_type}")
-    
-    return DataLoader(
-        TensorDataset(X, y),
-        batch_size=16,
-        shuffle=True
-    )
+
+    dataset = tf.data.Dataset.from_tensor_slices((X, y))
+    return dataset.shuffle(buffer_size=len(X)).batch(16)

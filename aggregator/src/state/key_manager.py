@@ -33,6 +33,7 @@ from crypto.ec_utils import (
     curve,
     G,
     parse_point,
+    parse_hex_point,
     serialize_point,
 )
 
@@ -160,7 +161,7 @@ class KeyManager:
         Format (FL-client):
             "x_hex,y_hex"
         """
-        return parse_point(hex_point)
+        return parse_hex_point(hex_point)
 
     # ------------------------------------------------------------------
     # Internal Loaders

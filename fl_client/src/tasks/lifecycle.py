@@ -25,8 +25,9 @@ def run_task(task, miner_addr):
         print(f"[M3] ✅ Initial model loaded")
     except Exception as e:
         print(f"[M3] ❌ Failed to load model: {e}")
-        print(f"[M3] Falling back to local SimpleModel")
-        model = SimpleModel()
+        print(f"[M3] Falling back to local SimpleCNN")
+        from training.model import SimpleCNN
+        model = SimpleCNN()
 
     # Step 2: Load Dataset
     print(f"[M3] Loading local dataset...")

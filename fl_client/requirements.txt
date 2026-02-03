@@ -3,7 +3,8 @@ ecdsa>=0.18.0
 eth-hash[pycryptodome]>=0.5.1
 
 # Machine learning
-torch>=2.0.0
+tensorflow>=2.12.0
+tensorflow-datasets>=4.9.0
 numpy>=1.24
 
 # HTTP and environment

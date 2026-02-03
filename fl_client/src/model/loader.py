@@ -18,37 +18,52 @@ def download_initial_model(task_id: str, model_url: str):
     Returns:
         model: PyTorch model loaded from checkpoint
     """
-    model_path = MODELS_DIR / f"{task_id}_initial.pt"
+    import os
+    # Determine extension from URL
+    ext = os.path.splitext(model_url)[-1].lower()
+    if ext not in [".h5", ".keras", ".pt"]:
+        ext = ".h5"  # Default to .h5 if unknown
+
+    model_path = MODELS_DIR / f"{task_id}_initial{ext}"
     h5_path = MODELS_DIR / f"{task_id}_initial.h5"
-    
+
     # Priority 1: Check for manual .h5 file (User override)
     if h5_path.exists():
         print(f"[Model] Found local H5 override: {h5_path}")
-        from .h5_adapter import load_h5_weights
-        return load_h5_weights(h5_path)
+        from training.model import load_model_checkpoint
+        return load_model_checkpoint(h5_path)
 
-    # Priority 2: Check for cached .pt file
+    # Priority 2: Check for cached file
     if model_path.exists():
         print(f"[Model] Loading cached model: {model_path}")
-        from training.model import load_model_checkpoint
-        return load_model_checkpoint(model_path)
-    
+        if ext in [".h5", ".keras"]:
+            from training.model import load_model_checkpoint
+            return load_model_checkpoint(model_path)
+        elif ext == ".pt":
+            import torch
+            return torch.load(model_path)
+        else:
+            raise ValueError(f"Unsupported model file extension: {ext}")
+
     print(f"[Model] Downloading from: {model_url}")
-    
+
     try:
         response = requests.get(model_url, timeout=30)
         response.raise_for_status()
-        
         # Save to cache
         with open(model_path, 'wb') as f:
             f.write(response.content)
-        
         print(f"[Model] Saved to: {model_path}")
-        
+
         # Load and return
-        model = torch.load(model_path)
-        return model
-        
+        if ext in [".h5", ".keras"]:
+            from training.model import load_model_checkpoint
+            return load_model_checkpoint(model_path)
+        elif ext == ".pt":
+            import torch
+            return torch.load(model_path)
+        else:
+            raise ValueError(f"Unsupported model file extension: {ext}")
     except Exception as e:
         print(f"[ERROR] Failed to download model: {e}")
         raise
