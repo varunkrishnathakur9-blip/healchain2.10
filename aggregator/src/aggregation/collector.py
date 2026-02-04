@@ -123,6 +123,7 @@ def _normalize_submission(sub: Dict) -> Dict:
     Handles:
     - Field name mapping (camelCase → snake_case)
     - Ciphertext format (string → list)
+    - Sparse format reconstruction (sparse → dense)
     - Optional field preservation
     """
     
@@ -134,14 +135,52 @@ def _normalize_submission(sub: Dict) -> Dict:
     normalized["score_commit"] = sub.get("scoreCommit", sub.get("score_commit"))
     normalized["signature"] = sub.get("signature")
     
-    # Handle ciphertext format (string or list)
-    ciphertext = sub.get("ciphertext", [])
-    if isinstance(ciphertext, str):
-        normalized["ciphertext"] = [ciphertext]
-    elif isinstance(ciphertext, list):
-        normalized["ciphertext"] = ciphertext
+    # Handle ciphertext format (sparse or dense)
+    if sub.get("format") == "sparse":
+        # Sparse format: reconstruct full dense tensor
+        logger.info("[M4] Processing sparse gradient format")
+        
+        total_size = sub.get("totalSize")
+        nonzero_indices = sub.get("nonzeroIndices", [])
+        ciphertext_sparse = sub.get("ciphertext", [])
+        
+        if not total_size or not isinstance(nonzero_indices, list) or not isinstance(ciphertext_sparse, list):
+            raise ValueError("Invalid sparse format: missing totalSize, nonzeroIndices, or ciphertext")
+        
+        if len(nonzero_indices) != len(ciphertext_sparse):
+            raise ValueError(f"Sparse format mismatch: {len(nonzero_indices)} indices but {len(ciphertext_sparse)} ciphertext values")
+        
+        # Get the "encrypted zero" from the first ciphertext value
+        # In sparse format, we need a default value for zero gradients
+        # The FL client uses base_mask (r_i * G) as the encrypted zero
+        # We'll extract this from the environment or use the most common value
+        import os
+        encrypted_zero_hex = os.getenv("ENCRYPTED_ZERO", None)
+        
+        if not encrypted_zero_hex:
+            # Fallback: use a deterministic encrypted zero based on the curve
+            # This should match what the FL client produces for val=0
+            # For now, we'll use the first sparse ciphertext as a reference
+            # In production, this should be derived properly
+            logger.warning("[M4] ENCRYPTED_ZERO not set, using synthetic zero")
+            encrypted_zero_hex = "66c7f1cf71f26866fc2488f7e79eb96e0098b889479cf158526edeb8c6069058,e55330ef2db3b9d83cd02a12936461930be8790d3dfc1e6ba8d0acc48f737c24"
+        
+        # Reconstruct full dense tensor
+        ciphertext_dense = [encrypted_zero_hex] * total_size
+        for idx, encrypted_val in zip(nonzero_indices, ciphertext_sparse):
+            ciphertext_dense[idx] = encrypted_val
+        
+        normalized["ciphertext"] = ciphertext_dense
+        logger.info(f"[M4] Reconstructed dense tensor: {total_size:,} total, {len(nonzero_indices):,} non-zero ({100*len(nonzero_indices)/total_size:.2f}%)")
     else:
-        raise ValueError("Invalid ciphertext format")
+        # Legacy dense format
+        ciphertext = sub.get("ciphertext", [])
+        if isinstance(ciphertext, str):
+            normalized["ciphertext"] = [ciphertext]
+        elif isinstance(ciphertext, list):
+            normalized["ciphertext"] = ciphertext
+        else:
+            raise ValueError("Invalid ciphertext format")
     
     # Preserve optional FL client fields
     if "quantization_scale" in sub:

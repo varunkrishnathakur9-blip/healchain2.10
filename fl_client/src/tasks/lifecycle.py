@@ -99,17 +99,34 @@ def run_task(task, miner_addr, progress_callback=None):
     else:
         sk_miner = 1  # Default fallback (should not be used in production)
     
-    # Perform real NDD-FE encryption
-    # Perform real NDD-FE encryption
+    # Perform real NDD-FE encryption with sparse format
     if pk_tp_hex and pk_agg_hex:
         import time
+        import torch
         start_time = time.time()
-        print(f"[M3] Starting Encryption...")
+        
+        # Extract sparse representation (non-zero indices and values)
+        print(f"[M3] Extracting sparse gradients...")
+        nonzero_mask = delta_p_quantized != 0
+        nonzero_indices = torch.nonzero(delta_p_quantized, as_tuple=False).squeeze().tolist()
+        nonzero_values = delta_p_quantized[nonzero_mask].tolist()
+        
+        # Handle edge case: if nonzero_indices is a single int (only one non-zero), wrap in list
+        if isinstance(nonzero_indices, int):
+            nonzero_indices = [nonzero_indices]
+        
+        total_params = len(delta_p_quantized)
+        num_nonzero = len(nonzero_values)
+        sparsity = (total_params - num_nonzero) / total_params * 100
+        
+        print(f"[M3] Total parameters: {total_params:,}")
+        print(f"[M3] Non-zero values: {num_nonzero:,}")
+        print(f"[M3] Sparsity: {sparsity:.2f}%")
+        print(f"[M3] Starting Encryption (sparse format)...")
         
         ctr = 0  # Counter for randomness derivation
-        ctr = 0  # Counter for randomness derivation
-        ciphertext = encrypt_update(
-            delta_prime=delta_p_quantized.tolist(),
+        ciphertext_sparse = encrypt_update(
+            delta_prime=nonzero_values,  # Only encrypt non-zero values!
             pk_tp_hex=pk_tp_hex,
             pk_agg_hex=pk_agg_hex,
             sk_miner=sk_miner,
@@ -121,15 +138,19 @@ def run_task(task, miner_addr, progress_callback=None):
         end_time = time.time()
         duration = end_time - start_time
         print(f"[M3] ✅ Encryption complete. Time taken: {duration:.2f} seconds")
+        print(f"[M3] Payload size reduced by ~{sparsity:.0f}%")
     else:
         # Fallback: Use mock if keys not available (for testing)
         # This should not happen in production
         import warnings
+        import torch
         warnings.warn("Public keys not available, using mock ciphertext")
-        ciphertext = ["0xmockpoint1,0xmockpoint2", "0xmockpoint3,0xmockpoint4"]
+        ciphertext_sparse = ["0xmockpoint1,0xmockpoint2", "0xmockpoint3,0xmockpoint4"]
+        nonzero_indices = [0, 1]
+        total_params = len(delta_p_quantized)
 
-    # Generate real signature for submission
-    ciphertext_concat = ",".join(ciphertext)
+    # Generate real signature for submission (using sparse ciphertext for signature)
+    ciphertext_concat = ",".join(ciphertext_sparse)
     
     # Get miner private key from environment
     miner_private_key = os.getenv("MINER_PRIVATE_KEY")
@@ -152,11 +173,14 @@ def run_task(task, miner_addr, progress_callback=None):
     import hashlib
     encrypted_hash = hashlib.sha256(ciphertext_concat.encode('utf-8')).hexdigest()
     
-    # Build full payload for submission
+    # Build full payload for submission (SPARSE FORMAT)
     payload = {
         "taskID": task["taskID"],
-        "ciphertext": ciphertext,
-        "ciphertext_concat": ciphertext_concat,  # For hashing
+        "format": "sparse",  # Indicate sparse format to aggregator
+        "totalSize": total_params,  # Total number of parameters
+        "nonzeroIndices": nonzero_indices,  # Indices of non-zero values
+        "ciphertext": ciphertext_sparse,  # Only non-zero encrypted values
+        "ciphertext_concat": ciphertext_concat,  # For hashing and signature
         "encryptedHash": encrypted_hash,  # For backend
         "scoreCommit": commit,
         "signature": signature,

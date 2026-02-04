@@ -145,6 +145,12 @@ def encrypt_update(
     print(f"[Crypto] Sparsity: {sparsity:.2f}% (Active Operations: {non_zeros})")
     
     log_interval = max(1, total_params // 100) # 1%
+    
+    # Cache for scalar multiplication: val -> (pk_agg * val)
+    # This avoids recomputing the expensive EC multiplication for repeated gradient values
+    point_cache = {}
+    cache_hits = 0
+    cache_misses = 0
 
     for i, val in enumerate(delta_prime):
         # Progress Logging
@@ -183,18 +189,29 @@ def encrypt_update(
         # PyCryptodome 3.x supports negative scalar mul?
         # If not, `(-val) * (-pk_agg)` or `N - val`.
         
-        if val < 0:
-             # Negate point (y -> -y mod p) then multiply by abs(val)
-             # point negation: -P = (x, p-y)
-             # PyCryptodome point negation: -point
-             grad_term = (-pk_agg) * abs(val)
+        # Check cache first
+        if val in point_cache:
+            grad_term = point_cache[val]
+            cache_hits += 1
         else:
-             grad_term = pk_agg * val
+            cache_misses += 1
+            if val < 0:
+                 # Negate point (y -> -y mod p) then multiply by abs(val)
+                 # point negation: -P = (x, p-y)
+                 # PyCryptodome point negation: -point
+                 grad_term = (-pk_agg) * abs(val)
+            else:
+                 grad_term = pk_agg * val
+            point_cache[val] = grad_term
 
         Ui = base_mask + grad_term
         ciphertext.append(_point_to_hex(Ui))
 
     if progress_callback:
-        progress_callback(100, "Encryption Complete")
+        # Report cache stats
+        total_ops = cache_hits + cache_misses
+        hit_rate = (cache_hits / total_ops * 100) if total_ops > 0 else 0
+        print(f"[Crypto] Cache Stats: {cache_hits} hits, {cache_misses} misses ({hit_rate:.1f}%)")
+        progress_callback(100, f"Encryption Complete (Cache Hit: {hit_rate:.0f}%)")
 
     return ciphertext
