@@ -84,7 +84,8 @@ def encrypt_update(
     pk_agg_hex: str,       # g^{s_A}
     sk_miner: int,         # s_i
     ctr: int,
-    task_id: str
+    task_id: str,
+    progress_callback=None # Optional callback(percent, message)
 ):
     """
     Implements:
@@ -136,7 +137,26 @@ def encrypt_update(
     # So Ui = base_mask + Identity = base_mask
     base_mask_hex = _point_to_hex(base_mask)
 
-    for val in delta_prime:
+    total_params = len(delta_prime)
+    log_interval = max(1, total_params // 20) # Log every 5%
+    
+    print(f"[Crypto] Encrypting {total_params} parameters...")
+
+    # Calculate sparsity to confirm DGC is working
+    non_zeros = sum(1 for x in delta_prime if x != 0)
+    sparsity = (1 - (non_zeros / total_params)) * 100
+    print(f"[Crypto] Sparsity: {sparsity:.2f}% (Skipping {total_params - non_zeros} zero-value operations)")
+    
+    log_interval = max(1, total_params // 100) # Log every 1%
+
+    for i, val in enumerate(delta_prime):
+        if i % log_interval == 0 and i > 0:
+             percent = (i / total_params) * 100
+             msg = f"[Crypto] Checkpoint: {percent:.1f}% ({i}/{total_params})"
+             print(msg, flush=True)
+             if progress_callback:
+                 progress_callback(percent, msg)
+
         if val == 0:
             ciphertext.append(base_mask_hex)
             continue
@@ -146,5 +166,7 @@ def encrypt_update(
 
         Ui = base_mask + grad_term
         ciphertext.append(_point_to_hex(Ui))
+    
+    print(f"[Crypto] Encryption Progress: 100.0% ({total_params}/{total_params})")
 
     return ciphertext

@@ -14,7 +14,7 @@ from utils.quantize_gradients import quantize_gradients
 from config.gradient_bounds import QUANTIZATION_SCALE, MAX_GRAD_MAGNITUDE
 from crypto.keys import derive_public_key
 
-def run_task(task, miner_addr):
+def run_task(task, miner_addr, progress_callback=None):
     task_id = task["taskID"]
     print(f"\n[M3] Starting real FL training for {task_id}")
 
@@ -49,8 +49,12 @@ def run_task(task, miner_addr):
 
     # Step 3: Train
     print(f"[M3] Training locally...")
+    if progress_callback:
+        progress_callback(10, "Training Model...")
     model = local_train(model, loader, LOCAL_EPOCHS)
     print(f"[M3] ✅ Training complete")
+    if progress_callback:
+        progress_callback(30, "Compressing Gradients (DGC)...")
     grad = compute_gradient(model)
     delta_p = dgc_compress(grad, DGC_THRESHOLD, MAX_GRAD_MAGNITUDE)
     
@@ -70,6 +74,8 @@ def run_task(task, miner_addr):
     # Get public keys from environment or task metadata
     # M3: NDD-FE Encryption (Algorithm 3 from BTP Report)
     # Get public keys from task metadata (priority) or environment
+    if progress_callback:
+        progress_callback(40, "Preparing Encryption...")
     import os
     
     # Priority 1: Task Metadata
@@ -94,7 +100,13 @@ def run_task(task, miner_addr):
         sk_miner = 1  # Default fallback (should not be used in production)
     
     # Perform real NDD-FE encryption
+    # Perform real NDD-FE encryption
     if pk_tp_hex and pk_agg_hex:
+        import time
+        start_time = time.time()
+        print(f"[M3] Starting Encryption...")
+        
+        ctr = 0  # Counter for randomness derivation
         ctr = 0  # Counter for randomness derivation
         ciphertext = encrypt_update(
             delta_prime=delta_p_quantized.tolist(),
@@ -102,8 +114,13 @@ def run_task(task, miner_addr):
             pk_agg_hex=pk_agg_hex,
             sk_miner=sk_miner,
             ctr=ctr,
-            task_id=task["taskID"]
+            task_id=task["taskID"],
+            progress_callback=progress_callback
         )
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f"[M3] ✅ Encryption complete. Time taken: {duration:.2f} seconds")
     else:
         # Fallback: Use mock if keys not available (for testing)
         # This should not happen in production

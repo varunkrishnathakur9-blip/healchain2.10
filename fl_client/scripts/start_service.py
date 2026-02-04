@@ -146,8 +146,26 @@ def training_worker(task, miner_address, effective_backend_url, task_id):
     Background worker for running FL training.
     """
     try:
-        print(f"[Service] Background training started for task {task_id}")
-        payload = run_task(task, miner_address)
+    print(f"[Service] Background training started for task {task_id}")
+        
+        # Define progress callback to update global status
+        def progress_callback(percent, msg):
+            # Map encryption progress (which is 0-100 of that step) to overall progress
+            # Training/Compression: 0-40%
+            # Encryption: 40-100%
+            if "[Crypto]" in msg:
+                # Encryption phase (starts at 40%)
+                effective_progress = 40 + (percent * 0.6)
+            else:
+                # Other phases (0-40%)
+                effective_progress = percent
+                
+            training_status[task_id].update({
+                "progress": int(effective_progress),
+                "message": msg
+            })
+            
+        payload = run_task(task, miner_address, progress_callback=progress_callback)
         
         # Store payload for manual submission (M3)
         training_payloads[task_id] = {

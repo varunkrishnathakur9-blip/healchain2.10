@@ -14,6 +14,7 @@ export interface TrainingStatus {
   minerAddress: string;
   status: 'IDLE' | 'TRAINING' | 'COMPLETED' | 'FAILED';
   progress?: number;
+  message?: string;
   error?: string;
   submittedAt?: string;
   submitted?: boolean;
@@ -45,7 +46,7 @@ export function useTraining(taskID: string | null) {
         // Trigger training (API expects: address, taskID, message, signature)
         try {
           const result = await minerAPI.startTraining(address, taskID, message, signature);
-          
+
           // If we get here, the request succeeded (200 status)
           if (result.success) {
             // Refresh status
@@ -62,7 +63,7 @@ export function useTraining(taskID: string | null) {
           // The axios interceptor converts errors to Error objects with the message
           // But we also need to check the original response data for success: false cases
           let errorMessage = 'Failed to start training';
-          
+
           // Check if it's an axios error with response data
           // The interceptor preserves responseData on the error object
           if (apiError?.responseData) {
@@ -89,7 +90,7 @@ export function useTraining(taskID: string | null) {
             // Error object message (from axios interceptor)
             errorMessage = apiError.message;
           }
-          
+
           const error = new Error(errorMessage);
           setError(error);
           throw error;
@@ -157,7 +158,7 @@ export function useTraining(taskID: string | null) {
         // Submit gradient (API expects: address, taskID, message, signature)
         try {
           const result = await minerAPI.submitGradient(address, taskID, message, signature);
-          
+
           if (result.success) {
             // Refresh status to get updated submission info
             await fetchStatus();
@@ -169,7 +170,7 @@ export function useTraining(taskID: string | null) {
           }
         } catch (apiError: any) {
           let errorMessage = 'Failed to submit gradient';
-          
+
           if (apiError?.responseData) {
             const responseData = apiError.responseData;
             if (responseData.success === false && responseData.message) {
@@ -191,7 +192,7 @@ export function useTraining(taskID: string | null) {
           } else if (apiError?.message) {
             errorMessage = apiError.message;
           }
-          
+
           const error = new Error(errorMessage);
           setError(error);
           throw error;

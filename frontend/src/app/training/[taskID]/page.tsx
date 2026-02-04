@@ -23,15 +23,15 @@ export default function TrainingPage() {
   const router = useRouter();
   const taskID = params.taskID as string;
   const { address, isConnected } = useAccount();
-  
+
   const { task, loading: taskLoading, error: taskError } = useTask(taskID);
   const { startTraining, submitGradient, status, loading: trainingLoading, error: trainingError, fetchStatus } = useTraining(taskID);
-  
+
   // Authorization state
   const [isRegistered, setIsRegistered] = useState<boolean | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  
+
   // Local error state
   const [localError, setLocalError] = useState<string | null>(null);
   const [startSuccess, setStartSuccess] = useState(false);
@@ -55,7 +55,7 @@ export default function TrainingPage() {
         const registeredTaskIDs = response.registeredTaskIDs || [];
         const registered = registeredTaskIDs.includes(taskID);
         setIsRegistered(registered);
-        
+
         if (!registered) {
           setAuthError(`You are not registered as a miner for task ${taskID}. Please register first.`);
         }
@@ -91,7 +91,7 @@ export default function TrainingPage() {
   const handleStartTraining = async () => {
     setLocalError(null);
     setStartSuccess(false);
-    
+
     try {
       await startTraining();
       setStartSuccess(true);
@@ -106,7 +106,7 @@ export default function TrainingPage() {
     setLocalError(null);
     setSubmitSuccess(false);
     setSubmitting(true);
-    
+
     try {
       await submitGradient();
       setSubmitSuccess(true);
@@ -392,6 +392,13 @@ export default function TrainingPage() {
                 </div>
               )}
 
+              {/* Detailed Status Message */}
+              {status.message && (
+                <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-1 font-mono animate-pulse">
+                  {status.message}
+                </p>
+              )}
+
               {/* Submission Error Message */}
               {status.submissionError && !status.submitted && (
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
@@ -433,7 +440,7 @@ export default function TrainingPage() {
                 {status?.status === 'FAILED' ? 'Retry Training' : 'Start Training'}
               </Button>
             )}
-            
+
             {isTraining && (
               <Button
                 variant="outline"
