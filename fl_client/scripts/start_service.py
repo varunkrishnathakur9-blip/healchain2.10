@@ -146,7 +146,7 @@ def training_worker(task, miner_address, effective_backend_url, task_id):
     Background worker for running FL training.
     """
     try:
-    print(f"[Service] Background training started for task {task_id}")
+        print(f"[Service] Background training started for task {task_id}")
         
         # Define progress callback to update global status
         def progress_callback(percent, msg):
