@@ -1,4 +1,5 @@
 import tensorflow as tf
+import torch
 from tensorflow.keras.layers import (
     Conv2D,
     BatchNormalization,
@@ -43,6 +44,28 @@ class KerasModelWrapper(Model):
     def __init__(self, model):
         super().__init__()
         self.model = model
+        # Store initial weights to compute pseudo-gradients later
+        self.initial_weights = [w.numpy() for w in self.model.trainable_variables]
+
+    def parameters(self):
+        """
+        Mock PyTorch parameters() for compatibility with gradient.py
+        Returns objects with a .grad attribute containing the weight difference.
+        """
+        class MockParam:
+            def __init__(self, grad):
+                self.grad = grad
+        
+        params = []
+        # Calculate pseudo-gradient: (w_old - w_new)
+        # This represents the direction of descent (approx gradient)
+        for i, w in enumerate(self.model.trainable_variables):
+            if i < len(self.initial_weights):
+                # gradient ~ (old - new) because w_new = w_old - lr * grad
+                diff = self.initial_weights[i] - w.numpy()
+                params.append(MockParam(torch.tensor(diff)))
+        
+        return params
 
     def call(self, inputs, training=False):
         return self.model(inputs, training=training)

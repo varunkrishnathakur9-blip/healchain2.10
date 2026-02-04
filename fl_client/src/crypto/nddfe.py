@@ -31,10 +31,48 @@ def _point_to_hex(pt) -> str:
 
 def load_public_key(pubkey_hex: str):
     """
-    pubkey_hex format: 'x_hex,y_hex'
+    Load public key from string. Supports both Hex and Decimal formats.
+    pubkey_hex format: 'x,y' where x,y are hex strings (0x prefix optional) or decimal strings.
     """
-    x_hex, y_hex = pubkey_hex.split(",")
-    return Point(curve, int(x_hex, 16), int(y_hex, 16))
+    try:
+        x_str, y_str = pubkey_hex.split(",")
+        x_str = x_str.strip()
+        y_str = y_str.strip()
+        
+        # Heuristic: Check if hex or decimal
+        # If starts with 0x, definitely hex
+        if x_str.startswith("0x") or x_str.startswith("0X"):
+            x = int(x_str, 16)
+        else:
+            # If no 0x, try decimal first (common in some configs)
+            # If decimal fails or results in off-curve point, could try hex?
+            # But usually purely numeric strings are decimal. 
+            # Hex strings without 0x usually contain a-f characters.
+            if any(c in "abcdefABCDEF" for c in x_str) or any(c in "abcdefABCDEF" for c in y_str):
+                x = int(x_str, 16)
+            else:
+                try:
+                    x = int(x_str)
+                except ValueError:
+                     # Fallback to hex if int fails (e.g. empty string or weird chars)
+                     x = int(x_str, 16)
+
+        # Same logic for Y
+        if y_str.startswith("0x") or y_str.startswith("0X"):
+            y = int(y_str, 16)
+        else:
+             if any(c in "abcdefABCDEF" for c in y_str):
+                 y = int(y_str, 16)
+             else:
+                 try:
+                     y = int(y_str)
+                 except ValueError:
+                     y = int(y_str, 16)
+                     
+        pt = Point(curve, x, y)
+        return pt
+    except Exception as e:
+        raise ValueError(f"Failed to parse public key '{pubkey_hex}': {e}")
 
 
 # ---------- Core NDD-FE Encryption ----------
@@ -88,11 +126,21 @@ def encrypt_update(
     )
 
     # ---- Step 3: encrypt each compressed gradient entry ----
+    # ---- Step 3: encrypt each compressed gradient entry ----
     ciphertext = []
 
     base_mask = ri * G  # g^{r_i}
+    
+    # Optimization: Precompute hex string for zero gradients
+    # Since DGC makes >90% of gradients 0, valid * pk_agg is Point at Infinity (Identity)
+    # So Ui = base_mask + Identity = base_mask
+    base_mask_hex = _point_to_hex(base_mask)
 
     for val in delta_prime:
+        if val == 0:
+            ciphertext.append(base_mask_hex)
+            continue
+            
         # pk_A^{Δ′}
         grad_term = val * pk_agg
 

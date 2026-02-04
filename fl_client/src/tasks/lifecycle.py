@@ -68,10 +68,20 @@ def run_task(task, miner_addr):
 
     # M3: NDD-FE Encryption (Algorithm 3 from BTP Report)
     # Get public keys from environment or task metadata
+    # M3: NDD-FE Encryption (Algorithm 3 from BTP Report)
+    # Get public keys from task metadata (priority) or environment
     import os
-    pk_tp_hex = os.getenv("TP_PUBLIC_KEY", "")
-    pk_agg_hex = os.getenv("AGGREGATOR_PK", "")
     
+    # Priority 1: Task Metadata
+    pk_tp_hex = task.get("tpPublicKey", "")
+    pk_agg_hex = task.get("aggregatorPublicKey", "")
+    
+    # Priority 2: Environment Variables (Fallback)
+    if not pk_tp_hex:
+        pk_tp_hex = os.getenv("TP_PUBLIC_KEY", "")
+    if not pk_agg_hex:
+        pk_agg_hex = os.getenv("AGGREGATOR_PK", "")
+
     # Get miner private key for NDD-FE encryption
     miner_private_key_str = os.getenv("MINER_PRIVATE_KEY", "")
     if miner_private_key_str:
@@ -82,15 +92,6 @@ def run_task(task, miner_addr):
         sk_miner = int(sk_miner_str, 16) if sk_miner_str else 1
     else:
         sk_miner = 1  # Default fallback (should not be used in production)
-    
-    # If public keys not in env, try to get from task metadata
-    if not pk_tp_hex or not pk_agg_hex:
-        # Fallback: Use default keys for testing (should be provided by backend)
-        # In production, these should come from task metadata or backend API
-        if not pk_tp_hex:
-            pk_tp_hex = task.get("tpPublicKey", "")
-        if not pk_agg_hex:
-            pk_agg_hex = task.get("aggregatorPublicKey", "")
     
     # Perform real NDD-FE encryption
     if pk_tp_hex and pk_agg_hex:
