@@ -135,7 +135,7 @@ export function useTraining(taskID: string | null) {
       if (status?.status === 'TRAINING') {
         fetchStatus();
       }
-    }, 5000); // Poll every 5 seconds
+    }, 10000); // Poll every 10 seconds (increased from 5s to prevent backend overload)
 
     return () => clearInterval(interval);
   }, [taskID, address, status?.status, fetchStatus]);
