@@ -206,6 +206,10 @@ def encrypt_update(
 
         Ui = base_mask + grad_term
         ciphertext.append(_point_to_hex(Ui))
+        
+        # Yield GEL periodically to allow status thread to respond
+        if i % 1000 == 0:
+            time.sleep(0)
 
     if progress_callback:
         # Report cache stats
