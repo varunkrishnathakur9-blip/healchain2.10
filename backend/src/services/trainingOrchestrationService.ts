@@ -256,8 +256,8 @@ export async function getTrainingStatus(
         params: {
           taskID,
           minerAddress: minerAddress.toLowerCase()
-        },
-        timeout: 120000  // 120 second timeout to accommodate encryption time (was 10s)
+        }
+        // Timeout removed as per user request to prevent "timeout exceeded" errors
       }
     );
 
@@ -338,7 +338,7 @@ export async function triggerSubmission(
       `${flClientServiceUrl}/api/submit`,
       requestBody,
       {
-        timeout: 180000, // 180 second timeout for submission (was 30s) to handle large sparse payloads
+        // Timeout removed as per user request to handle large sparse payloads without being cut off
         validateStatus: (status) => status < 500
       }
     );
