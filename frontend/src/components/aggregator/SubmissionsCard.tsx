@@ -15,9 +15,10 @@ interface SubmissionsCardProps {
   loading: boolean;
   taskID: string;
   error?: Error | null;
+  onLoadCiphertext?: (submissionId: string) => void;
 }
 
-export default function SubmissionsCard({ submissions, loading, taskID, error }: SubmissionsCardProps) {
+export default function SubmissionsCard({ submissions, loading, taskID, error, onLoadCiphertext }: SubmissionsCardProps) {
   const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
 
   if (error) {
@@ -109,7 +110,7 @@ export default function SubmissionsCard({ submissions, loading, taskID, error }:
           <div className="space-y-2">
             {submissions.map((submission, index) => {
               const hasCiphertext = submission.ciphertext && submission.ciphertext.length > 0;
-              const isExpanded = expandedSubmission === submission.minerAddress;
+              const isExpanded = expandedSubmission === submission.id;
 
               return (
                 <div
@@ -159,7 +160,15 @@ export default function SubmissionsCard({ submissions, loading, taskID, error }:
                       </dl>
                     </div>
                     <button
-                      onClick={() => setExpandedSubmission(isExpanded ? null : submission.minerAddress)}
+                      onClick={() => {
+                        const nextId = isExpanded ? null : submission.id;
+                        setExpandedSubmission(nextId);
+
+                        // Lazy-load ciphertext when expanding and it is missing
+                        if (!hasCiphertext && !isExpanded && submission.id && onLoadCiphertext) {
+                          onLoadCiphertext(submission.id);
+                        }
+                      }}
                       className="ml-4 p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                       aria-label={isExpanded ? "Collapse" : "Expand"}
                     >

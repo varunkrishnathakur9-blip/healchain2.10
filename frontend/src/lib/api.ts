@@ -354,12 +354,28 @@ export const aggregatorAPI = {
     return response.data;
   },
 
-  // Algorithm 3: Get all miner submissions with ciphertext (requires aggregator authentication)
+  // Algorithm 3: Get all miner submissions (dashboard view, without ciphertext)
   getSubmissions: async (taskID: string, address: string, message: string, signature: string) => {
     const response = await api.post(`/aggregator/${taskID}/submissions`, {
       address,
       message,
-      signature
+      signature,
+    });
+    return response.data;
+  },
+
+  // Fetch full ciphertext for a single submission (dashboard on-demand view)
+  getSubmissionCiphertext: async (
+    taskID: string,
+    gradientID: string,
+    address: string,
+    message: string,
+    signature: string
+  ) => {
+    const response = await api.post(`/aggregator/${taskID}/submissions/${gradientID}`, {
+      address,
+      message,
+      signature,
     });
     return response.data;
   },

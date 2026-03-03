@@ -431,34 +431,143 @@ router.post(
       }
 
       // Get all gradients (submissions) for this task
+      // NOTE: For the dashboard view we intentionally do NOT load the
+      // ciphertext blob to avoid huge string allocations in Node/Prisma.
       const gradients = await prisma.gradient.findMany({
         where: { taskID },
-        include: {
+        select: {
+          id: true,
+          taskID: true,
+          minerAddress: true,
+          scoreCommit: true,
+          encryptedHash: true,
+          signature: true,
+          status: true,
+          createdAt: true,
           miner: {
             select: {
               address: true,
-              publicKey: true
-            }
-          }
+              publicKey: true,
+            },
+          },
         },
-        orderBy: { createdAt: "asc" }
+        orderBy: { createdAt: "asc" },
       });
 
-      // Transform to aggregator-expected format
+      // Transform to aggregator-expected format (without ciphertext)
       const submissions = gradients.map((grad) => ({
+        id: grad.id,
         taskID: grad.taskID,
         minerAddress: grad.minerAddress,
         miner_pk: grad.minerAddress, // For aggregator compatibility
         publicKey: grad.miner?.publicKey || null,
         scoreCommit: grad.scoreCommit,
         encryptedHash: grad.encryptedHash,
-        ciphertext: grad.ciphertext ? JSON.parse(grad.ciphertext) : null, // Parse JSON array
+        ciphertext: null,
         signature: grad.signature || null,
         status: grad.status,
-        submittedAt: grad.createdAt.toISOString()
+        submittedAt: grad.createdAt.toISOString(),
       }));
 
       res.json(submissions);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /aggregator/:taskID/submissions/:gradientID
+ * Fetch full ciphertext for a single submission (dashboard on-demand view).
+ *
+ * SECURITY: Only accessible by the selected aggregator (wallet-authenticated).
+ */
+router.post(
+  "/:taskID/submissions/:gradientID",
+  requireWalletAuth,
+  async (req, res, next) => {
+    try {
+      const { taskID, gradientID } = req.params;
+      const { prisma } = await import("../config/database.config.js");
+
+      // Get authenticated aggregator address from wallet auth
+      const authenticatedAddress = (req as any).walletAddress;
+      if (!authenticatedAddress) {
+        return res.status(401).json({ error: "Wallet authentication required" });
+      }
+
+      // Get task to verify aggregator
+      const task = await prisma.task.findUnique({
+        where: { taskID },
+        select: {
+          aggregatorAddress: true,
+          minMiners: true,
+        },
+      });
+
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      const { aggregatorAddress } = task;
+
+      // SECURITY: Verify authenticated address is the selected aggregator
+      if (!aggregatorAddress || authenticatedAddress.toLowerCase() !== aggregatorAddress.toLowerCase()) {
+        return res.status(403).json({
+          error: "Unauthorized: Only the selected aggregator can access submissions",
+          message: aggregatorAddress
+            ? `This endpoint is restricted to aggregator ${aggregatorAddress}. Your address: ${authenticatedAddress}`
+            : "Aggregator not selected yet for this task",
+        });
+      }
+
+      // Fetch the specific gradient with ciphertext
+      const gradient = await prisma.gradient.findFirst({
+        where: {
+          id: gradientID,
+          taskID,
+        },
+        include: {
+          miner: {
+            select: {
+              address: true,
+              publicKey: true,
+            },
+          },
+        },
+      });
+
+      if (!gradient) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+
+      // Parse ciphertext JSON (single row -> safe for memory)
+      let ciphertext: any = null;
+      if (gradient.ciphertext) {
+        if (typeof gradient.ciphertext === "string") {
+          try {
+            ciphertext = JSON.parse(gradient.ciphertext);
+          } catch {
+            ciphertext = [gradient.ciphertext];
+          }
+        }
+      }
+
+      const submission = {
+        id: gradient.id,
+        taskID: gradient.taskID,
+        minerAddress: gradient.minerAddress,
+        miner_pk: gradient.miner?.address || gradient.minerAddress,
+        publicKey: gradient.miner?.publicKey || null,
+        scoreCommit: gradient.scoreCommit,
+        encryptedHash: gradient.encryptedHash,
+        ciphertext,
+        signature: gradient.signature || null,
+        status: gradient.status,
+        submittedAt: gradient.createdAt.toISOString(),
+      };
+
+      res.json(submission);
     } catch (err) {
       next(err);
     }

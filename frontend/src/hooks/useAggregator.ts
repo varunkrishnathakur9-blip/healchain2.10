@@ -42,6 +42,7 @@ export interface KeyStatus {
 }
 
 export interface Submission {
+  id: string;
   taskID: string;
   minerAddress: string;
   miner_pk: string;
@@ -227,6 +228,44 @@ export function useAggregator(taskID: string | null) {
     }
   }, [taskID, isConnected, address, signMessage, createAuthMessage, loadingSubmissions]);
 
+  // Load ciphertext for a single submission on demand (dashboard expansion)
+  const loadCiphertextForSubmission = useCallback(
+    async (submissionId: string) => {
+      if (!taskID || !isConnected || !address) {
+        return;
+      }
+
+      try {
+        const message = createAuthMessage(address);
+        const signature = await signMessage(message);
+
+        const fullSubmission = await aggregatorAPI.getSubmissionCiphertext(
+          taskID,
+          submissionId,
+          address,
+          message,
+          signature
+        );
+
+        // Merge ciphertext into existing submissions list
+        setSubmissions((prev) =>
+          prev.map((sub) =>
+            sub.id === submissionId
+              ? {
+                  ...sub,
+                  ciphertext: fullSubmission.ciphertext || null,
+                }
+              : sub
+          )
+        );
+      } catch (err) {
+        console.error('Failed to load ciphertext for submission:', err);
+        // Do not propagate error to global error state; this is a best-effort enhancement
+      }
+    },
+    [taskID, isConnected, address, signMessage, createAuthMessage]
+  );
+
   // Use refs to store latest function versions to avoid stale closures without causing infinite loops
   const fetchStatusRef = useRef(fetchStatus);
   const fetchKeyStatusRef = useRef(fetchKeyStatus);
@@ -280,6 +319,7 @@ export function useAggregator(taskID: string | null) {
     fetchStatus,
     fetchKeyStatus,
     fetchSubmissions,
+    loadCiphertextForSubmission,
     status,
     keyStatus,
     submissions,

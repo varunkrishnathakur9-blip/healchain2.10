@@ -126,6 +126,7 @@ function TaskAggregatorDashboard({ taskID, chainConfig }: { taskID: string; chai
     fetchStatus,
     fetchKeyStatus,
     fetchSubmissions,
+    loadCiphertextForSubmission,
     error
   } = useAggregator(taskID);
 
@@ -158,7 +159,13 @@ function TaskAggregatorDashboard({ taskID, chainConfig }: { taskID: string; chai
       <KeyDerivationCard keyStatus={keyStatus} loading={loadingKeyStatus} error={error} />
 
       {/* Algorithm 3: Submissions */}
-      <SubmissionsCard submissions={submissions} loading={loadingSubmissions} taskID={taskID} error={error} />
+      <SubmissionsCard
+        submissions={submissions}
+        loading={loadingSubmissions}
+        taskID={taskID}
+        error={error}
+        onLoadCiphertext={loadCiphertextForSubmission}
+      />
 
       {/* Aggregator Status */}
       <Card>

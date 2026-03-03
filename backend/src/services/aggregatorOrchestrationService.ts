@@ -120,8 +120,10 @@ export async function getAggregatorStatus(
       miners: {
         where: { proofVerified: true }
       },
-      gradients: true,
-      block: true
+      block: true,
+      _count: {
+        select: { gradients: true }
+      }
     }
   });
 
@@ -157,12 +159,12 @@ export async function getAggregatorStatus(
       return {
         taskID,
         status: "AGGREGATING",
-        submissionCount: task.gradients.length,
+        submissionCount: task._count.gradients,
         requiredSubmissions: task.miners.length
       };
     } else {
       // Aggregator not running, check database state
-      const submissionCount = task.gradients.length;
+      const submissionCount = task._count.gradients;
       const requiredSubmissions = task.miners.length;
 
       console.log(`[getAggregatorStatus] Aggregator not running. Submissions: ${submissionCount}/${requiredSubmissions}`);

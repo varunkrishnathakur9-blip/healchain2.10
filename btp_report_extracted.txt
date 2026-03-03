@@ -1,0 +1,2398 @@
+
+
+--- PAGE 1 ---
+HEALCHAIN: A PRIVACY-PRESERVING
+FEDERATED LEARNING FRAMEWORK
+WITH SECURE AND FAIR
+BLOCKCHAIN PAYMENTS
+A Project Report Submitted
+in Partial Fulfilment of the Requirements
+for the Degree of
+Bachelor of Technology
+in
+Computer Science and Engineering
+with Specialization in
+Cyber Security
+by
+Kumarjit Kumar - 2022BCY0063
+P. Bavith Babu - 2022BCY0056
+Varun Krishna Thakur - 2022BCY0015
+Mani Teja - 2022BCY0037
+Guided By:
+Dr. Panchami V
+DEPARTMENT OF CSE-CYBER SECURITY
+INDIAN INSTITUTE OF INFORMATION TECHNOLOGY
+KOTTAYAM–686635, INDIA
+November 2025
+
+
+--- PAGE 2 ---
+DECLARATION
+We, Kumarjit Kumar (Roll No: 2022BCY0063), P. Bavith Babu (Roll No: 2022BCY0056),
+Varun Krishna Thakur (Roll No: 2022BCY0015), Mani Teja (Roll No: 2022BCY0037)
+hereby declare that this report entitled “HealChain: A Privacy-Preserving Federated
+Learning Framework with Secure and Fair Blockchain Payments” submitted to Indian
+Institute of Information Technology Kottayam towards partial requirement of Bachelor
+of Technology in Computer Science and Engineering with specialization in Cyber Secu-
+rity is an original work carried out by our team under the supervision of Dr. Panchami
+V and has not formed the basis for the award of any degree or diploma, in this or any
+other institution or university. I have sincerely tried to uphold the academic ethics and
+honesty. Whenever external information or statement or result is used, it has been duly
+acknowledged and cited.
+Kottayam–686635
+Kumarjit Kumar
+P. Bavith Babu
+Varun Krishna Thakur
+Mani Teja
+November 2025
+
+
+--- PAGE 3 ---
+CERTIFICATE
+This is to certify that the work contained in this project report entitled “HealChain: A
+Privacy-Preserving Federated Learning Framework with Secure and Fair Blockchain Pay-
+ments” submitted to the Indian Institute of Information Technology Kottayam towards
+partial requirement of Bachelor of Technology in Computer Science and Engineering with
+specialization in Cyber Security has been carried out by the following students under my
+supervision:
+Name
+Roll No
+Kumarjit Kumar
+2022BCY0063
+P. Bavith Babu
+2022BCY0056
+Varun Krishna Thakur
+2022BCY0015
+Mani Teja
+2022BCY0037
+The work has not been submitted elsewhere for the award of any degree.
+Kottayam-686635
+(Dr. Panchami V)
+November 2025
+Project Supervisor
+
+
+--- PAGE 4 ---
+ABSTRACT
+Federated learning (FL) is a paradigm that allows multiple entities, particularly in sen-
+sitive domains like smart healthcare, to collaboratively train a global machine learning
+model without sharing their raw private data. Although FL addresses initial privacy con-
+cerns, it raises new risks, such as the potential for reconstructing sensitive information
+from shared model updates (gradients). Furthermore, most existing privacy-preserving
+FL (PPFL) solutions, which rely on complex cryptographic methods, face issues like
+computational overhead and a critical lack of robust, verifiable fairness mechanisms to
+incentivize high-quality participation and prevent ”free-riding”. To address these multi-
+faceted concerns, we propose HealChain, an enhanced framework built upon the Efficient
+and Secure Blockchain-based Federated Learning (ESB-FL) architecture. HealChain re-
+tains the efficiency benefits of Non-Interactive Designated Decryptor Functional Encryp-
+tion (NDD-FE) and Decentralized Gradient Compression (DGC), while introducing three
+core innovations: (1) an Escrow-based Smart Contract Mechanism that locks task rewards
+on-chain to guarantee payment upon successful task completion; (2) a Commit-Reveal
+Verification Protocol that ensures the Task Publisher’s model accuracy requirement re-
+mains immutable and verifiable; and (3) a Gradient-Norm Based Contribution Scoring
+function (∥∆′
+i∥2) to accurately measure the quality of miner updates for fair, propor-
+tional reward distribution. This architecturally modular system comprises seven distinct
+phases from task publishing to reward distribution. We conduct a comprehensive security
+analysis and outline planned experimental work to demonstrate that our new framework
+provides enhanced security, verifiable fairness, and high communication efficiency.
+
+
+--- PAGE 5 ---
+Contents
+DECLARATION
+i
+CERTIFICATE
+ii
+ABSTRACT
+iii
+1
+Introduction
+1
+1.1
+Problem Motivation and Background . . . . . . . . . . . . . . . . . . . .
+1
+1.2
+Privacy-Preserving Federated Learning (PPFL) and Techniques
+. . . . .
+2
+1.2.1
+Non-Crypto-Based Methods . . . . . . . . . . . . . . . . . . . . .
+2
+1.2.2
+Crypto-Based Methods . . . . . . . . . . . . . . . . . . . . . . . .
+2
+1.3
+The Fair Payment Challenge and Project Motivation
+. . . . . . . . . . .
+2
+1.4
+Project Contributions: The HealChain Framework . . . . . . . . . . . . .
+3
+2
+Literature Review and Foundational Framework
+4
+2.1
+Privacy-Preserving Federated Learning (PPFL)
+. . . . . . . . . . . . . .
+4
+2.1.1
+Non-Cryptographic Privacy Mechanisms . . . . . . . . . . . . . .
+4
+2.1.2
+Cryptographic Privacy Mechanisms . . . . . . . . . . . . . . . . .
+4
+2.2
+Blockchain Integration and Fair Incentive Mechanisms
+. . . . . . . . . .
+5
+2.2.1
+Incentive Mechanisms and Fair Payment Gaps . . . . . . . . . . .
+5
+2.2.2
+Survey of Related Blockchain-FL Frameworks . . . . . . . . . . .
+5
+2.3
+The Base Framework: ESB-FL
+. . . . . . . . . . . . . . . . . . . . . . .
+6
+2.3.1
+Non-Interactive Designated Decryptor Functional Encryption (NDD-
+FE)
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6
+2.3.2
+Decentralized Gradient Compression (DGC) and Blockchain Struc-
+ture
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+6
+3
+Preliminaries
+8
+3.1
+Blockchain . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+8
+3.2
+Hard Problem Assumption . . . . . . . . . . . . . . . . . . . . . . . . . .
+9
+3.2.1
+Definition: Computational Diffie-Hellman (CDH) Assumption
+. .
+9
+3.2.2
+Alignment with NDD-FE Privacy . . . . . . . . . . . . . . . . . .
+9
+iv
+
+
+--- PAGE 6 ---
+v
+3.3
+Non-Interactive Designated Decryptor Functional Encryption (NDD-FE)
+10
+3.3.1
+NDD-FE: Non-Interactive and Designated Security
+. . . . . . . .
+10
+3.4
+Federated Learning (FL) Framework
+. . . . . . . . . . . . . . . . . . . .
+11
+4
+Proposed System Architecture
+13
+Overview of the ESB-FL Framework
+. . . . . . . . . . . . . . . . . . . . . . .
+13
+4.1
+Enhanced ESB-FL Framework Overview . . . . . . . . . . . . . . . . . .
+13
+4.2
+Module 1: Task Publishing with Escrow and Commit . . . . . . . . . . .
+15
+4.2.1
+Task Initialization Process . . . . . . . . . . . . . . . . . . . . . .
+16
+4.3
+Module 2: Miner Selection and Key Derivation . . . . . . . . . . . . . . .
+16
+4.4
+Module 3: Local Model Training and Gradient-Norm Scoring . . . . . . .
+19
+4.5
+Module 4: Secure Aggregation, BSGS Recovery, Evaluation and Candidate
+Formation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+20
+4.6
+Module 5: Miner Verification Feedback . . . . . . . . . . . . . . . . . . .
+24
+4.7
+Module 6: Aggregator Verify, Build Payload and Publish On-Chain . . .
+26
+4.8
+Module 7: Smart Contract Reveal and Reward Distribution
+. . . . . . .
+29
+4.9
+Unified Notation
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+32
+5
+System Security Analysis
+34
+5.1
+Confidentiality and Privacy Guarantees . . . . . . . . . . . . . . . . . . .
+34
+5.1.1
+Security of Local Gradient Updates . . . . . . . . . . . . . . . . .
+35
+5.1.2
+Security of Aggregated Results
+. . . . . . . . . . . . . . . . . . .
+35
+5.2
+Efficiency and Communication Analysis . . . . . . . . . . . . . . . . . . .
+35
+5.2.1
+Reduced Communication Overhead via DGC . . . . . . . . . . . .
+35
+5.2.2
+Low Cryptographic Overhead via NDD-FE . . . . . . . . . . . . .
+36
+5.2.3
+Support for Parallelism and Decentralization . . . . . . . . . . . .
+36
+5.3
+Fairness and Payment Integrity Analysis (HealChain Enhancements)
+. .
+37
+5.3.1
+Eliminating Payment Default via Escrow (Modules 1, 7)
+. . . . .
+37
+5.3.2
+Enforcing Task Honesty via Commit–Reveal (Modules 1, 4, 7) . .
+37
+5.3.3
+Mitigating Free-Riding via Gradient-Norm Scoring (Modules 3, 7)
+38
+5.3.4
+Decentralized Block Integrity (Modules 5, 6) . . . . . . . . . . . .
+38
+6
+Performance Analysis and Experimental Results
+39
+6.1
+Experimental Setup and Configuration . . . . . . . . . . . . . . . . . . .
+39
+6.1.1
+Environment and Dataset
+. . . . . . . . . . . . . . . . . . . . . .
+39
+6.1.2
+Model Architectures
+. . . . . . . . . . . . . . . . . . . . . . . . .
+40
+6.2
+Efficiency Analysis: Cryptographic and Blockchain Overheads
+. . . . . .
+40
+6.2.1
+Time Cost of Core Blockchain Operations
+. . . . . . . . . . . . .
+40
+6.2.2
+Cryptographic Performance Benchmark . . . . . . . . . . . . . . .
+40
+6.3
+Performance Analysis of the Federated Learning Cycle
+. . . . . . . . . .
+41
+
+
+--- PAGE 7 ---
+vi
+6.3.1
+Training Time and Communication Gains
+. . . . . . . . . . . . .
+41
+6.3.2
+Model Accuracy and Utility . . . . . . . . . . . . . . . . . . . . .
+41
+6.4
+Verifiable Fairness Confirmation . . . . . . . . . . . . . . . . . . . . . . .
+43
+6.4.1
+Integrity of Contribution Score
+. . . . . . . . . . . . . . . . . . .
+43
+6.4.2
+Guaranteed Conditional Payment . . . . . . . . . . . . . . . . . .
+43
+7
+Conclusion
+44
+
+
+--- PAGE 8 ---
+List of Figures
+4.1
+Enhanced ESB-FL Three-Layer Architecture. The diagram maps the seven
+functional modules (M1-M7) across the Federated, Blockchain, and Client
+Layers. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+14
+4.2
+Task Publishing Workflow (Escrow and Commit)
+. . . . . . . . . . . . .
+15
+4.3
+Miner Selection and Key Derivation (Algorithm 2) . . . . . . . . . . . . .
+18
+4.4
+Local Model Training and Gradient-Norm Score (Algorithm 3) . . . . . .
+19
+4.5
+Secure Aggregation, BSGS Recovery, Evaluation and Candidate Formation
+(Algorithm 4) . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+21
+4.6
+Miner Verification Feedback (Consensus)Algorithm 5
+. . . . . . . . . . .
+24
+4.7
+Aggregator Verify, Build, and Publish On-Chain (Algorithm 6) . . . . . .
+28
+4.8
+Smart Contract Reveal and Reward Distribution (Algorithm 7)
+. . . . .
+31
+6.1
+Model Accuracy Over Epochs . . . . . . . . . . . . . . . . . . . . . . . .
+42
+vii
+
+
+--- PAGE 9 ---
+List of Tables
+4.1
+Unified Notation for Enhanced ESB-FL (HealChain) Framework . . . . .
+33
+5.1
+Security and Privacy Guarantees of HealChain (NDD-FE Core)
+. . . . .
+34
+5.2
+Comparative Analysis of Security and Fairness Mechanisms . . . . . . . .
+36
+5.3
+Security Analysis of HealChain’s Novel Enhancements . . . . . . . . . . .
+37
+6.1
+Time Costs of Major Blockchain Operations . . . . . . . . . . . . . . . .
+40
+6.2
+Time Costs of Single Gradient Cryptographic Operations . . . . . . . . .
+41
+viii
+
+
+--- PAGE 10 ---
+Chapter 1
+Introduction
+Federated Learning (FL) is an emerging technology that allows users to train a centralized
+model on separate datasets stored by different entities [1]. FL is a distributed machine
+learning paradigm where data remains decentralized across clients, such as hospitals,
+financial institutions, or IoT devices. Instead of sharing raw data, only model updates
+(gradients or weights) are exchanged, making this approach increasingly prevalent in
+business and society. Its applications in sensitive fields like healthcare drive reforms in
+areas such as medical diagnosis and treatment and disease risk factor prediction.
+The rapid growth of FL benefits from two main drivers: (1) applying machine learning
+technologies to distributed data scenarios, and (2) providing data privacy protection
+during the data application process [2]. This decentralized nature preserves data privacy,
+enables cross-organization collaboration, and helps comply with privacy regulations (e.g.,
+GDPR, HIPAA). The objective is to provide a secure, efficient, and fair platform for
+sensitive applications like health care centers.
+1.1
+Problem Motivation and Background
+Although FL brings great benefits, it also raises new privacy concerns in practical appli-
+cations [3]. Recent research has shown that FL may not always offer sufficient privacy
+protection for local training datasets. This is mainly because some malicious adversaries
+may extract sensitive information about the training datasets (e.g., private medical data)
+from the model parameters, such as weights or gradients. For instance, the member-
+ship inference attack could construct a series of shadow models through local gradi-
+ents to reconstruct original data samples. Furthermore, FL systems are vulnerable to
+malicious participants through data poisoning (corrupting local data) and model poi-
+soning (manipulating local updates) attacks. Such potential privacy leakage risks in FL
+may become a serious obstacle for practical and privacy-sensitive scenarios, particularly
+healthcare.
+1
+
+
+--- PAGE 11 ---
+2
+1.2
+Privacy-Preserving Federated Learning (PPFL)
+and Techniques
+To address these privacy concerns, Privacy-Preserving FL (PPFL) is introduced by
+applying specific privacy-enhancing techniques (PETs) before model updates are shared
+[4].
+The PPFL schemes can be categorized into two types according to the privacy-
+preserving methods:
+1.2.1
+Non-Crypto-Based Methods
+These methods, primarily Differential Privacy (DP), rely on modifying, restricting,
+or managing data rather than using encryption [5].
+DP provides privacy guarantees
+by adding controlled noise to data or model parameters.
+While offering more effi-
+cient performance, these methods often introduce a trade-off: it is hard to achieve high
+model accuracy and strong privacy simultaneously, as the effect of adding noise may
+be unknown. Other non-crypto methods include Anonymization (stripping PII) and
+Pseudonymization (replacing identifiers with consistent tokens).
+1.2.2
+Crypto-Based Methods
+These techniques, such as Homomorphic Encryption (HE) or Secure Multi-Party
+Computation (MPC), use cryptographic algorithms to secure data during storage,
+transmission, or computation [6]. These methods can provide stronger privacy protec-
+tion while retaining the original accuracy, enabling computation on encrypted data. How-
+ever, despite providing strong guarantees, these solutions face significant computational
+and communication costs, which may hinder the wide application of crypto-based
+PPFL schemes.
+For example, schemes adopting fully homomorphic encryption tech-
+nology may incur vast computational and communication overhead. Zero-Knowledge
+Proofs (ZKP) are also used to prove knowledge of a fact without revealing the actual
+data.
+1.3
+The Fair Payment Challenge and Project Moti-
+vation
+In addition to efficiency, achieving a fair exchange between task publishers and task
+participants (miners) in the FL framework is an extremely meaningful challenge [1]. A
+financial incentive mechanism is typically needed to motivate task participants to actively
+train models. However, how to ensure fairness of both parties in the trading process is
+
+
+--- PAGE 12 ---
+3
+still an open problem. Participants may be motivated to submit models lazily or with
+low accuracy if paid in advance, or the publisher may refuse payment if they receive the
+model first. An effective FL framework must ensure that the FL task can be completed
+correctly and each participant who participates can obtain the task rewards timely.
+A native solution is a trusted arbiter, but this largely eliminates the benefits of this
+distributed framework. Blockchain technology, proven effective at financial services,
+offers a decentralized alternative to build a decentralized, healthy FL system with incen-
+tive mechanisms. However, existing blockchain-based schemes often fail to balance data
+privacy protection with the fair payment of rewards.
+1.4
+Project Contributions: The HealChain Frame-
+work
+To comprehensively address the issues of efficiency, data privacy, and verifiable
+fair payment, we propose the HealChain framework, an enhanced system built upon
+the Efficient and Secure Blockchain-based Federated Learning (ESB-FL) architecture.
+HealChain is designed to overcome limitations in existing crypto-based PPFL, specifically
+computational overhead and the lack of fair incentives.
+Our primary contributions are the integration of three novel, robust mechanisms into
+the ESB-FL architecture:
+1. Escrow-based Smart Contract Mechanism: Ensures the Task Publisher (TP)
+deposits the reward (R) into an on-chain escrow upon task initialization, securing
+funds and preventing payment disputes.
+2. Commit-Reveal Verification Protocol: Requires the TP to commit to the re-
+quired model accuracy (accreq) using a hash commitment (commitHash = H(accreq∥nonceTP)).
+This ensures immutable task requirements verified by the smart contract upon re-
+veal.
+3. Gradient-Norm Based Contribution Scoring: Assesses miners’ local contri-
+butions by computing the L2 norm (∥∆′
+i∥2) of their compressed gradient updates.
+This verifiable metric proxies contribution quality, enabling proportional reward
+distribution and actively discouraging free-riding.
+In summary, HealChain ensures that a highly accurate model can be trained while pro-
+tecting the privacy of local training data, all while supporting verifiable, fair payment
+between the task publisher and all participants.
+
+
+--- PAGE 13 ---
+Chapter 2
+Literature Review and Foundational
+Framework
+This chapter reviews relevant academic literature concerning Privacy-Preserving Fed-
+erated Learning (PPFL) and blockchain integration, identifying the research gaps
+addressed by our proposed system. It concludes by detailing the architecture of the base
+Efficient and Secure Blockchain-Based Federated Learning (ESB-FL) frame-
+work, upon which HealChain is built.
+2.1
+Privacy-Preserving Federated Learning (PPFL)
+PPFL aims to collaboratively train a global model while strongly preserving data privacy
+[1].
+The current landscape of PPFL solutions can be broadly divided based on the
+underlying privacy-preserving mechanisms.
+2.1.1
+Non-Cryptographic Privacy Mechanisms
+Non-cryptographic technologies, primarily reliant on Differential Privacy (DP), pro-
+vide privacy guarantees by adding controlled noise to local data or model parameters
+[2]. While this offers competitive efficiency, applying DP results in an inherent trade-off:
+achieving a high level of privacy often requires significant noise injection, which inversely
+affects model accuracy and utility [3, 4].
+Consequently, non-crypto methods struggle
+to satisfy applications that demand both rigorous privacy guarantees and high model
+accuracy.
+2.1.2
+Cryptographic Privacy Mechanisms
+In contrast, cryptographic technologies, including Homomorphic Encryption (HE)
+and Secure Multi-Party Computation (MPC), provide stronger privacy guarantees
+while retaining the original model accuracy [5]. HE schemes allow computation directly
+4
+
+
+--- PAGE 14 ---
+5
+on encrypted data, preventing information leakage throughout the aggregation process
+[6]. MPC protocols enable distributed participants to securely compute a joint objective
+function without revealing their individual inputs [6].
+However, these solutions face significant practical hurdles: HE schemes often incur
+vast computational overhead [2], and MPC protocols frequently demand substantial
+communication costs [6] due to complex cryptographic mechanisms or intricate multi-
+round interactions.
+This low efficiency hinders the wide deployment of crypto-based
+PPFL schemes.
+2.2
+Blockchain Integration and Fair Incentive Mech-
+anisms
+Blockchain technology is increasingly adopted in FL frameworks due to its decentral-
+ization, verifiability, and immutability, often replacing the need for a single trusted
+central server [5].
+2.2.1
+Incentive Mechanisms and Fair Payment Gaps
+While blockchain acts as an immutable distributed ledger, integrating an effective incen-
+tive mechanism that ensures fair exchange remains challenging [1]. Many existing works
+focus on achieving fair assessment of a participant’s technical contribution, but they often
+neglect the fairness of the payment procedure itself.
+For example, if rewards are paid upfront, participants may submit lazily trained,
+low-accuracy models (free-riding). Conversely, if the Task Publisher (TP) receives the
+model first, they may refuse payment. An ideal framework must ensure that the task
+can be completed correctly and that each participant obtains the task rewards timely.
+Traditional blockchain-based schemes often fail to balance data privacy protection with
+fair payment of rewards.
+2.2.2
+Survey of Related Blockchain-FL Frameworks
+Several blockchain-based FL frameworks have attempted to tackle these issues, but they
+each present distinct trade-offs:
+• TAPFed [2]: Employs Threshold Functional Encryption (TFE) for secure aggre-
+gation. Merit: Superior security. Demerit: Lacks comprehensive, explicit incentive
+and payment logic.
+• Federify [5]: Utilizes zkSNARKs and smart contracts for model verifiability. Merit:
+Transparency, verifiability. Demerit: Heavy proof generation and high gas cost.
+
+
+--- PAGE 15 ---
+6
+• FLoBC [4]: Features a decentralized consensus mechanism with validator/trainer
+ratios. Merit: Byzantine tolerance. Demerit: Adds extra validation overhead and
+provides less formal privacy guarantees.
+• PEFL [3]: Uses local Differential Privacy and anomaly detection. Merit: Balanced
+privacy and efficient defense. Demerit: Core reliance on DP results in model accu-
+racy loss and lacks a robust, cryptographically verifiable fair payment mechanism.
+2.3
+The Base Framework: ESB-FL
+Our HealChain project is anchored in the principles established by the Efficient and
+Secure Blockchain-Based Federated Learning (ESB-FL) framework [1]. ESB-FL
+was specifically designed to balance security, efficiency, and initial payment feasibility.
+2.3.1
+Non-Interactive Designated Decryptor Functional Encryp-
+tion (NDD-FE)
+ESB-FL introduced NDD-FE to protect the privacy of training data while maintaining
+high communication performance [1]. This scheme is a lightweight cryptographic tool [1]
+supporting inner-product computation [6] and ensures:
+1. Non-Interactive Key Derivation: Eliminates the need for repeated multi-round
+communication between the key generator and the data encryptor [1], significantly
+lowering communication costs.
+2. Designated Decryptor: Only the specified Aggregation Node (A) holds the de-
+cryption function key (skFE) [1], preventing all other parties from accessing indi-
+vidual or aggregated updates.
+The aggregated result is recovered using the Baby-Step Giant-Step (BSGS) al-
+gorithm [1], with security resting on the Computational Diffie-Hellman (CDH) as-
+sumption [1].
+2.3.2
+Decentralized Gradient Compression (DGC) and Blockchain
+Structure
+Decentralized Gradient Compression (DGC): The DGC algorithm [1] is imple-
+mented at the local training stage. It minimizes communication costs [1] by compressing
+gradient updates (∆i) into a sparse, quantized update (∆′
+i) prior to NDD-FE encryption,
+substantially mitigating the communication bottleneck inherent in FL systems [1].
+
+
+--- PAGE 16 ---
+7
+Designed Blockchain Structure for Payment: ESB-FL modifies the traditional
+block header to bind task performance and participant information to the immutable
+ledger. The header is enhanced with digital signatures for the task information (σ1) and
+the final model’s hash, link, and accuracy (σ2) [1]. This design guarantees that rewards
+are released only if the trained model meets the Task Publisher’s requirements [1], laying
+the groundwork for conditional payment.
+In conclusion, HealChain builds upon these efficiency and foundational payment
+structures by enhancing verifiability and contribution fairness mechanisms, ensuring privacy-
+preserving and incentivized federated learning.
+
+
+--- PAGE 17 ---
+Chapter 3
+Preliminaries
+This chapter provides an expanded introduction to the foundational technologies and
+cryptographic concepts essential for understanding the proposed HealChain framework,
+specifically focusing on the mechanisms utilized and enhanced in our system.
+3.1
+Blockchain
+Blockchain can be regarded as a decentralized, distributed database composed of a
+chronological collection of blocks linked by cryptographic hash pointers.
+This chain-
+like structure guarantees immutability, ensuring that once a transaction or block is
+recorded, it cannot be tampered with retrospectively without invalidating all subsequent
+blocks.
+Consensus mechanisms, such as Proof-of-Stake (PoS) utilized in the participant
+selection phase, ensure that all network nodes agree on the validity of new blocks before
+they are added.
+In the context of HealChain, the blockchain serves several critical functions:
+• Maintaining the task registry.
+• Securely storing immutable commitments (commitHash) to required accuracy.
+• Verifiably logging contribution scores.
+• Executing the pre-defined logic of the Escrow Smart Contract for fair, condi-
+tional reward distribution.
+This decentralized design eliminates the dependency on a central trusted arbiter while
+ensuring transparency and fairness in collaborative learning.
+8
+
+
+--- PAGE 18 ---
+9
+3.2
+Hard Problem Assumption
+The security and privacy guarantees of the Functional Encryption (FE) scheme are rooted
+in the computational intractability of specific mathematical problems. For the NDD-FE
+scheme utilized in HealChain, the confidentiality of local training gradients and the
+security of the inner-product calculation are directly dependent on the difficulty of solving
+the Computational Diffie-Hellman (CDH) assumption.
+3.2.1
+Definition: Computational Diffie-Hellman (CDH) Assump-
+tion
+Let G be a cyclic group of prime order p, generated by an element g, typically derived
+from an efficient algorithm GGen(1λ), where λ is the security parameter. Given the group
+parameters (G, p, g) and two derived group elements (ga, gb) ∈G, where the exponents a
+and b are randomly chosen in Z∗
+p, the CDH problem is to compute the element gab.
+We assume that the advantage of solving the CDH problem is negligible, confirming
+its suitability as a secure foundation.
+3.2.2
+Alignment with NDD-FE Privacy
+The CDH assumption is critical because it ensures that unauthorized parties cannot
+deduce the random mask applied to the encrypted gradients. The random component
+used in the encryption,
+ri = H1(pkski
+TP, ctr, T),
+relies on computing a secure hash of an element where the exponent is derived from the
+product of the Task Publisher’s public key exponent (sTP) and the Miner’s secret key
+exponent (si).
+Since
+pkski
+TP = (gsTP)si = gsTPsi,
+recovering the randomized component ri without knowing both sTP and si requires solving
+a CDH instance. This guarantees that the encrypted gradient Ui remains computationally
+indistinguishable from a random element for any unauthorized party.
+Furthermore, while the aggregated result is recovered using the Baby-Step Giant-
+Step (BSGS) algorithm, this is only feasible because the numeric aggregated value
+⟨∆′, y⟩is a relatively small integer recovered from the exponent of g, distinguishing it
+from the large, random, CDH-hard exponents used for masking. This achieves a balance
+between efficiency and security.
+
+
+--- PAGE 19 ---
+10
+3.3
+Non-Interactive Designated Decryptor Functional
+Encryption (NDD-FE)
+Functional Encryption (FE) allows a party to derive a function key (sky) that permits
+a decryptor to compute a specific function ⟨x, y⟩on the encrypted input x, without
+revealing x.
+3.3.1
+NDD-FE: Non-Interactive and Designated Security
+HealChain adopts NDD-FE, an enhancement designed to overcome the communication
+overhead of traditional FE (by achieving non-interactive key generation) and ensuring
+security by designating only the Aggregation Node (A) as the sole decryptor.
+The system uses a public key pk1 and secret key sk1 for the Task Publisher (TP),
+and key pairs (pki, ski) for miners and (pkA, skA) for the Aggregator. The algorithms are
+instantiated as follows:
+Key Derive (TP →skFE)
+The TP non-interactively derives the functional key skFE for the Aggregation Node:
+skFE =
+h
+X
+i=1
+rcrt
+i yi
+(3.1)
+where yi is the aggregation weight and rcrt
+i
+is derived from the TP’s secret key sk1:
+rcrt
+i
+= H1(pksk1
+i
+, ctr, T) ∈Z∗
+p
+(3.2)
+Encrypt (Mineri →Ui)
+Each miner encrypts their compressed update ∆′
+i (the vector x) using the TP’s public
+key pk1 and the Aggregator’s public key pkA:
+Ui = pkri
+1 · pk
+∆′
+i
+A
+(3.3)
+where ri is derived from the Miner’s secret key ski:
+ri = H1(pkski
+1 , ctr, T) ∈Z∗
+p
+(3.4)
+
+
+--- PAGE 20 ---
+11
+Decrypt (Aggregator →g⟨∆′,y⟩)
+The Aggregation Node A aggregates the ciphertexts from all participating miners (Ui)
+and uses the key skFE to obtain the encoded aggregate E:
+E =
+Qh
+i=1 U yi
+i
+pkskFE
+1
+(3.5)
+Substituting the components reveals the mathematical proof of aggregation:
+E =
+Qh
+i=1(pkri
+1 · pk
+∆′
+i
+A )yi
+pk
+Ph
+i=1 riyi
+1
+= pk
+P riyi
+1
+· pk
+P ∆′
+iyi
+A
+pk
+P riyi
+1
+= pk⟨∆′,y⟩
+A
+(3.6)
+Recover Weights
+The Aggregator then uses its private key skA to remove the pkA exponentiation and
+recover the aggregated result ⟨∆′, y⟩via the BSGS algorithm on the resulting group
+element E∗:
+E∗= E1/skA = (pk⟨∆′,y⟩
+A
+)1/skA = g⟨∆′,y⟩
+(3.7)
+This derivation ensures that only the designated Aggregator successfully decrypts the
+aggregated result, and the TP cannot decrypt the individual Ui due to the reliance on
+pkA, thus achieving both non-interactivity and designated security.
+3.4
+Federated Learning (FL) Framework
+A classic Federated Learning (FL) cycle involves collaborative training across multiple
+miners (Mi) holding diverse local datasets (Di), coordinated by an Aggregation Node (A).
+The core goal is to generate a robust global model W without centralizing proprietary
+data.
+The iterative process relies on three primary phases:
+1. Initialization: The cycle begins when the Task Publisher (TP) broadcasts the
+task parameters and the initial global model W0.
+2. Local Training: Each miner i ∈{1, . . . , h} downloads Wt, trains it using their
+local data Di, and computes their raw local gradient update ∆i. In HealChain,
+this phase is augmented by Decentralized Gradient Compression (DGC) to
+compute the sparse update ∆′
+i, followed by the NDD-FE Encryption (as detailed
+
+
+--- PAGE 21 ---
+12
+above) to create the ciphertext Ui. This ensures minimal communication overhead
+and protection of the privacy-sensitive local update ∆i.
+3. Secure Aggregation and Update: The Aggregation Node A collects the en-
+crypted updates {Ui}. Leveraging the NDD-FE scheme, A securely computes the
+aggregated, decentralized update ⟨∆′, y⟩. This aggregated gradient is then decom-
+pressed and applied to the existing global model Wt, resulting in the updated model
+Wt+1. This process continues until W converges or meets the committed accuracy
+requirement (accreq).
+
+
+--- PAGE 22 ---
+Chapter 4
+Proposed System Architecture
+Overview of the ESB-FL Framework
+The Efficient and Secure Blockchain-Based Federated Learning (ESB-FL) framework was
+proposed to address the fundamental challenges of privacy, efficiency, and fair payment
+in Federated Learning (FL) systems. It functions by combining a novel Non-Interactive
+Designated Decryptor Functional Encryption (NDD-FE) scheme with the Decentralized
+Gradient Compression (DGC) algorithm, all orchestrated through an elaborately designed
+blockchain. This architecture ensures strong data privacy for local training gradients
+while minimizing communication overhead [1].
+Crucially, ESB-FL modifies the traditional blockchain structure to bind task informa-
+tion and model performance to the ledger using digital signatures, thereby establishing a
+basic framework for conditional reward payment where participants are guaranteed com-
+pensation if, and only if, the trained model satisfies the Task Publisher’s requirements.
+This foundation of efficient, cryptographically secured aggregation and immutable, condi-
+tional recording serves as the launchpad for the enhanced fairness mechanisms introduced
+in HealChain.
+4.1
+Enhanced ESB-FL Framework Overview
+The proposed Enhanced ESB-FL, designated as HealChain, augments the original
+framework by integrating three novel enhancements: a Commit–Reveal Verification Pro-
+tocol to ensure task honesty and verifiable model validation; an Escrow-based Smart
+Contract Mechanism for secure and conditional payments; and a Gradient-Norm Based
+Contribution Scoring Function to mitigate free-riding and ensure fair contribution-based
+rewards. This integrated architecture significantly strengthens privacy, fairness, and re-
+liability in decentralized federated learning environments while maintaining low compu-
+tational and communication overhead.
+The system is conceptually divided into three interacting layers—the Client Layer
+13
+
+
+--- PAGE 23 ---
+14
+Enhanced ESB-FL Three-Layer Architecture
+This diagram illustrates the mapping of the seven functional modules (M1-M7) across the
+Federated, Blockchain, and Client Layers.
+Figure 4.1: Enhanced ESB-FL Three-Layer Architecture. The diagram maps the seven
+functional modules (M1-M7) across the Federated, Blockchain, and Client Layers.
+(executing local training, DGC, and NDD-FE encryption), the Federated Layer (co-
+ordinating tasks, secure aggregation, and reputation calculation), and the Blockchain
+Layer (storing task state, executing smart contracts, and achieving consensus)—and
+operates through a sequence of seven distinct functional modules (M1–M7).
+The architectural workflow (Figure 4.1) begins at the Client Layer (M1: Task
+Publishing), where the Task Publisher deposits the reward into the Blockchain Layer’s
+Escrow Contract and generates a hash commitment for the required accuracy (accreq)
+via the Commit–Reveal Protocol. The process moves to the Federated Layer (M2:
+Miner Selection), which selects an Aggregator using Proof-of-Stake (PoS) and derives
+the functional key (skFE) via NDD-FE for secure delivery.
+In the next phase (M3: Local Training and Scoring), the participating miners
+train their models, compute the contribution score based on the L2 norm (∥∆′
+i∥2) of their
+compressed (DGC) gradients, commit this score on-chain, and submit the encrypted
+gradient updates (Ui).
+The Aggregator then executes Secure Aggregation (M4),
+decrypting the aggregate, performing BSGS Recovery of the weights, evaluating the
+resulting global model accuracy, and forming a signed candidate block if the requirements
+are met.
+Miners provide binary feedback on this candidate block integrity (M5: Verifica-
+tion Feedback), enabling the Aggregator to publish the verified block payload to the
+blockchain (M6: Block Publishing). Finally, the smart contract on the Blockchain
+
+
+--- PAGE 24 ---
+15
+Layer executes the Reward Distribution logic (M7), validating the accuracy commit-
+ment and distributing the escrowed funds proportionally based on the miners’ verifiably
+revealed contribution scores.
+4.2
+Module 1: Task Publishing with Escrow and Com-
+mit
+The workflow illustrating the escrow deposit and commitment generation.
+Figure 4.2: Task Publishing Workflow (Escrow and Commit)
+Algorithm 1 Task Publishing with Escrow Commit
+1: procedure TaskPublishing EscrowCommit(pkTP, skTP, D, L, accreq, Texp, R, nonceTP)
+2:
+commitHash ←HASH(accreq∥nonceTP)
+3:
+taskID ←NewTaskIdentifier(pkTP, timestamp)
+4:
+Update taskPool[taskID] with metadata
+5:
+escrowTx ←EscrowContract.deposit(taskID, pkTP, R)
+6:
+if escrowTx.failed then
+7:
+Mark taskPool[taskID] as FAILED
+8:
+emit TaskInitFailed(taskID)
+9:
+return ERROR
+10:
+end if
+11:
+Broadcast TaskPublished(taskID)
+12:
+return taskID
+13: end procedure
+
+
+--- PAGE 25 ---
+16
+4.2.1
+Task Initialization Process
+The process of task initialization, detailed in Algorithm1 and illustrated in Figure 4.2,
+guarantees payment integrity and task honesty from the outset. The Task Publisher
+(TP) begins by initializing the training task
+T = (pkTP, D, L, accreq, Texp, R)
+where pkTP denotes the publisher’s public key, D the task description, L the learning
+objective, accreq the required model accuracy, Texp the task expiration, and R the total
+reward.
+The core preparatory steps involve generating a commitment hash for the required
+model accuracy (accreq) and a random nonce (nonceTP) using the HASH() function. The
+resulting commitHash is crucial as it binds the required accuracy to the blockchain im-
+mutably, forming the basis of the Commit–Reveal Verification Protocol. Concurrently, a
+unique taskID is generated via the NewTaskIdentifier() function.
+The process then transitions to the core financial and contractual step: the TP de-
+posits the full reward (R) into the specialized on-chain Escrow Smart Contract using the
+EscrowContract.deposit() function. This action locks the funds, producing an escrowTx
+reference, which eliminates the risk of payment default and guarantees that the reward
+is available upon successful task completion. All resulting metadata, including the pub-
+lisher’s public key (pkTP), task parameters, and the commitHash, are recorded in the
+off-chain taskPool registry.
+If the deposit fails, the process is aborted and a TaskInitFailed event is emitted.
+Finally, the successful publication is broadcasted via the BroadcastEvent.TaskPublished()
+function to notify potential miners of the new, available, and securely funded task.
+4.3
+Module 2: Miner Selection and Key Derivation
+Miners satisfying the dataset and computation criteria submit proofs and public keys.
+The TP selects the aggregator node A using a Proof-of-Stake (PoS) mechanism and
+generates a function key skFE using NDD-FE.
+
+
+--- PAGE 26 ---
+17
+Algorithm 2 Miner Selection with Key Derivation
+1: procedure
+MinerSelection and KeyDerive(taskID,
+taskPool[taskID],
+re-
+sponses,)
+selectionPolicy, ctr, default y
+2:
+validMiners ←[ ]
+3:
+for all r ∈responses do
+4:
+if V erifyMinerProof(r.pki, r.proofi, taskPool[taskID].meta.D) = TRUE
+then
+5:
+Append r.pki to validMiners
+6:
+else
+7:
+Log(”miner rejected”, r.pki)
+8:
+end if
+9:
+end for
+10:
+if |validMiners| < MIN PARTICIPANTS then
+11:
+emit NotEnoughMiners(taskID)
+12:
+return ERROR
+13:
+end if
+14:
+Apk ←PoS Select(validMiners, selectionPolicy, seed = taskID∥timestamp)
+15:
+taskPool[taskID].participants ←validMiners
+16:
+taskPool[taskID].aggregator ←Apk
+17:
+taskPool[taskID].status ←PROCESSING
+18:
+h ←|validMiners|
+19:
+y ←[ 1
+h for each miner]
+20:
+skFE ←NDD FE.KeyDerive(pkTP, skTP, validMiners, ctr, y, aux = taskID)
+21:
+deliverResult ←SecureSend(Apk, EncryptWithPK(Apk, skFE), tag = taskID)
+22:
+if deliverResult.failed then
+23:
+Retry or SelectAlternativeAggregator()
+24:
+end if
+25:
+emit AggregatorSelected(taskID, Apk)
+26:
+return SUCCESS
+27: end procedure
+
+
+--- PAGE 27 ---
+18
+The workflow detailing miner validation, aggregator selection via PoS, and secure
+NDD-FE key delivery.
+Figure 4.3: Miner Selection and Key Derivation (Algorithm 2)
+Module 2, outlined in Algorithm 2 and visualized in Figure 4.3, governs the secure
+setup of the federated learning round. The process begins with miner validation: partic-
+ipants who responded to the task are individually checked to ensure they meet the task’s
+criteria (e.g., possessing the required dataset type D or sufficient computing power) using
+the VerifyMinerProof() function. The list of eligible miners is compiled into validMiners,
+and the system enforces a minimum participant count (MIN PARTICIPANTS); if the
+threshold is not met, the task is aborted.
+Next, the crucial Aggregator selection occurs using the PoS Select() function,
+which applies a Proof-of-Stake (PoS) mechanism to deterministically and transparently
+choose an Aggregation Node (Apk) from the validMiners list. Once selected, the Task
+Publisher (TP) updates the central taskPool status to PROCESSING and prepares the
+weight vector (y) necessary for aggregation, where each of the h participants is assigned
+an initial weight of 1/h.
+Finally, the most critical security step is executed: the TP uses the NDD FE.KeyDerive()
+function along with their own secret key (skTP), the list of validMiners, and the weight
+vector y, to generate the functional encryption key (skFE). This skFE is then transported
+
+
+--- PAGE 28 ---
+19
+via the SecureSend() mechanism (encrypted under Apk) to ensure only the designated
+Aggregator can access the key required for secure model summation, thereby completing
+the round’s secure initialization.
+4.4
+Module 3: Local Model Training and Gradient-
+Norm Scoring
+Each miner trains its local model on private data, compresses the gradient using DGC,
+and computes the contribution score based on the gradient norm:
+score = ∥∆′
+i∥2
+The score is committed to the chain, and encrypted updates are transmitted to the
+aggregator.
+The workflow detailing local training, DGC compression, L2 norm scoring, and
+encrypted update submission.
+Figure 4.4: Local Model Training and Gradient-Norm Score (Algorithm 3)
+Module 3, detailed in Algorithm 3 and visualized in Figure 4.4, is executed by
+every participating miner (Mj) and represents the core security and fairness stage.
+The miner begins by performing local training through the LocalTrain() function on their
+private dataset Dj using the global model Wt, resulting in an updated local model Wi.
+The raw gradient update (∆i) is then computed via the ComputeGradient() function.
+This raw update undergoes Decentralized Gradient Compression (DGC) using
+the DGC Compress() function with a specified threshold (τ), producing the sparse and
+
+
+--- PAGE 29 ---
+20
+Algorithm 3 Local Model Training and Secure Submission
+1: procedure Miner LocalTrain Encode Submit(Mj(pkj, skj), taskID, Wt, Dj, τ, ctr)
+2:
+Wi ←LocalTrain(Dj, Wt, localTrainingParams)
+3:
+∆i ←ComputeGradient(Wi, Wt)
+4:
+∆′
+i ←DGC Compress(∆i, threshold = τ)
+5:
+score ←Norm2(∆′
+i)
+6:
+noncei ←Random()
+7:
+scoreCommiti ←HASH(score ∥noncei ∥taskID ∥pkj)
+8:
+Ui ←NDD FE.Encrypt(pkTP , skj, pkaggregator, ctr, ∆′
+i, aux = taskID)
+9:
+sigi ←Sign(skj, {taskID, Ui.hash, scoreCommiti, pkj})
+10:
+SendToAggregator(Apk, {Ui, scoreCommiti, sigi, pkj})
+11:
+LogOffChain(submission metadata)
+12:
+return OK
+13: end procedure
+quantized update ∆′
+i. This compression drastically reduces communication volume while
+retaining essential model information.
+Next, the unique fairness contribution—the Gradient-Norm Score—is calculated
+by computing the Norm2() (L2 norm) of the compressed update (∥∆′
+i∥2). To ensure this
+score remains immutable and verifiable, the miner generates a random nonce using the
+Random() function and computes the score commitment (scoreCommiti) through the
+HASH() function over the tuple ⟨score, nonce, taskID, pkj⟩.
+Finally, the compressed update ∆′
+i is secured using the NDD FE.Encrypt() function,
+producing the ciphertext Ui. The miner then signs the final submission package using
+Sign(), which includes both the encrypted update and the commitment (scoreCommiti),
+and transmits it via SendToAggregator() to the designated Aggregation Node.
+This
+concludes the local training and secure submission phase of the federated round.
+4.5
+Module 4: Secure Aggregation, BSGS Recovery,
+Evaluation and Candidate Formation
+The aggregator decrypts received encrypted updates using the NDD-FE function key and
+aggregates the global model Wt+1. Model accuracy is computed and a candidate block is
+generated.
+
+
+--- PAGE 30 ---
+21
+The complex workflow detailing secure decryption, BSGS recovery of global model
+weights, model evaluation, and candidate block generation.
+Figure 4.5: Secure Aggregation, BSGS Recovery, Evaluation and Candidate Formation
+(Algorithm 4)
+
+
+--- PAGE 31 ---
+22
+Algorithm 4 Secure Aggregation, Decryption, and Accuracy Evaluation
+1: procedure
+Aggregator SecureAggregate BSGS Eval FormCandidate(taskID,
+taskPool[taskID],
+submissions, skF E, config)
+2:
+procedure (v)alidSubs ←{}
+3:
+for all s ∈submissions do
+4:
+if V erifySignature(s.pki, s.sigi, then
+{taskID, s.Ui.hash, s.scoreCommiti}) = TRUE
+5:
+Append s to validSubs
+6:
+else
+7:
+Log(”Invalid submission”, s.pki)
+8:
+end if
+9:
+end for
+10:
+if |validSubs| < minParticipants then
+11:
+taskPool[taskID].status ←FAILED
+12:
+emit AggregationAborted(taskID,)
+reason = ”insufficient valid submissions”
+13:
+return FAIL
+14:
+end if
+15:
+E ←NDD FE.Decrypt(taskPool[taskID].publisher pk, skF E, {s.Ui},
+taskPool[taskID].weightV ector, aux = taskID, ctr = taskPool[taskID].ctr)
+16:
+if Decrypt.failed then
+17:
+taskPool[taskID].status ←FAILED
+18:
+emit DecryptFailure(taskID)
+19:
+return FAIL
+20:
+end if
+21:
+recoveredV ector ←RecoverWeights BSGS(E, encodingParams, DGC meta)
+22:
+if recoveredV ector = FAIL then
+23:
+taskPool[taskID].status ←FAILED
+24:
+emit RecoveryFailure(taskID)
+25:
+return FAIL
+26:
+end if
+27:
+Everify ←EncodeAggregateUnderFE(recoveredV ector, encodingParams,
+aux = taskID, ctr = taskPool[taskID].ctr)
+28:
+if Everify ̸= E then
+29:
+taskPool[taskID].status ←FAILED
+30:
+emit RecoveryVerificationFailed(taskID)
+31:
+return FAIL
+32:
+end if
+33:
+decompressedUpdate ←DGC Decompress(recoveredV ector, DGC meta)
+34:
+Wnew ←ApplyUpdate(taskPool[taskID].currentGlobalModel, decompressedUpdate)
+35:
+taskPool[taskID].round ←taskPool[taskID].round + 1
+36:
+taskPool[taskID].currentGlobalModel ←Wnew
+37:
+acccalc ←EvaluateModel(Wnew, FetchV alidationSet())
+38:
+if acccalc ≥accreq then
+39:
+ml ←PublishModelArtifact(Wnew,
+tag = taskID ∥”round ” ∥taskPool[taskID].round)
+40:
+mh ←HASH(ml ∥metadata(Wnew))
+41:
+B ←{taskID, round, modelHash : mh, modelLink : ml, acccalc,
+participants : [s.pki], scoreCommits : [s.scoreCommiti],
+aggregator, timestamp : now()}
+42:
+B.signatureA ←Sign(skaggregator, HASH(B))
+43:
+taskPool[taskID].candidateBlock ←B
+44:
+taskPool[taskID].status ←AWAITING V ERIFICATION
+45:
+BroadcastToParticipants(event : ”CANDIDATE READY ”, B, ml)
+46:
+return PROCEED TO PUBLISH
+47:
+else
+48:
+if taskPool[taskID].round < taskPool[taskID].meta.maxRounds then
+49:
+taskPool[taskID].status ←BACK TO TRAINING
+50:
+mlround ←PublishModelArtifact(Wnew,
+tag = taskID ∥”round ” ∥taskPool[taskID].round)
+51:
+BroadcastToParticipants(event : ”RETRAIN”, modelLink : mlround)
+52:
+return RETRAIN
+53:
+else
+54:
+taskPool[taskID].status ←FAILED ACCURACY
+55:
+return FAIL
+56:
+end if
+57:
+end if
+58:
+end procedure
+
+
+--- PAGE 32 ---
+23
+Module 4, detailed in Algorithm 4 and illustrated in Figure 4.5, serves as the
+complex processing core executed primarily by the Aggregation Node (A). This
+module encompasses submission verification, cryptographic decryption, model recovery,
+application of updates, accuracy evaluation, and the final decision to either proceed or
+retrain the global model.
+The process begins with Submission Verification, where the Aggregator validates
+each incoming miner submission by verifying the authenticity of the miner’s digital sig-
+nature using the VerifySignature() function. Invalid or malicious submissions are logged
+and discarded. If the number of valid submissions falls below the minimum threshold
+(minParticipants), the aggregation process is aborted to maintain integrity and fairness.
+The validated ciphertexts {Ui} are then collectively aggregated and decrypted using
+the NDD FE.Decrypt() function along with the Aggregator’s designated functional en-
+cryption key (skFE). This operation yields an encoded aggregate result E, represented as
+a single group element:
+E = g⟨∆′,y⟩
+where ∆′ denotes the vector of compressed miner updates and y the assigned weight
+vector.
+The next crucial step is the BSGS Recovery Phase.
+Since E is an element
+in the cyclic group G, the Aggregator must recover the numerical aggregated gradi-
+ent ⟨∆′, y⟩—the hidden exponent—using the Baby-Step Giant-Step algorithm via the
+RecoverWeights BSGS() function. This step is computationally feasible because the en-
+coded result lies within a bounded range smaller than the group order p. A subsequent
+sanity check is performed by re-encoding the recovered vector through EncodeAggregateUnderFE()
+to verify consistency between the recovered and original encoded values.
+Upon successful verification, the process transitions to the Model Update and
+Evaluation Phase. The decrypted and recovered update is first decompressed using the
+DGC Decompress() function to restore its full dense form. The global model parameters
+are then updated via ApplyUpdate(), following:
+Wnew ←Wcurrent + decompressedUpdate
+The updated model is evaluated using the EvaluateModel() function to compute the
+achieved accuracy acccalc on a designated validation set.
+Finally, the Accuracy Decision Tree determines the next operational step.
+If
+acccalc ≥accreq, the Aggregator publishes the new model artifact using PublishModelArtifact(),
+forms a signed candidate block (B) embedding all miner commitments, and transitions the
+system to the PROCEED TO PUBLISH state. Conversely, if the accuracy remains be-
+low threshold and the maximum training rounds (maxRounds) have not been exhausted,
+a RETRAIN signal is broadcasted to initiate another learning iteration. If neither con-
+
+
+--- PAGE 33 ---
+24
+dition is satisfied, the task is finalized as a failure and marked accordingly in the task
+pool.
+4.6
+Module 5: Miner Verification Feedback
+Miners verify the candidate block integrity, check signatures, and ensure all score com-
+mitments are present. Each miner returns a binary feedback (VALID/INVALID) to the
+aggregator.
+The flow for miners to verify the candidate block integrity and submit signed binary
+feedback (VALID/INVALID).
+Figure 4.6: Miner Verification Feedback (Consensus)Algorithm 5
+Module 5, detailed in Algorithm 5 and visually represented in Figure 4.6, in-
+troduces a vital layer of decentralized security and lightweight consensus among
+participating miners before the aggregation result is permanently committed on-chain.
+This stage effectively transitions trust from the single computational authority of the
+Aggregator (as in Module 4) to the collective verification power of the miner network.
+Each participating miner (Mj) concurrently receives the Candidate Block (B) and
+the associated off-chain Model Link (ml).
+Upon reception, every miner performs a
+sequence of three critical verification steps to formulate an independent consensus verdict.
+The first step involves validating the block integrity.
+Each miner executes the
+VerifySignature() function to authenticate the Aggregator’s digital signature (signatureA)
+over the entire block hash. A failed verification at this stage immediately signals potential
+tampering or misbehavior by the Aggregator.
+
+
+--- PAGE 34 ---
+25
+Algorithm 5 Decentralized Consensus and Integrity Verification
+1: procedure Miner VerificationFeedback(B, ml)
+2:
+for all Mj ∈B.participants (concurrent) do
+3:
+feedbackj ←V ALID
+4:
+reasonj ←””
+▷Step 1: Verify Aggregator Signature
+5:
+if V erifySignature(B.aggregator, B.signatureA, HASH(B)) = FALSE
+then
+6:
+feedbackj ←INV ALID
+7:
+reasonj ←”bad aggregator sig”
+8:
+goto send feedback
+9:
+end if
+▷Step 2: Check Score Commitment Presence
+10:
+if scoreCommitj /∈B.scoreCommits then
+11:
+feedbackj ←INV ALID
+12:
+reasonj ←”missing scoreCommit”
+13:
+goto send feedback
+14:
+end if
+▷Step 3: Optional Local Sanity Check
+15:
+Wcandidate ←FetchModel(ml)
+16:
+sanity ←SanityCheckModel(Wcandidate, smallLocalTestSet)
+17:
+if sanity = FALSE then
+18:
+feedbackj ←INV ALID
+19:
+reasonj ←”model fails local sanity”
+20:
+goto send feedback
+21:
+end if
+22:
+send feedback:
+23:
+sig feedbackj ←Sign(skj, {taskID, B.hash, feedbackj, reasonj})
+24:
+SendToAggregator(Apk, {pkj, feedbackj, reasonj, sig feedbackj})
+25:
+end for
+▷Aggregator tallies feedbacks and forms consensus
+26:
+if Majority(V ALID) then
+27:
+emit MajorityVerified(taskID, B.hash)
+28:
+return PROCEED TO PUBLISH
+29:
+else
+30:
+emit BlockRejected(taskID, B.hash)
+31:
+return REJECT
+32:
+end if
+33: end procedure=0
+
+
+--- PAGE 35 ---
+26
+The second verification step is a fairness integrity check. Each miner ensures that
+their individual scoreCommitj, generated during Module 3, is correctly included within
+the list B.scoreCommits. This prevents the Aggregator from selectively omitting legit-
+imate miners to manipulate reward distribution or conceal malicious gradient updates.
+Any mismatch here triggers an IntegrityViolation flag.
+The third and optional step, the Local Sanity Check, allows miners to indepen-
+dently validate model quality. Through the FetchModel(ml) function, a miner retrieves
+the trained model artifact and executes a lightweight verification using SanityCheckModel()
+on a small local validation subset. This decentralized evaluation acts as a final safeguard
+against subtle model poisoning, backdoor attacks, or severe accuracy degradation that
+might have bypassed the Aggregator’s centralized EvaluateModel() phase in Module 4.
+After performing these cumulative verifications, each miner formulates a signed binary
+verdict—either VALID or INVALID—and transmits it back to the Aggregator using a
+secure communication channel. The Aggregator then aggregates all signed verdicts and
+computes the collective outcome via the Majority Consensus rule:
+ConsensusResult = Majority(VALID)
+Only if the number of VALID votes exceeds the consensus threshold is the block deemed
+trustworthy and allowed to progress to final publication in Module 6. Otherwise, the
+block is rejected, ensuring that the integrity and fairness of the global model are verified
+by the decentralized miner network prior to the activation of the guaranteed payment
+mechanism.
+4.7
+Module 6: Aggregator Verify, Build Payload and
+Publish On-Chain
+If the majority feedback is positive, the aggregator signs and publishes the verified block,
+transitioning the task status to AWAITING REVEAL. The aggregator prepares a deter-
+ministic payload for the smart contract.
+Module 6, detailed in Algorithm 6 and illustrated in Figure 4.7, represents the
+final control gate for commit and publication, executed by the Aggregator (A).
+Its core responsibility is to verify the decentralized consensus established in Module 5
+and construct a verified, tamper-proof payload to be recorded on the blockchain, thereby
+triggering the payment contract.
+The process begins with the Collection and Verification of Miner Feedbacks,
+executed via the CollectFeedbacksForCandidate() function. The Aggregator tallies all
+received VALID and INVALID responses from the miners in Module 5 to determine
+
+
+--- PAGE 36 ---
+27
+Algorithm 6 On-Chain Commit and Verified Block Publication
+1: procedure Aggregator VerifyBuildPublish OnChain(taskID, taskPool[taskID])
+2:
+if taskPool[taskID].candidateBlock = NULL then
+3:
+emit Error(”No candidate to publish”)
+4:
+return ERROR
+5:
+end if
+6:
+B ←taskPool[taskID].candidateBlock
+7:
+sign1 ←taskPool[taskID].meta.sign1
+8:
+sign2local ←Sign(skaggregator, HASH(B))
+9:
+feedbacks ←CollectFeedbacksForCandidate(B.hash, timeout = verificationTimeout)
+10:
+validCount ←count(valid feedbacks with valid sigs)
+11:
+invalidCount ←count(invalid feedbacks with valid sigs)
+12:
+requiredMajority ←⌈|B.participants| × (1 −tolerableFaultRate)⌉
+13:
+if validCount < requiredMajority then
+14:
+taskPool[taskID].status ←REJECTED
+15:
+emit CandidateRejected(taskID, reason = ”insufficient valid feedback”)
+16:
+return REJECTED
+17:
+end if
+18:
+verificationEvidence ←Summary(feedbacks)
+19:
+payload ←{taskID, round, modelHash, modelLink, acccalc, participants,
+scoreCommits, aggregator, sign1, sign2 : sign2local, timestamp,
+verificationEvidence}
+20:
+if
+V erifyPublisherToken(sign1, taskPool[taskID].meta.publisher pk, taskID) = FALSE
+then
+21:
+taskPool[taskID].status ←REJECTED
+22:
+return ERROR
+23:
+end if
+24:
+if V erifySignature(B.aggregator, sign2local, HASH(B)) = FALSE then
+25:
+taskPool[taskID].status ←REJECTED
+26:
+return ERROR
+27:
+end if
+28:
+txP ublish ←SmartContract.publishBlock(payload)
+29:
+if txP ublish.failed then
+30:
+emit BlockPublishFailed(taskID, txP ublish.error)
+31:
+taskPool[taskID].status ←REJECTED
+32:
+return ERROR
+33:
+end if
+34:
+taskPool[taskID].onChainBlockRef ←txP ublish.blockHash
+35:
+taskPool[taskID].status ←PUBLISHED ONCHAIN
+36:
+taskPool[taskID].awaitingRevealUntil ←now() + SmartContract.REV EAL WINDOW
+37:
+Notify Publisher and Participants of deadline
+38:
+return PUBLISHED ONCHAIN
+39: end procedure
+
+
+--- PAGE 37 ---
+28
+The detailed process for building the final, verifiable on-chain payload after
+consensus and publishing the block.
+Figure 4.7: Aggregator Verify, Build, and Publish On-Chain (Algorithm 6)
+whether the proposed block achieved sufficient approval.
+The next step enforces the Majority Threshold Check. The count of VALID votes,
+denoted as validCount, must satisfy the calculated requiredMajority, typically expressed
+as 1−tolerableFaultRate of the total number of participants. If this condition is not met,
+the candidate block is immediately marked as REJECTED, preventing the publication
+of faulty or disputed models and thereby halting any premature payment activation.
+Upon achieving consensus, the Aggregator executes two final Sanity Checks to en-
+sure cryptographic authenticity. First, it validates the Task Publisher’s payment to-
+ken (sign1) using VerifyPublisherToken(). Second, it verifies its own signature (sign2local)
+over the candidate block hash via VerifySignature(). Both signatures must be verifiable
+and match the registered blockchain identities of the respective signers.
+Once all checks pass, the Aggregator constructs the deterministic On-Chain Pay-
+load, an immutable data record permanently stored on the blockchain. This payload
+encapsulates all elements necessary for post-hoc auditability and reward distribution in
+Module 7, and includes:
+• Model Identifiers: modelHash, ensuring model immutability since Module 4, and
+modelLink for reference to the stored model artifact.
+• Performance Metrics: The final evaluated model accuracy, acccalc.
+• Fairness and Participation Data: The definitive list of miners (pki) and their
+
+
+--- PAGE 38 ---
+29
+associated scoreCommits, generated during Module 3.
+These commitments are
+critical for proportional reward distribution in Module 7.
+• Signatures and Evidence: The Task Publisher’s payment guarantee signature
+(sign1), the Aggregator’s approval signature (sign2), and the aggregated verificationEvidence
+summarizing the consensus results from Module 5.
+After assembling the payload, the Aggregator calls the blockchain smart contract
+function publishBlock(), submitting the final verified block.
+Successful execution of
+this function permanently records the payload on-chain, updates the task status to
+PUBLISHED ONCHAIN, and initiates the Reveal Window phase.
+This phase de-
+fines a time-bound parameter awaitingRevealUntil, which specifies the deadline for the
+Task Publisher to execute the final reward disbursement process described in Module 7.
+This final operation guarantees the persistence, verifiability, and transparency of all
+task-related data, establishing the preconditions for secure and fair payment distribution
+while ensuring full auditability within the blockchain ledger.
+4.8
+Module 7: Smart Contract Reveal and Reward
+Distribution
+Once the task publisher reveals (accreveal, nonceTP), the smart contract validates the
+commit-reveal and releases proportional rewards according to normalized miner scores.
+Module 7, detailed in Algorithm 7 and visualized in Figure 4.8, represents the
+final on-chain execution phase where all cryptographic guarantees and decentralized
+verifications culminate in the trustless disbursement of funds. This module is entirely
+governed by the pre-deployed Escrow Smart Contract, leveraging the immutable data
+finalized across Modules 1–6 to ensure transparency, auditability, and fairness.
+The process begins when the Task Publisher (TP) initiates the Commit–Reveal
+Verification Protocol finale by calling the tpReveal() function.
+The TP discloses
+the original required accuracy (accreveal) along with the corresponding nonceTP.
+The
+smart contract immediately validates this revelation by recomputing and matching the
+resulting hash with the commitHash stored in the verified block (recorded in Module 6
+and originally established in Module 1). If the integrity check succeeds, the contract
+confirms that the finalized model’s accuracy (acccalc, obtained in Module 4) satisfies the
+TP’s committed performance requirement, thereby activating the conditional payment
+guarantee.
+Upon successful tpReveal() execution, the contract enters the Score Reveal Win-
+dow Phase, during which each participating miner (Mi), previously registered in Mod-
+ule 2, calls the minerRevealScore() function. This step performs the Fairness Final-
+
+
+--- PAGE 39 ---
+30
+Algorithm 7 SmartContract RevealAndDistribute (On-Chain)
+1: procedure tpReveal(taskID, accreveal, nonceT P)
+2:
+B ←onChainBlocks[taskID]
+3:
+require B.modelHash ̸= 0
+4:
+require msg.sender = RecoverSignerFromSign1(B.sign1)
+5:
+require block.timestamp < B.revealDeadline
+6:
+expected commit ←storedTaskCommitHash(taskID)
+7:
+require HASH(accreveal∥nonceT P ) = expected commit
+8:
+publisherRevealed[taskID] ←true
+9:
+minersRevealDeadline[taskID] ←block.timestamp + SCORE REV EAL WINDOW
+10:
+emit TPRevealed(taskID, accreveal)
+11: end procedure
+12: procedure minerRevealScore(taskID, score, noncei)
+13:
+B ←onChainBlocks[taskID]
+14:
+require publisherRevealed[taskID] = true
+15:
+require block.timestamp ≤minersRevealDeadline[taskID]
+16:
+expected commit ←HASH(score∥noncei∥taskID∥msg.sender)
+17:
+idx ←participantIndex(B.participants, msg.sender)
+18:
+require expected commit = B.scoreCommits[idx]
+19:
+scoreRevealed[taskID][msg.sender] ←true
+20:
+revealedScore[taskID][msg.sender] ←score
+21:
+emit MinerScoreRevealed(taskID, msg.sender, score)
+22: end procedure
+23: procedure distributeRewards(taskID)
+24:
+B ←onChainBlocks[taskID]
+25:
+require ¬B.distributed
+26:
+require publisherRevealed[taskID] = true and block.timestamp > B.revealDeadline +
+DISPUTE GRACE
+27:
+totalScore ←P revealedScore for all participants
+28:
+if totalScore = 0 then
+29:
+applyFallbackDistribution(taskID)
+30:
+else
+31:
+B.distributed ←true
+32:
+Rtotal ←escrowBalance(taskID)
+33:
+aggregatorReward ←computeAggregatorShare(Rtotal, AGGREGATOR SHARE POLICY )
+34:
+remaining ←Rtotal −aggregatorReward
+35:
+for all p ∈participants do
+36:
+share ←(remaining × revealedScore[taskID][p])/totalScore
+37:
+safeTransfer(p, share)
+38:
+end for
+39:
+if aggregatorReward > 0 then
+40:
+safeTransfer(B.aggregator, aggregatorReward)
+41:
+end if
+42:
+end if
+43:
+B.distributed ←true
+44:
+emit RewardsDistributed(taskID, Rtotal, aggregatorReward)
+45: end procedure
+
+
+--- PAGE 40 ---
+31
+The on-chain flow detailing the TP reveal, miner score reveal, and proportional
+reward distribution from the escrow.
+Figure 4.8: Smart Contract Reveal and Reward Distribution (Algorithm 7)
+ization Process, where each miner reveals their true contribution score (scorei) and
+associated nonce (noncei), both originally committed in Module 3. The contract then
+cryptographically validates each revelation by recomputing and comparing it to the im-
+mutable scoreCommiti embedded in the on-chain record (Module 6). This mechanism
+guarantees fairness and prevents free-riding by ensuring only miners who genuinely con-
+tributed receive rewards.
+Once the reveal window closes, the smart contract autonomously triggers the distributeRewards()
+function, computing the total validated contribution score, totalScore = P
+i scorei,
+from all miners who successfully revealed. The escrowed funds, initially locked during
+task publication in Module 1, are then distributed proportionally among the participants
+according to:
+rewardSharei =
+scorei
+totalScore × totalFunds
+The final disbursement is executed via the safeTransfer() function, ensuring atomic
+and secure payment to each miner’s blockchain wallet address. This automated, trustless
+reward distribution concludes the federated workflow, establishing end-to-end verifiability
+
+
+--- PAGE 41 ---
+32
+and economic fairness underpinned by immutable cryptographic proofs.
+Through this final operation, the system achieves full-cycle decentralization—transitioning
+from cryptographic verification to transparent on-chain accountability—ensuring that
+all participants are compensated proportionally, securely, and transparently within the
+blockchain ledger.
+4.9
+Unified Notation
+Table 4.1 provides a unified list of the primary symbols, functions, and variables used
+across the seven modules of the Enhanced ESB-FL (HealChain) framework.
+
+
+--- PAGE 42 ---
+33
+Table 4.1: Unified Notation for Enhanced ESB-FL (HealChain) Framework
+Symbol / Function
+Module
+Description
+pkTP, skTP
+1, 2, 4
+Publisher public/private keys.
+D, L
+1, 2
+Dataset requirement descriptor and initial model link.
+accreq, acccalc
+1, 4, 7
+Required vs. calculated accuracy threshold.
+Texp, R
+1
+Task expiry/deadline and reward amount.
+nonceTP, commitHash
+1, 7
+Random nonce and HASH(accreq‖nonceTP).
+escrowTx
+1
+On-chain transaction reference for reward deposit.
+taskPool
+1–7
+Off-chain registry of tasks and their current state.
+EscrowContract.deposit()
+1
+Smart contract API to deposit funds into escrow.
+VerifyMinerProof()
+2
+Validates miner eligibility proof.
+PoS Select()
+2
+Stake-based aggregator selection.
+skFE
+2, 4
+Function encryption key derived via NDD-FE.
+NDD FE.KeyDerive()
+2
+Key derivation routine.
+MIN PARTICIPANTS
+2, 4
+Minimum required number of miners.
+Wt, Wi
+3
+Global model and miner’s local model.
+∆i, ∆′
+i
+3
+Raw gradient update and compressed update.
+DGC Compress()
+3
+Compression (sparsification + quantization).
+score
+3, 7
+Contribution score using L2 norm.
+scoreCommiti
+3, 4, 6, 7
+HASH(score‖noncei‖taskID‖pkj).
+Ui
+3, 4
+FE-based ciphertext of compressed update.
+NDD FE.Encrypt()
+3
+Encrypt update under NDD-FE.
+E
+4
+Encoded aggregate after FE decryption.
+NDD FE.Decrypt()
+4
+Functional encryption decryption.
+RecoverWeights BSGS()
+4
+Baby-Step Giant-Step decoding.
+DGC Decompress()
+4
+Reconstruct dense update.
+EvaluateModel()
+4
+Computes model accuracy.
+B, signatureA
+4, 5, 6
+Candidate block and aggregator signature.
+PublishModelArtifact()
+4
+Stores trained model off-chain.
+Majority(VALID)
+5, 6
+Majority-based verification rule.
+FetchModel()
+5
+Retrieve model artifact.
+SanityCheckModel()
+5
+Quick validation test.
+sign1, sign2
+6
+Payment token and aggregator signature.
+SmartContract.publishBlock()
+6
+Publish block payload on-chain.
+verificationEvidence
+6
+Collected feedback summary.
+REVEAL WINDOW
+6, 7
+Time window for TP reveal.
+DISPUTE GRACE
+7
+Post-reveal grace period.
+publisherRevealed,
+minersRe-
+vealDeadline
+7
+Reveal tracking variables.
+revealedScore
+7
+Miner contribution score.
+distributeRewards()
+7
+Final reward distribution logic.
+computeAggregatorShare()
+7
+Aggregator reward share.
+applyFallbackDistribution()
+7
+Used when no scores are revealed.
+safeTransfer()
+7
+Secure on-chain payment function.
+Note: The unified notation provides consistent symbol definitions and module mapping across the
+seven functional components of the Enhanced ESB-FL (HealChain) architecture.
+
+
+--- PAGE 43 ---
+Chapter 5
+System Security Analysis
+This chapter analyzes the HealChain framework against the core security and func-
+tional guarantees required for decentralized federated learning, specifically focusing on
+Confidentiality, Efficiency, and Fair Payment. We demonstrate how the integra-
+tion of the NDD-FE scheme and the three novel enhancements achieves a robust and
+trustworthy system suitable for privacy-sensitive applications such as healthcare.
+5.1
+Confidentiality and Privacy Guarantees
+Table 5.1: Security and Privacy Guarantees of HealChain (NDD-FE Core)
+Security Goal
+Vulnerability Addressed
+HealChain Mechanism
+Data Confidentiality
+Reconstruction or inference attacks on raw lo-
+cal data
+NDD-FE encryption during gradi-
+ent submission (Module 3).
+Aggregate Confidentiality
+Aggregator learns individual gradients
+Designated Decryptor in NDD-FE
+ensures only aggregated sum is re-
+vealed (Module 4).
+TP Decryption Prevention
+Task Publisher gains unauthorized access to
+encrypted updates
+Encryption tied exclusively to Ag-
+gregator’s public key pkA.
+Immutability / Auditabil-
+ity
+Tampering or modification of task require-
+ments
+Blockchain
+logging
+with
+commitHash ensures traceability
+(Module 1).
+Note: These guarantees ensure both individual data confidentiality and system-wide privacy through
+functional encryption and immutable blockchain commitments.
+Confidentiality ensures the privacy of local medical data and prevents adversaries
+from reconstructing sensitive information during task processing. The privacy guarantee
+of HealChain is primarily upheld by the Non-Interactive Designated Decryptor
+Functional Encryption (NDD-FE) scheme.
+34
+
+
+--- PAGE 44 ---
+35
+5.1.1
+Security of Local Gradient Updates
+The confidentiality of individual local training models submitted by miners (Mj) is guar-
+anteed because the gradient updates (W j
+t+1) are encrypted before transmission to the
+Aggregation Node (A). Each ciphertext is structured as:
+U j
+t+1 = pk
+rj
+TP · pk
+W j
+t+1
+A
+Adversary Eavesdropping: For any external adversary, the component pk
+rj
+TP acts
+as a cryptographic mask. Since the randomization factor rj is derived using a secure hash
+function H1 over a CDH-hard problem instance (pk
+skj
+TP), the ciphertext U j
+t+1 is computa-
+tionally indistinguishable from a standard ElGamal ciphertext. Therefore, the adversary
+cannot recover any information about the local gradient W j
+t+1.
+Task Publisher (TP) Attack: The TP holds the master secret key but cannot
+decrypt individual updates because the encryption is tied to the Aggregator’s public key
+(pkA). While the TP might compute pk
+W j
+t+1
+A
+using its own key, the Aggregator’s secret
+key (skA) remains unknown to the TP, preventing final decryption. This ensures that
+the TP remains out of the model training process, satisfying the availability assumption.
+5.1.2
+Security of Aggregated Results
+In the model aggregation phase (Module 4), the Aggregation Node A collects all encrypted
+gradients {U j
+t+1}. A holds the functional key skFE, which is designed solely to compute the
+aggregated sum P yjW j
+t+1. Due to the functional nature of NDD-FE, A can only recover
+the final aggregated result ⟨W, y⟩. The Aggregator is mathematically prevented from
+disaggregating the sum into individual components (W j
+t+1), ensuring the confidentiality
+of each miner’s contribution.
+The Baby-Step Giant-Step (BSGS) decoding algorithm
+verifies that the aggregated weight is a valid numerical result derived from the group
+exponent.
+5.2
+Efficiency and Communication Analysis
+Efficiency is paramount for the practical deployment of federated learning, especially in
+resource-constrained medical environments. HealChain achieves high efficiency through
+optimized architecture and cryptographic design.
+5.2.1
+Reduced Communication Overhead via DGC
+HealChain integrates the Decentralized Gradient Compression (DGC) algorithm
+(Module 3). Miners compress their gradient updates (W j
+t+1) into sparse, quantized vec-
+
+
+--- PAGE 45 ---
+36
+Table 5.2: Comparative Analysis of Security and Fairness Mechanisms
+Scheme
+/
+Mecha-
+nism
+Confidentiality
+Efficiency
+Prevents
+Free-
+Riding
+Prevents
+TP
+De-
+fault
+HE-based FL
+High
+(Homomor-
+phic Encryption)
+Low
+No
+No
+DP-based FL
+Moderate
+(Noise
+Addition)
+High
+No
+No
+ESB-FL (Base)
+High (NDD-FE)
+High
+No
+Yes via σ1 Verification
+HealChain (Proposed)
+High (NDD-FE)
+High
+Yes — Gradient Norm
+Check ∥∆′
+i∥2
+Yes
+—
+Escrow
+Lock
+Mechanism
+Note: HealChain extends ESB-FL with verifiable fairness, escrow-backed financial integrity, and
+cryptographically bound commitment protocols for task honesty.
+tors (∆′
+i) before encryption. This significantly reduces the communication bandwidth
+required between miners and the Aggregator in each round. By transmitting only up-
+dates exceeding a predefined threshold (τ), DGC mitigates the “high communication
+overhead” bottleneck commonly found in traditional federated learning.
+5.2.2
+Low Cryptographic Overhead via NDD-FE
+Compared to alternatives like Homomorphic Encryption (HE) or Secure Multi-Party
+Computation (MPC), NDD-FE offers two key advantages:
+• Non-Interactivity: NDD-FE eliminates the multi-round key exchange required
+by many interactive protocols. The Task Publisher derives skFE non-interactively
+using the miners’ static public keys and a counter value (ctr). In large-scale FL
+setups, this saves significant latency and network resources.
+• Compact Ciphertext Size: The ciphertext Uj
+t+1 generated under NDD-FE is
+much smaller than that of HE-based schemes, contributing to overall communica-
+tion efficiency.
+5.2.3
+Support for Parallelism and Decentralization
+HealChain’s blockchain-based ledger and smart contracts enable multiple FL tasks to
+execute in parallel. The Aggregator coordinates task order and publishes verified results
+based on task end times. This design mitigates blockchain forks during concurrent FL
+sessions, thereby improving scalability, task availability, and throughput.
+
+
+--- PAGE 46 ---
+37
+5.3
+Fairness and Payment Integrity Analysis (HealChain
+Enhancements)
+Table 5.3: Security Analysis of HealChain’s Novel Enhancements
+Module(s)
+Enhancement
+Attack Mitigated
+Security Guarantee Detail
+M1, M7
+Escrow-based Smart Contract
+Payment Default
+Transfers reward custody from TP to im-
+mutable on-chain escrow contract, ensur-
+ing pre-secured fund availability.
+M1,
+M4,
+M7
+Commit–Reveal Protocol
+Retroactive
+Requirement
+Manipulation
+TP’s committed accuracy (accreq) bound
+by commitHash ensures honesty and au-
+ditability before training starts.
+M3, M7
+Gradient-Norm
+Scoring
+(∥∆′
+i∥2)
+Free-Riding / Lazy Train-
+ing
+Rewards proportional to verifiable contri-
+bution score prevent minimal or fraudulent
+participation.
+M5, M6
+Miner Verification Consensus
+Faulty Aggregator Publi-
+cation
+Majority(VALID) consensus ensures col-
+lective verification before final block pub-
+lishing, preventing unilateral aggregator
+actions.
+Note: These modular enhancements integrate economic fairness, cryptographic verifiability, and
+decentralized consensus to form a tamper-resistant, incentive-aligned federated learning ecosystem.
+While the base ESB-FL framework established conditional payment based on model
+accuracy, HealChain extends it with enhanced fairness and integrity mechanisms, miti-
+gating “free-riding” and payment default attacks.
+5.3.1
+Eliminating Payment Default via Escrow (Modules 1, 7)
+The Escrow-based Smart Contract Mechanism ensures financial security by requir-
+ing the Task Publisher (TP) to deposit the full reward amount (R) into an on-chain escrow
+at task initialization (Module 1). The contract locks these funds until task completion
+conditions are met, guaranteeing miners’ compensation and preventing TP withdrawal
+or default. This establishes trust before any computational investment.
+5.3.2
+Enforcing Task Honesty via Commit–Reveal (Modules 1, 4, 7)
+The Commit–Reveal Verification Protocol ensures that the TP cannot retroactively
+manipulate task requirements:
+• Commitment (M1): The TP commits to the required accuracy (accreq) by pub-
+lishing commitHash = H(accreq∥nonceTP) on-chain before training begins. This
+commitment is immutable.
+• Verification (M7): The smart contract verifies that the revealed (accreveal, nonceTP)
+pair matches the original commitHash. If the achieved model accuracy (acccalc from
+
+
+--- PAGE 47 ---
+38
+M4) meets or exceeds accreq, reward distribution is triggered, ensuring payment in-
+tegrity.
+5.3.3
+Mitigating Free-Riding via Gradient-Norm Scoring (Mod-
+ules 3, 7)
+The Gradient-Norm Based Contribution Scoring Mechanism ensures fairness and
+accountability:
+• Verifiable Score (M3): Each miner computes its contribution score using the L2
+norm of its compressed update:
+score = ∥∆′
+i∥2
+This score is committed to the blockchain as scoreCommiti = H(score∥noncei∥taskID∥pkj).
+• Proportional Reward (M7): After task completion, miners reveal their scores,
+which are verified against scoreCommiti recorded on-chain (M6). The smart con-
+tract distributes rewards proportionally:
+Rewardi = R ×
+scorei
+P
+j scorej
+This linkage between cryptographic contribution quality and payout discourages
+malicious or idle participants.
+5.3.4
+Decentralized Block Integrity (Modules 5, 6)
+The Miner Verification Feedback (M5) and Aggregator Publish (M6) modules
+collectively ensure block-level trust. By enforcing majority consensus Majority(VALID)
+among miners before block publication, HealChain prevents the Aggregator from unilat-
+erally finalizing an invalid or manipulated result. This design removes single-point failure
+and establishes decentralized control over payment-triggering events.
+
+
+--- PAGE 48 ---
+Chapter 6
+Performance Analysis and Experimen-
+tal Results
+This chapter validates the efficiency, scalability, and practical viability of the HealChain
+framework against its core design goals. We first detail the experimental environment
+and then present results focusing on time costs for core blockchain operations, model
+training efficiency, and the resulting model accuracy, benchmarking HealChain against
+the base scenario and existing comparable Privacy-Preserving Federated Learning (PPFL)
+schemes.
+6.1
+Experimental Setup and Configuration
+6.1.1
+Environment and Dataset
+Our analysis utilizes experimental data based on a configuration typical for decentral-
+ized FL research. The underlying blockchain network simulated a topology similar to
+the decentralized framework structure shown in the base paper. The core components,
+including the NDD-FE scheme, are implemented to align with secure cryptographic stan-
+dards, and the DGC algorithm is consistently applied with a high compression threshold
+(e.g., 90%).
+The domain chosen for analysis is medical image detection, specifically using the Chest
+X-ray image (Pneumonia) dataset. This choice highlights HealChain’s relevance in highly
+sensitive and resource-intensive healthcare applications. The simulation setup involves:
+• Total Miners: 100 registered miners participating in the network.
+• Training Data: 80,000 greyscaled images (200×200) randomly distributed among
+the miners.
+• Validation Data: A separate set of 1,000 images (normal, virus, bacteria) used
+for final model accuracy testing.
+39
+
+
+--- PAGE 49 ---
+40
+6.1.2
+Model Architectures
+The effectiveness of the federated learning framework is tested using well-established con-
+volutional neural network models to ensure robust feature extraction and classification.
+• Feature Extraction: DenseBlock network structures containing multiple convo-
+lutional layers designed to extract detailed features from medical images.
+• Localization and Classification: The extracted features are localized and classi-
+fied using SSD or VGG models, confirming the ability of the framework to support
+complex deep learning tasks.
+6.2
+Efficiency Analysis: Cryptographic and Blockchain
+Overheads
+The efficiency analysis confirms that HealChain successfully mitigates the high computa-
+tional and communication costs typically associated with cryptographic PPFL schemes.
+6.2.1
+Time Cost of Core Blockchain Operations
+We measure the time costs for critical, non-iterative tasks required for system functional-
+ity (Table 6.1). Operations like Task Publishing (M1), Block Publishing (M6), and Task
+Reward Release (M7) require minimal time (typically < 1 hour total for initialization and
+finalization). This demonstrates that the integrated mechanisms—including the escrow
+contract deployment and the commit hash recording—add negligible overhead to the
+overall system lifecycle, ensuring immediate task availability and payment finalization.
+Table 6.1: Time Costs of Major Blockchain Operations
+Blockchain Operation
+HealChain (NDD-FE)
+PEFL (HE Benchmark)
+Task Publishing (M1)
+< 1 hour
+< 1 hour
+Model Training
+4.3 hours
+7.4 hours
+Model Aggregation (10 nodes)
+6.44 min
+8.03 min
+Block Publishing (M6)
+< 1 hour
+< 1 hour
+6.2.2
+Cryptographic Performance Benchmark
+The efficiency gains of NDD-FE (used by HealChain) over traditional Homomorphic
+Encryption (HE) schemes (like PEFL) are significant, confirming the advantage of using
+a lightweight functional primitive (Table 6.2).
+
+
+--- PAGE 50 ---
+41
+• Encryption Time: NDD-FE encryption for a gradient update is nearly 50% faster
+than the comparable HE scheme (e.g., 23.33 seconds vs. 45.28 seconds).
+• Decryption Time: Similarly, NDD-FE decryption (secure aggregation) is notably
+faster (e.g., 37.44 seconds vs. 47.51 seconds).
+These results confirm that NDD-FE addresses the core limitation of computational
+intensity, making the secure aggregation phase highly efficient and scalable.
+Table 6.2: Time Costs of Single Gradient Cryptographic Operations
+Cryptographic Operation
+HealChain (NDD-FE)
+PEFL (HE)
+Encryption
+23.33 seconds
+45.28 seconds
+Decryption (Aggregation)
+37.44 seconds
+47.51 seconds
+6.3
+Performance Analysis of the Federated Learning
+Cycle
+The evaluation of the training cycle demonstrates the combined effectiveness of NDD-FE
+and DGC in balancing security, accuracy, and total processing time.
+6.3.1
+Training Time and Communication Gains
+The comparison of cumulative training time (Figure 6.1) shows that while secure FL
+frameworks necessarily take longer than a non-encrypted Baseline, HealChain achieves
+superior performance compared to rival PPFL schemes.
+• DGC Effectiveness: By integrating DGC (Module 3), HealChain achieves the
+most efficient runtime among comparable secure frameworks (HealChain, PEFL,
+Lu’s, Kumar’s). DGC reduces communication by transmitting only gradients ex-
+ceeding a threshold (τ).
+• NDD-FE Advantage: The efficiency advantage over HE-based schemes like PEFL
+is primarily due to NDD-FE’s non-interactive nature, which eliminates costly multi-
+round key exchanges.
+6.3.2
+Model Accuracy and Utility
+Accuracy tests validate that the cryptographic security mechanisms do not compromise
+the model’s utility.
+
+
+--- PAGE 51 ---
+42
+• High Utility: The NDD-FE scheme retains full model accuracy since it computes
+directly over encrypted updates, unlike Differential Privacy (DP) methods that
+inject noise.
+• Accuracy Loss Mitigation: HealChain’s minimal accuracy drop (1–2%) com-
+pared to the unencrypted baseline is much smaller than HE-based schemes (5–6%).
+• Testing Results: The final trained model demonstrates high test accuracy across
+classes (Normal, Virus, Bacteria), confirming clinical applicability.
+Figure 6.1: Model Accuracy Over Epochs
+
+
+--- PAGE 52 ---
+43
+6.4
+Verifiable Fairness Confirmation
+The architectural design ensures fair reward distribution based on quantifiable effort,
+solving the central incentive problem.
+6.4.1
+Integrity of Contribution Score
+The core fairness guarantee relies on the Gradient-Norm Based Contribution Scoring
+(M3), which computes the L2 norm of the compressed update ∥∆′
+i∥2. This verifiable
+metric is bound to the cryptographic update Ui. The Commit-Reveal Protocol (M7)
+ensures:
+• The contribution metric is objective and derived from actual gradient data.
+• Rewards are strictly proportional to verified contribution, discouraging free-riding.
+6.4.2
+Guaranteed Conditional Payment
+The integration of the Escrow Smart Contract (M1) and Block Publishing Mechanism
+(M6/M7) ensures trustless, immutable payment execution.
+Funds locked by the TP
+are released automatically upon verification, protecting both the Task Publisher (who
+receives a verified model) and the Miners (who receive proportional rewards).
+
+
+--- PAGE 53 ---
+Chapter 7
+Conclusion
+Federated Learning (FL) offers a powerful paradigm for collaboratively training high-
+precision models, which is particularly relevant in highly sensitive sectors like smart
+healthcare where data privacy is paramount. However, the practical viability of existing
+Privacy-Preserving Federated Learning (PPFL) solutions is severely constrained by per-
+sistent challenges, namely high computational and communication overhead stemming
+from complex cryptography, and a fundamental lack of verifiable, proportional fairness
+mechanisms to incentivize honest participation.
+This report introduced HealChain, an enhanced framework built upon the Efficient
+and Secure Blockchain-Based Federated Learning (ESB-FL) architecture. HealChain was
+explicitly designed to create a fully decentralized, trustless, and highly efficient system
+that overcomes the shortcomings in fairness and payment integrity found in existing
+solutions. By retaining the established security of the NDD-FE scheme and integrating
+three core enhancements, HealChain provides robust guarantees across security, efficiency,
+and financial equity.
+Summary of Contributions and Achievements
+The success of HealChain rests on its novel integration of cryptographic primitives and
+specialized smart contract logic across the entire workflow (M1–M7).
+First, the implementation of an Escrow-based Smart Contract Mechanism (M1)
+is the core financial safeguard. By requiring the Task Publisher (TP) to deposit the full
+reward (R) into a secure, on-chain escrow upon task initialization, we effectively eliminate
+the risk of payment default and secure the miners’ incentives immediately.
+Second, to prevent the TP from arbitrarily shifting goalposts, we introduced the
+Commit–Reveal Verification Protocol. The TP commits a hash (commitHash) of
+the required accuracy (accreq) before training starts (M1), and the smart contract rigor-
+ously validates this commitment upon finalization (M7), ensuring payment is conditional
+only on the original, agreed-upon quality standard.
+44
+
+
+--- PAGE 54 ---
+45
+The most critical enhancement for sustainability is the Gradient-Norm Based
+Contribution Scoring (M3/M7). This method calculates a miner’s contribution based
+on the L2 norm (∥∆′
+i∥2) of their cryptographically compressed gradient update. This
+objective metric is committed to the blockchain, verified upon reward distribution, and
+used to calculate payment that is strictly proportional to the quality of work submitted.
+This measure actively discourages “free-riding,” guaranteeing that computational effort
+is correctly compensated.
+Beyond fairness, HealChain maintains superior efficiency.
+The integration of De-
+centralized Gradient Compression (DGC) significantly reduces the data volume
+transmitted, while the NDD-FE scheme leverages the CDH Assumption to ensure non-
+interactive, lightweight secure aggregation. This design avoids the massive computational
+latency typical of Homomorphic Encryption and the communication complexity of Multi-
+Party Computation, confirming HealChain’s scalability for practical application.
+Finally, the Miner Verification Consensus (M5/M6) provides a decentralized
+check on the Aggregator’s final block submission, ensuring the integrity of the published
+model and preventing single-point failure attacks before the final payment is triggered.
+Future Research Directions
+While HealChain provides a complete, robust, and verifiable framework, its foundation
+allows for exciting avenues of future research. We intend to expand the capability of
+our system by developing a formal on-chain governance mechanism capable of resolving
+complex disputes and collusion scenarios that go beyond the current cryptographic checks.
+Furthermore, exploring alternative, potentially more nuanced contribution metrics
+compatible with NDD-FE will be crucial for capturing the true value of each participant’s
+update. Finally, extending the Functional Encryption scheme to support a broader range
+of non-linear functions would enable HealChain to secure a wider variety of modern deep
+learning models, solidifying its position as a truly general-purpose and efficient PPFL
+solution.
+
+
+--- PAGE 55 ---
+Bibliography
+[1] B. Chen, H. Zeng, T. Xiang, S. Guo, T. Zhang, and Y. Liu, “ESB-FL: Efficient and
+Secure Blockchain-Based Federated Learning With Fair Payment,” IEEE Transac-
+tions on Big Data, vol. 10, no. 6, pp. 761–774, 2024.
+[2] R. Xu, B. Li, C. Li, J. Joshi, S. Ma, and J. Li, “TAPFed: Threshold Secure Aggrega-
+tion for Privacy-Preserving Federated Learning,” IEEE Transactions on Information
+Forensics and Security, 2023.
+[3] L. Tian, F. Lin, Z. Zheng, J. Gan, R. Jia, and M. Li, “PEFL: Privacy-Preserved and
+Efficient Federated Learning With Blockchain,” IEEE Internet of Things Journal,
+2025 (early access).
+[4] Y. Abuzied, M. Ghanem, F. Dawoud, H. Gamal, E. Soliman, H. Sharara, and T. El-
+Batt, “FLoBC: A Privacy-Preserving Federated Learning Framework for Blockchain
+Networks,” Journal of Network and Computer Applications, vol. 220, pp. 103741,
+2024.
+[5] A. Liu, X. Zhang, W. Li, and Y. Chen, “Federify: A Verifiable Federated Learning
+Scheme Based on zkSNARKs and Blockchain,” IEEE Transactions on Dependable
+and Secure Computing, 2024.
+[6] X. Yang, Z. Liu, X. Tang, R. Lu, and B. Liu, “An Efficient and Multi-Private
+Key Secure Aggregation Scheme for Federated Learning,” IEEE Internet of Things
+Journal, vol. 10, no. 18, pp. 16027–16039, 2023.
+46
