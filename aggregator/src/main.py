@@ -206,18 +206,31 @@ class HealChainAggregator:
         logger.info("[Aggregator] Waiting for miner submissions")
 
         start = time.time()
-        submissions = []
+        # Keep latest submission per gradient id to avoid duplicates across polls.
+        submissions_by_id = {}
 
         while time.time() - start < AGGREGATION_TIMEOUT:
             batch = self.backend_rx.fetch_submissions()
             if batch:
-                submissions.extend(batch)
-                logger.info(f"[Aggregator] Received {len(batch)} submissions")
+                new_count = 0
+                for sub in batch:
+                    sub_id = sub.get("id")
+                    if not sub_id:
+                        continue
+                    if sub_id not in submissions_by_id:
+                        new_count += 1
+                    submissions_by_id[sub_id] = sub
+                logger.info(
+                    f"[Aggregator] Received {len(batch)} submissions "
+                    f"({new_count} new, {len(submissions_by_id)} unique total)"
+                )
 
-            if len(submissions) >= self.min_participants:
+            if len(submissions_by_id) >= self.min_participants:
                 break
 
             time.sleep(1)
+
+        submissions = list(submissions_by_id.values())
 
         valid_subs = collect_and_validate_submissions(
             submissions=submissions,
@@ -239,18 +252,33 @@ class HealChainAggregator:
     def _secure_aggregate(self, submissions: List[Dict]):
         logger.info("[Aggregator] Performing NDD-FE secure aggregation")
 
+        # Align weights with the accepted submissions only.
+        # state.weights/state.participants are task-level metadata and may include
+        # miners whose submissions were rejected or missing.
+        participant_to_weight = {
+            pk: w for pk, w in zip(self.state.participants, self.state.weights)
+        }
+        active_weights = []
+        for sub in submissions:
+            miner_pk = sub.get("miner_pk")
+            if miner_pk not in participant_to_weight:
+                raise RuntimeError(
+                    f"Missing aggregation weight for submission miner_pk={miner_pk}"
+                )
+            active_weights.append(participant_to_weight[miner_pk])
+
         aggregate = secure_aggregate(
             submissions=submissions,
             skFE=self.keys.skFE,
             skA=self.keys.skA,
             pkTP=self.keys.pkTP,
-            weights=self.state.weights,
+            weights=active_weights,
         )
 
         if not verify_recovered_aggregate(
             aggregate,
             submissions,
-            self.state.weights,
+            active_weights,
             self.keys,
         ):
             raise RuntimeError("Aggregate verification failed")

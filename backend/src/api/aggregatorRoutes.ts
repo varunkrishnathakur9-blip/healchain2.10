@@ -17,6 +17,7 @@ router.post(
   requireFields([
     "taskID",
     "minerAddress",
+    "miner_pk",
     "scoreCommit",
     "encryptedHash",
     "message",
@@ -28,6 +29,7 @@ router.post(
       await submitGradient({
         taskID: req.body.taskID,
         minerAddress: req.body.minerAddress,
+        minerPublicKey: req.body.miner_pk, // Public key used for miner signature verification
         scoreCommit: req.body.scoreCommit,
         encryptedHash: req.body.encryptedHash,
         ciphertext: req.body.ciphertext, // Optional: JSON array of EC points
@@ -169,11 +171,21 @@ router.get(
         });
       }
 
+      // Aggregation metadata (Algorithm 4):
+      // Use deterministic participant ordering and uniform integer weights.
+      // Aggregator expects weights.length === participants.length.
+      const participants = minersWithPKs
+        .map(m => m.publicKey as string)
+        .sort();
+      const weights = participants.map(() => 1);
+
       // Return metadata for key derivation
       res.json({
         taskID: task.taskID,
         publisher: task.publisher.toLowerCase(),
-        minerPublicKeys: minersWithPKs.map(m => m.publicKey).sort(),
+        minerPublicKeys: participants,
+        participants,
+        weights,
         nonceTP: task.nonceTP,
         aggregatorAddress: task.aggregatorAddress,
         minerCount: task.miners.length,
@@ -308,10 +320,20 @@ router.get(
         });
       }
 
-      // Get all gradients (submissions) for this task
+      // IMPORTANT:
+      // Return lightweight submission metadata only.
+      // Full ciphertext is fetched per-submission via dedicated endpoint to avoid
+      // huge JSON payloads causing `RangeError: Invalid string length`.
       const gradients = await prisma.gradient.findMany({
         where: { taskID },
-        include: {
+        select: {
+          id: true,
+          taskID: true,
+          minerAddress: true,
+          scoreCommit: true,
+          encryptedHash: true,
+          signature: true,
+          createdAt: true,
           miner: {
             select: {
               address: true,
@@ -322,35 +344,71 @@ router.get(
         orderBy: { createdAt: "asc" }
       });
 
-      // Transform to aggregator-expected format
-      const submissions = gradients.map((grad: any) => {
-        // Parse ciphertext if it's a JSON string
-        let ciphertext = grad.ciphertext;
-        if (typeof ciphertext === 'string') {
-          try {
-            ciphertext = JSON.parse(ciphertext);
-          } catch (e) {
-            // If parsing fails, treat as single string
-            ciphertext = [ciphertext];
-          }
-        }
-
-        return {
-          taskID: taskID, // Required by aggregator
-          task_id: taskID, // Also include snake_case version
-          miner_address: grad.miner.address.toLowerCase(),
-          miner_pk: grad.miner.publicKey,
-          ciphertext: ciphertext, // Parsed array of EC points
-          encrypted_hash: grad.encryptedHash,
-          encryptedHash: grad.encryptedHash, // Also include camelCase
-          score_commit: grad.scoreCommit,
-          scoreCommit: grad.scoreCommit, // Also include camelCase for normalization
-          signature: grad.signature,
-          submitted_at: grad.createdAt.toISOString()
-        };
-      });
+      const submissions = gradients.map((grad) => ({
+        id: grad.id,
+        taskID: taskID,
+        task_id: taskID, // python aggregator compatibility
+        miner_address: (grad.miner?.address || grad.minerAddress).toLowerCase(),
+        miner_pk: grad.miner?.publicKey || null,
+        encrypted_hash: grad.encryptedHash,
+        encryptedHash: grad.encryptedHash, // camelCase compatibility
+        score_commit: grad.scoreCommit,
+        scoreCommit: grad.scoreCommit, // camelCase compatibility
+        signature: grad.signature,
+        submitted_at: grad.createdAt.toISOString(),
+        ciphertext: null, // fetched via per-submission endpoint
+      }));
 
       res.json(submissions);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * GET /aggregator/:taskID/submissions/:gradientID/ciphertext
+ * Fetch full ciphertext for a single submission (local aggregator service, no wallet auth).
+ */
+router.get(
+  "/:taskID/submissions/:gradientID/ciphertext",
+  async (req, res, next) => {
+    try {
+      const { taskID, gradientID } = req.params;
+      const { prisma } = await import("../config/database.config.js");
+
+      // Fetch ciphertext only for the requested submission
+      // Use unique-id lookup to reduce DB work, then enforce task match in code.
+      const gradient = await prisma.gradient.findUnique({
+        where: { id: gradientID },
+        select: {
+          id: true,
+          taskID: true,
+          ciphertext: true
+        }
+      });
+
+      if (!gradient) {
+        return res.status(404).json({ error: "Submission not found" });
+      }
+      if (gradient.taskID !== taskID) {
+        return res.status(404).json({ error: "Submission not found for task" });
+      }
+
+      let ciphertext: any = gradient.ciphertext;
+      if (typeof ciphertext === "string") {
+        try {
+          ciphertext = JSON.parse(ciphertext);
+        } catch {
+          ciphertext = [ciphertext];
+        }
+      }
+
+      res.json({
+        id: gradient.id,
+        taskID: gradient.taskID,
+        ciphertext
+      });
     } catch (err) {
       next(err);
     }
@@ -719,6 +777,77 @@ router.post(
         status: task.status
       });
     } catch (err: any) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /aggregator/:taskID/admin/clear-gradients
+ * Admin utility: clear all gradients for a task so miners can resubmit.
+ *
+ * Security:
+ * - Requires wallet auth
+ * - Caller must be task publisher
+ */
+router.post(
+  "/:taskID/admin/clear-gradients",
+  requireWalletAuth,
+  async (req, res, next) => {
+    try {
+      const { taskID } = req.params;
+      const authenticatedAddress = (req as any).walletAddress as string | undefined;
+      const { prisma } = await import("../config/database.config.js");
+
+      if (!authenticatedAddress) {
+        return res.status(401).json({ error: "Wallet authentication required" });
+      }
+
+      const task = await prisma.task.findUnique({
+        where: { taskID },
+        select: {
+          taskID: true,
+          publisher: true,
+          aggregatorAddress: true,
+          status: true
+        }
+      });
+
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      const caller = authenticatedAddress.toLowerCase();
+      const isPublisher = task.publisher?.toLowerCase() === caller;
+      if (!isPublisher) {
+        return res.status(403).json({
+          error: "Unauthorized: only task publisher can clear gradients",
+          taskID,
+          caller: authenticatedAddress
+        });
+      }
+
+      const deleted = await prisma.gradient.deleteMany({
+        where: { taskID }
+      });
+
+      // If aggregation was in progress, reopen task for fresh submissions.
+      let statusChanged = false;
+      if (task.status === "AGGREGATING") {
+        await prisma.task.update({
+          where: { taskID },
+          data: { status: "OPEN" as any }
+        });
+        statusChanged = true;
+      }
+
+      res.json({
+        success: true,
+        taskID,
+        deletedGradients: deleted.count,
+        statusChangedToOpen: statusChanged
+      });
+    } catch (err) {
       next(err);
     }
   }

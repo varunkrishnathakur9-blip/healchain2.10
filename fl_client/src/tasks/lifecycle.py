@@ -14,7 +14,7 @@ from utils.quantize_gradients import quantize_gradients
 from config.gradient_bounds import QUANTIZATION_SCALE, MAX_GRAD_MAGNITUDE
 from crypto.keys import derive_public_key
 
-def run_task(task, miner_addr, progress_callback=None):
+def run_task(task, miner_addr, progress_callback=None, miner_private_key_override=None):
     task_id = task["taskID"]
     print(f"\n[M3] Starting real FL training for {task_id}")
 
@@ -89,7 +89,7 @@ def run_task(task, miner_addr, progress_callback=None):
         pk_agg_hex = os.getenv("AGGREGATOR_PK", "")
 
     # Get miner private key for NDD-FE encryption
-    miner_private_key_str = os.getenv("MINER_PRIVATE_KEY", "")
+    miner_private_key_str = miner_private_key_override or os.getenv("MINER_PRIVATE_KEY", "")
     if miner_private_key_str:
         # Strip 0x prefix if present and convert to int
         sk_miner_str = miner_private_key_str.strip()
@@ -153,7 +153,7 @@ def run_task(task, miner_addr, progress_callback=None):
     ciphertext_concat = ",".join(ciphertext_sparse)
     
     # Get miner private key from environment
-    miner_private_key = os.getenv("MINER_PRIVATE_KEY")
+    miner_private_key = miner_private_key_override or os.getenv("MINER_PRIVATE_KEY")
     if not miner_private_key:
         raise ValueError("MINER_PRIVATE_KEY not set in environment. Please set it in .env file.")
     

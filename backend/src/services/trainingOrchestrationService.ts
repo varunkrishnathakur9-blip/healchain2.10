@@ -74,7 +74,8 @@ export async function triggerTraining(
     where: {
       taskID,
       minerAddress: minerAddress.toLowerCase()
-    }
+    },
+    select: { id: true }
   });
 
   if (existingGradient) {
@@ -184,13 +185,21 @@ export async function getTrainingStatus(
         taskID,
         minerAddress: minerAddress.toLowerCase()
       },
+      select: {
+        createdAt: true
+      },
       orderBy: {
         id: "desc"
       }
     });
   } catch (dbError: any) {
     // Handle database connection errors gracefully
-    if (dbError.code === 'P1001' || dbError.message?.includes('Can\'t reach database server')) {
+    if (
+      dbError.code === 'P1001' ||
+      dbError.code === 'P1017' ||
+      dbError.message?.includes('Can\'t reach database server') ||
+      dbError.message?.includes('Server has closed the connection')
+    ) {
       console.warn(`[getTrainingStatus] Database connection error: ${dbError.message}`);
       console.warn(`[getTrainingStatus] Continuing with FL client service check instead`);
       // Continue to check FL client service instead of failing completely
@@ -237,14 +246,31 @@ export async function getTrainingStatus(
   }
 
   // Get miner's FL client service URL from database (for distributed status check)
-  const miner = await prisma.miner.findUnique({
-    where: {
-      taskID_address: {
-        taskID,
-        address: minerAddress.toLowerCase()
+  let miner: { flClientUrl: string | null } | null = null;
+  try {
+    miner = await prisma.miner.findUnique({
+      where: {
+        taskID_address: {
+          taskID,
+          address: minerAddress.toLowerCase()
+        }
+      },
+      select: {
+        flClientUrl: true
       }
+    });
+  } catch (dbError: any) {
+    if (
+      dbError.code === 'P1001' ||
+      dbError.code === 'P1017' ||
+      dbError.message?.includes('Can\'t reach database server') ||
+      dbError.message?.includes('Server has closed the connection')
+    ) {
+      console.warn(`[getTrainingStatus] Miner lookup skipped due to DB connection error: ${dbError.message}`);
+    } else {
+      throw dbError;
     }
-  });
+  }
 
   // Use stored FL client URL, fallback to localhost if not provided
   const flClientServiceUrl = (miner as any)?.flClientUrl || process.env.FL_CLIENT_SERVICE_URL || "http://localhost:5001";
@@ -310,7 +336,8 @@ export async function triggerSubmission(
     where: {
       taskID,
       minerAddress: minerAddress.toLowerCase()
-    }
+    },
+    select: { id: true }
   });
 
   if (existingGradient) {

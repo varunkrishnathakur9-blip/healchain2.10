@@ -56,6 +56,8 @@ def _parse_signature(sig_hex: str) -> bytes:
     Parse DER-encoded ECDSA signature from hex string.
     """
     try:
+        if sig_hex.startswith("0x") or sig_hex.startswith("0X"):
+            sig_hex = sig_hex[2:]
         return binascii.unhexlify(sig_hex)
     except Exception as e:
         raise ValueError("Invalid signature encoding") from e

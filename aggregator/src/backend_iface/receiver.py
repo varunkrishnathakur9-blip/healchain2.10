@@ -36,6 +36,9 @@ class BackendReceiver:
     def __init__(self, task_id: str):
         self.task_id = task_id
         self.base_url = self._load_backend_url()
+        # Cache ciphertext once fetched so we don't keep hitting backend/DB
+        # for the same large payload on every polling cycle.
+        self._ciphertext_cache: Dict[str, object] = {}
 
     # ------------------------------------------------------------------
     # Public API
@@ -53,7 +56,8 @@ class BackendReceiver:
         endpoint = f"{self.base_url}/aggregator/{self.task_id}/submissions"
 
         try:
-            resp = requests.get(endpoint, timeout=5)
+            # Submissions payload can be large (ciphertext vectors), so allow longer read time.
+            resp = requests.get(endpoint, timeout=20)
             if resp.status_code != 200:
                 logger.warning(
                     f"[BackendReceiver] Submissions fetch failed "
@@ -68,11 +72,63 @@ class BackendReceiver:
                 )
                 return []
 
-            return data
+            # Fetch ciphertext per submission to avoid massive single-response payloads.
+            # Backend returns lightweight metadata in this endpoint.
+            # IMPORTANT: reuse cached ciphertext for already-seen submissions to reduce
+            # backend Prisma load and avoid repeated large-row reads.
+            enriched: List[Dict] = []
+            for item in data:
+                grad_id = item.get("id")
+                if not grad_id:
+                    logger.warning("[BackendReceiver] Submission missing id; skipping")
+                    continue
+
+                ciphertext = self._ciphertext_cache.get(grad_id)
+                if ciphertext is None:
+                    ciphertext = self._fetch_submission_ciphertext(grad_id)
+                    if ciphertext is not None:
+                        self._ciphertext_cache[grad_id] = ciphertext
+
+                if ciphertext is None:
+                    logger.warning(
+                        f"[BackendReceiver] Missing ciphertext for submission id={grad_id}; skipping"
+                    )
+                    continue
+
+                item["ciphertext"] = ciphertext
+                enriched.append(item)
+
+            return enriched
 
         except Exception as e:
             logger.error(f"[BackendReceiver] Error fetching submissions: {e}")
             return []
+
+    def _fetch_submission_ciphertext(self, gradient_id: str):
+        """
+        Fetch ciphertext blob for a single submission.
+        """
+        endpoint = (
+            f"{self.base_url}/aggregator/{self.task_id}/submissions/"
+            f"{gradient_id}/ciphertext"
+        )
+
+        # Retry a few times because backend may transiently fail while serving
+        # large ciphertext rows.
+        for attempt in range(3):
+            try:
+                resp = requests.get(endpoint, timeout=20)
+                if resp.status_code == 200:
+                    payload = resp.json()
+                    return payload.get("ciphertext")
+            except Exception:
+                pass
+
+            # Small backoff before retrying
+            if attempt < 2:
+                time.sleep(0.4 * (attempt + 1))
+
+        return None
 
     def fetch_feedback(self) -> List[Dict]:
         """

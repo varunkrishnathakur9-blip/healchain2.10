@@ -134,6 +134,111 @@ router.get(
 );
 
 /**
+ * GET /miners/:taskID/key-status
+ * Check whether a miner public key is available for a task.
+ *
+ * Query params:
+ * - address (required): miner wallet address
+ * - publicKey (required): miner_pk derived from miner private key
+ *
+ * Returns:
+ * - valid: boolean
+ * - conflict: boolean
+ * - reason/message for debugging
+ */
+router.get(
+  "/:taskID/key-status",
+  async (req, res, next) => {
+    try {
+      const { taskID } = req.params;
+      const { address, publicKey } = req.query;
+
+      if (!address || typeof address !== "string") {
+        return res.status(400).json({
+          valid: false,
+          conflict: false,
+          reason: "address is required"
+        });
+      }
+      if (!publicKey || typeof publicKey !== "string") {
+        return res.status(400).json({
+          valid: false,
+          conflict: false,
+          reason: "publicKey is required"
+        });
+      }
+
+      const normalizedAddress = address.toLowerCase();
+      const normalizedPublicKey = publicKey.trim();
+
+      const task = await prisma.task.findUnique({
+        where: { taskID },
+        select: { taskID: true }
+      });
+      if (!task) {
+        return res.status(404).json({
+          valid: false,
+          conflict: false,
+          reason: "Task not found"
+        });
+      }
+
+      const selfMiner = await prisma.miner.findUnique({
+        where: {
+          taskID_address: {
+            taskID,
+            address: normalizedAddress
+          }
+        },
+        select: {
+          address: true,
+          publicKey: true
+        }
+      });
+
+      const duplicate = await prisma.miner.findFirst({
+        where: {
+          taskID,
+          publicKey: normalizedPublicKey,
+          address: {
+            not: normalizedAddress
+          }
+        },
+        select: {
+          address: true
+        }
+      });
+
+      if (duplicate) {
+        return res.json({
+          valid: false,
+          conflict: true,
+          reason: "PUBLIC_KEY_ALREADY_USED",
+          message: `publicKey already used by miner ${duplicate.address} in task ${taskID}`
+        });
+      }
+
+      if (selfMiner?.publicKey && selfMiner.publicKey !== normalizedPublicKey) {
+        return res.json({
+          valid: false,
+          conflict: true,
+          reason: "PUBLIC_KEY_MISMATCH",
+          message: "Submitted publicKey does not match your existing registration for this task"
+        });
+      }
+
+      return res.json({
+        valid: true,
+        conflict: false,
+        reason: "OK"
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
  * POST /miners/:address/tasks/:taskID/start-training
  * Trigger FL client training for a miner on a specific task
  */

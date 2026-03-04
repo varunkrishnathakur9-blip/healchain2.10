@@ -24,6 +24,9 @@ export async function registerMiner(
   proof?: string,  // Algorithm 2: Miner proof (IPFS link or system proof)
   flClientUrl?: string  // FL Client service URL for distributed training
 ) {
+  const normalizedAddress = address.toLowerCase();
+  const normalizedPublicKey = publicKey?.trim();
+
   // Check if task exists
   const task = await prisma.task.findUnique({
     where: { taskID }
@@ -48,10 +51,13 @@ export async function registerMiner(
   if (!proof || proof.trim() === '') {
     throw new Error("Miner proof is required (Algorithm 2). Please provide IPFS link or system proof.");
   }
+  if (!normalizedPublicKey) {
+    throw new Error("Miner publicKey is required (Algorithm 2) and must be unique per miner.");
+  }
 
   // Algorithm 2: VerifyMinerProof(r.pki, r.proofi, taskPool[taskID].meta.D)
   const proofValid = await verifyMinerProof(
-    publicKey || address,  // r.pki (miner public key)
+    normalizedPublicKey,  // r.pki (miner public key)
     proof,                    // r.proofi (miner proof)
     task.dataset             // taskPool[taskID].meta.D (dataset requirements)
   );
@@ -65,13 +71,33 @@ export async function registerMiner(
     where: {
       taskID_address: {
         taskID,
-        address: address.toLowerCase()
+        address: normalizedAddress
       }
     }
   });
 
   if (existingMiner) {
     throw new Error(`Miner ${address} is already registered for task ${taskID}`);
+  }
+
+  // Enforce unique miner public key per task.
+  const duplicateKeyMiner = await prisma.miner.findFirst({
+    where: {
+      taskID,
+      publicKey: normalizedPublicKey,
+      address: {
+        not: normalizedAddress
+      }
+    },
+    select: {
+      address: true
+    }
+  });
+  if (duplicateKeyMiner) {
+    throw new Error(
+      `publicKey already registered by miner ${duplicateKeyMiner.address} for task ${taskID}. ` +
+      "Each miner must use a unique keypair."
+    );
   }
 
   // Algorithm 2.1: Validate miner has sufficient on-chain stake for PoS selection
@@ -106,8 +132,8 @@ export async function registerMiner(
   const miner = await prisma.miner.create({
     data: {
       taskID,
-      address: address.toLowerCase(),
-      publicKey: publicKey || null,
+      address: normalizedAddress,
+      publicKey: normalizedPublicKey,
       stake: onChainStake,        // Use on-chain stake from StakeRegistry
       proof: proof,                // Algorithm 2: Store miner proof
       proofVerified: true,         // Algorithm 2: Mark proof as verified

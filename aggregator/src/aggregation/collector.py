@@ -78,13 +78,20 @@ def collect_and_validate_submissions(
     )
 
     valid: List[Dict] = []
+    seen_identities = set()
 
     for idx, sub in enumerate(submissions):
         try:
             # Normalize FL client format to aggregator format
             normalized = _normalize_submission(sub)
             _validate_submission_structure(normalized, task_id)
+            # Identity should be miner address when available.
+            # Some local/dev setups reuse the same signing key across miners.
+            identity = normalized.get("miner_address") or normalized["miner_pk"]
+            if identity in seen_identities:
+                raise ValueError("Duplicate miner submission")
             _verify_submission_signature(normalized)
+            seen_identities.add(identity)
             valid.append(normalized)
         except Exception as e:
             logger.warning(
@@ -131,6 +138,7 @@ def _normalize_submission(sub: Dict) -> Dict:
     
     # Map FL client fields to aggregator fields
     normalized["task_id"] = sub.get("taskID", sub.get("task_id"))
+    normalized["miner_address"] = sub.get("miner_address", sub.get("minerAddress"))
     normalized["miner_pk"] = sub.get("miner_pk")
     normalized["score_commit"] = sub.get("scoreCommit", sub.get("score_commit"))
     normalized["signature"] = sub.get("signature")

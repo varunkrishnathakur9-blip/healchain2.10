@@ -344,6 +344,21 @@ export const aggregatorAPI = {
     return response.data;
   },
 
+  // Admin: clear all gradients for a task (publisher-only)
+  clearGradients: async (
+    taskID: string,
+    address: string,
+    message: string,
+    signature: string
+  ) => {
+    const response = await api.post(`/aggregator/${taskID}/admin/clear-gradients`, {
+      address,
+      message,
+      signature
+    });
+    return response.data;
+  },
+
   // Algorithm 2: Get skFE key derivation status (requires aggregator authentication)
   getKeyStatus: async (taskID: string, address: string, message: string, signature: string) => {
     const response = await api.post(`/aggregator/${taskID}/key-status`, {

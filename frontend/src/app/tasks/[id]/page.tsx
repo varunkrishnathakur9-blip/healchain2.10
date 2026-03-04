@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { useTask } from '@/hooks/useTask';
 import { useContract } from '@/hooks/useContract';
-import { minerAPI } from '@/lib/api';
+import { minerAPI, aggregatorAPI } from '@/lib/api';
+import { useWallet } from '@/hooks/useWallet';
 import Card from '@/components/Card';
 import Badge, { TaskStatusBadge } from '@/components/Badge';
 import Button from '@/components/Button';
@@ -25,11 +26,14 @@ export default function TaskDetailPage() {
   const params = useParams();
   const taskID = params.id as string;
   const { address, isConnected, chainId } = useAccount();
+  const { signMessage, createAuthMessage } = useWallet();
   const { task, loading, error, refresh } = useTask(taskID);
   const { publishTask, revealAccuracy, revealScore, distributeRewards, refundEscrow } = useContract();
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [showCompleteEscrow, setShowCompleteEscrow] = useState(false);
   const [isRegisteredMiner, setIsRegisteredMiner] = useState<boolean | null>(null);
+  const [isClearingGradients, setIsClearingGradients] = useState(false);
+  const [clearGradientsMessage, setClearGradientsMessage] = useState<string | null>(null);
 
   const chainConfig = chainId ? getChainConfig(chainId) : null;
 
@@ -243,6 +247,35 @@ export default function TaskDetailPage() {
     }, 1000);
   };
 
+  const handleClearGradients = async () => {
+    if (!task?.taskID || !address) return;
+
+    const confirmed = window.confirm(
+      `Clear all submitted gradients for ${task.taskID}? This allows fresh resubmissions and restarts aggregation input.`
+    );
+    if (!confirmed) return;
+
+    setIsClearingGradients(true);
+    setClearGradientsMessage(null);
+
+    try {
+      const message = createAuthMessage(address);
+      const signature = await signMessage(message);
+      const result = await aggregatorAPI.clearGradients(task.taskID, address, message, signature);
+
+      setClearGradientsMessage(
+        `Cleared ${result.deletedGradients ?? 0} gradients` +
+          (result.statusChangedToOpen ? ' and reset task status to OPEN.' : '.')
+      );
+
+      refresh?.();
+    } catch (err: any) {
+      setClearGradientsMessage(err?.message || 'Failed to clear gradients');
+    } finally {
+      setIsClearingGradients(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -423,6 +456,20 @@ export default function TaskDetailPage() {
                 <Button variant="primary" onClick={handlePublishBlock}>
                   Publish Block (M6, when M5 consensus passed)
                 </Button>
+              )}
+              {(task.status === 'OPEN' || task.status === 'AGGREGATING') && (
+                <Button
+                  variant="outline"
+                  onClick={handleClearGradients}
+                  disabled={isClearingGradients}
+                >
+                  {isClearingGradients ? 'Clearing Gradients...' : 'Clear Gradients (Admin)'}
+                </Button>
+              )}
+              {clearGradientsMessage && (
+                <div className="p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-700 dark:text-gray-300">
+                  {clearGradientsMessage}
+                </div>
               )}
               {(task.status === 'REVEAL_OPEN' || task.status === 'REVEAL_CLOSED' || task.status === 'VERIFIED') && (
                 <Link href="/rewards">

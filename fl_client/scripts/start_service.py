@@ -27,6 +27,7 @@ from tasks.watcher import poll_tasks
 from tasks.validator import is_task_acceptable
 from tasks.lifecycle import run_task
 from state.local_store import load_state, save_state
+from crypto.keys import derive_public_key
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for backend requests
@@ -83,6 +84,56 @@ def get_task_details(task_id: str, backend_url: str = None):
         return None
 
 
+def check_miner_key_status(task_id: str, miner_address: str, backend_url: str = None, miner_private_key: str = None):
+    """
+    Preflight check: ensure this miner's derived public key is not already
+    used by another miner for the same task.
+    """
+    import requests
+
+    miner_private_key = miner_private_key or os.getenv("MINER_PRIVATE_KEY", "")
+    if not miner_private_key:
+        return False, "MINER_PRIVATE_KEY is not set in .env"
+
+    try:
+        miner_pk = derive_public_key(miner_private_key)
+    except Exception as e:
+        return False, f"Failed to derive miner public key from MINER_PRIVATE_KEY: {e}"
+
+    try:
+        url = f"{(backend_url or BACKEND_URL)}/miners/{task_id}/key-status"
+        resp = requests.get(
+            url,
+            params={
+                "address": miner_address.lower(),
+                "publicKey": miner_pk
+            },
+            timeout=8
+        )
+
+        if resp.status_code != 200:
+            return False, f"Key status check failed (HTTP {resp.status_code}): {resp.text}"
+
+        data = resp.json()
+        if not data.get("valid"):
+            return False, data.get("message") or data.get("reason") or "Miner public key validation failed"
+
+        return True, "OK"
+    except Exception as e:
+        return False, f"Could not validate miner public key uniqueness: {e}"
+
+
+def get_effective_miner_private_key(miner_address: str):
+    """
+    Resolve per-miner private key.
+    Priority:
+    1. Dynamic config for this miner (minerPrivateKey)
+    2. MINER_PRIVATE_KEY from environment
+    """
+    cfg = miner_configs.get(miner_address.lower(), {})
+    return cfg.get("minerPrivateKey") or os.getenv("MINER_PRIVATE_KEY", "")
+
+
 def update_env_file(miner_address: str, config: dict):
     """
     Optionally update .env file with configuration for persistence.
@@ -107,6 +158,8 @@ def update_env_file(miner_address: str, config: dict):
             updates["TP_PUBLIC_KEY"] = config["tpPublicKey"]
         if config.get("aggregatorPublicKey"):
             updates["AGGREGATOR_PK"] = config["aggregatorPublicKey"]
+        if config.get("minerPrivateKey"):
+            updates["MINER_PRIVATE_KEY"] = config["minerPrivateKey"]
         
         # Update existing lines or append new ones
         updated = set()
@@ -141,7 +194,7 @@ def update_env_file(miner_address: str, config: dict):
 
 import threading
 
-def training_worker(task, miner_address, effective_backend_url, task_id):
+def training_worker(task, miner_address, effective_backend_url, task_id, miner_private_key):
     """
     Background worker for running FL training.
     """
@@ -165,7 +218,12 @@ def training_worker(task, miner_address, effective_backend_url, task_id):
                 "message": msg
             })
             
-        payload = run_task(task, miner_address, progress_callback=progress_callback)
+        payload = run_task(
+            task,
+            miner_address,
+            progress_callback=progress_callback,
+            miner_private_key_override=miner_private_key
+        )
         
         # Store payload for manual submission (M3)
         training_payloads[task_id] = {
@@ -229,17 +287,57 @@ def trigger_training():
                 "backendUrl": config.get("backendUrl", BACKEND_URL),
                 "tpPublicKey": config.get("tpPublicKey", ""),
                 "aggregatorPublicKey": config.get("aggregatorPublicKey", ""),
+                "minerPrivateKey": config.get("minerPrivateKey", ""),
             }
             update_env_file(miner_address, config)
 
         # Use stored config or defaults
         current_config = miner_configs.get(miner_address, {})
         effective_backend_url = current_config.get("backendUrl", BACKEND_URL)
+        effective_miner_private_key = get_effective_miner_private_key(miner_address)
+
+        if not effective_miner_private_key:
+            return jsonify({
+                "error": "MINER_PRIVATE_KEY is not configured for this miner.",
+                "suggestion": "Set MINER_PRIVATE_KEY in fl_client/.env or pass config.minerPrivateKey for this miner instance."
+            }), 400
+
+        # Guard against accidentally using one FL service instance for multiple miners
+        # with a single shared key.
+        configured_miner_address = (MINER_ADDRESS or "").lower()
+        if configured_miner_address and configured_miner_address != miner_address and not current_config.get("minerPrivateKey"):
+            return jsonify({
+                "error": (
+                    f"FL service configured for miner {configured_miner_address} "
+                    f"but request is for {miner_address}."
+                ),
+                "suggestion": (
+                    "Run one FL service per miner (distinct .env with unique MINER_PRIVATE_KEY), "
+                    "or provide config.minerPrivateKey explicitly for this miner."
+                )
+            }), 400
 
         # Fetch task details from backend
         task = get_task_details(task_id, effective_backend_url)
         if not task:
             return jsonify({"error": f"Task {task_id} not found"}), 404
+
+        # Preflight: ensure this miner uses a unique keypair for this task
+        key_ok, key_msg = check_miner_key_status(
+            task_id,
+            miner_address,
+            effective_backend_url,
+            effective_miner_private_key
+        )
+        if not key_ok:
+            return jsonify({
+                "error": "Miner key validation failed",
+                "details": key_msg,
+                "suggestion": (
+                    "Each miner must use a unique MINER_PRIVATE_KEY for a task. "
+                    "Update fl_client/.env for this miner instance."
+                )
+            }), 400
 
         # Inject public keys into task
         if current_config.get("tpPublicKey"):
@@ -264,7 +362,7 @@ def trigger_training():
         # Start training in background thread
         thread = threading.Thread(
             target=training_worker, 
-            args=(task, miner_address, effective_backend_url, task_id),
+            args=(task, miner_address, effective_backend_url, task_id, effective_miner_private_key),
             name=f"TrainingWorker-{task_id}"
         )
         thread.start()
@@ -400,6 +498,21 @@ def submit_gradient():
 
         payload = payload_data
 
+        # Preflight again before submission to fail fast with clear reason
+        effective_miner_private_key = get_effective_miner_private_key(miner_address)
+        key_ok, key_msg = check_miner_key_status(
+            task_id,
+            miner_address,
+            backend_url,
+            effective_miner_private_key
+        )
+        if not key_ok:
+            return jsonify({
+                "error": "Miner key validation failed before submission",
+                "details": key_msg,
+                "suggestion": "Use a unique MINER_PRIVATE_KEY per miner instance and retrain/resubmit."
+            }), 400
+
         # Get wallet auth from request (if provided by backend from frontend)
         # This is needed for backend API authentication
         # The payload signature is for gradient submission verification, not API auth
@@ -448,6 +561,7 @@ def submit_gradient():
             # Gradient submission fields (M3) - Algorithm 3
             "taskID": payload["taskID"],
             "minerAddress": payload["minerAddress"],
+            "miner_pk": payload.get("miner_pk"),  # Public key used to sign submission
             "scoreCommit": payload["scoreCommit"],
             "encryptedHash": payload["encryptedHash"],
             "ciphertext": json.dumps(payload["ciphertext"]),  # JSON array of EC points (required for aggregator)

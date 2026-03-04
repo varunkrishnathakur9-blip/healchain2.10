@@ -36,7 +36,9 @@ export async function triggerAggregation(
       miners: {
         where: { proofVerified: true }
       },
-      gradients: true
+      _count: {
+        select: { gradients: true }
+      }
     }
   });
 
@@ -201,7 +203,7 @@ export async function getAggregatorStatus(
 
     // If service not available, infer status from database
     if (error.code === "ECONNREFUSED" || error.code === "ETIMEDOUT") {
-      const submissionCount = task.gradients.length;
+      const submissionCount = task._count.gradients;
       const requiredSubmissions = task.miners.length;
 
       if (submissionCount === 0) {
