@@ -142,6 +142,9 @@ def _normalize_submission(sub: Dict) -> Dict:
     normalized["miner_pk"] = sub.get("miner_pk")
     normalized["score_commit"] = sub.get("scoreCommit", sub.get("score_commit"))
     normalized["signature"] = sub.get("signature")
+    # Optional canonical-signature helpers from FL client payload.
+    normalized["signed_message"] = sub.get("message")
+    normalized["signed_ciphertext_concat"] = sub.get("ciphertext_concat")
     
     # Handle ciphertext format (sparse or dense)
     if sub.get("format") == "sparse":
@@ -157,6 +160,10 @@ def _normalize_submission(sub: Dict) -> Dict:
         
         if len(nonzero_indices) != len(ciphertext_sparse):
             raise ValueError(f"Sparse format mismatch: {len(nonzero_indices)} indices but {len(ciphertext_sparse)} ciphertext values")
+
+        # Keep the exact sparse concatenation that miners sign over.
+        if not normalized.get("signed_ciphertext_concat"):
+            normalized["signed_ciphertext_concat"] = ",".join(ciphertext_sparse)
         
         # Get the "encrypted zero" from the first ciphertext value
         # In sparse format, we need a default value for zero gradients
@@ -253,22 +260,85 @@ def _verify_submission_signature(sub: Dict):
         HASH(task_id || ciphertext_hash || score_commit || miner_pk)
     """
 
-    message = _canonical_message(sub)
+    # Try message supplied by client first (when available), then fallback to
+    # canonical variants built from normalized fields.
+    message_variants = []
+    signed_message = sub.get("signed_message")
+    if isinstance(signed_message, str) and signed_message:
+        message_variants.append(signed_message.encode("utf-8"))
 
-    if not verify_signature(
-        public_key=sub["miner_pk"],
-        message=message,
-        signature=sub["signature"],
+    ciphertext_default = ",".join(sub["ciphertext"])
+    ciphertext_variants = [ciphertext_default]
+    signed_ciphertext_concat = sub.get("signed_ciphertext_concat")
+    if (
+        isinstance(signed_ciphertext_concat, str)
+        and signed_ciphertext_concat
+        and signed_ciphertext_concat != ciphertext_default
     ):
-        raise ValueError("Invalid miner signature")
+        ciphertext_variants.append(signed_ciphertext_concat)
+
+    pk_no_prefix = _normalize_pk_for_message(sub["miner_pk"], with_prefix=False)
+    pk_with_prefix = _normalize_pk_for_message(sub["miner_pk"], with_prefix=True)
+    pk_variants = _dedupe_preserve_order([sub["miner_pk"], pk_no_prefix, pk_with_prefix])
+    score_variants = _score_commit_variants(sub["score_commit"])
+
+    for ciphertext_concat in ciphertext_variants:
+        for pk_variant in pk_variants:
+            for score_variant in score_variants:
+                sub_variant = dict(sub)
+                sub_variant["miner_pk"] = pk_variant
+                sub_variant["score_commit"] = score_variant
+                message_variants.append(
+                    _canonical_message(sub_variant, ciphertext_concat=ciphertext_concat)
+                )
+
+    for msg in _dedupe_preserve_order(message_variants):
+        if verify_signature(
+            public_key=sub["miner_pk"],
+            message=msg,
+            signature=sub["signature"],
+        ):
+            return
+
+    raise ValueError("Invalid miner signature")
 
 
-def _canonical_message(sub: Dict) -> bytes:
+def _score_commit_variants(score_commit: str) -> List[str]:
+    """
+    Generate score_commit formatting variants for canonical-message matching.
+    """
+    raw = score_commit.strip()
+    if not raw:
+        return [score_commit]
+
+    lowered = raw.lower()
+    if lowered.startswith("0x"):
+        no_prefix = lowered[2:]
+    else:
+        no_prefix = lowered
+    with_prefix = f"0x{no_prefix}"
+
+    return _dedupe_preserve_order([score_commit, raw, no_prefix, with_prefix, lowered])
+
+
+def _dedupe_preserve_order(items: List):
+    seen = set()
+    out = []
+    for item in items:
+        if item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+    return out
+
+
+def _canonical_message(sub: Dict, *, ciphertext_concat: str = None) -> bytes:
     """
     Deterministic message encoding for signature verification.
     """
 
-    ciphertext_concat = ",".join(sub["ciphertext"])
+    if ciphertext_concat is None:
+        ciphertext_concat = ",".join(sub["ciphertext"])
 
     parts = [
         sub["task_id"],
@@ -278,3 +348,22 @@ def _canonical_message(sub: Dict) -> bytes:
     ]
 
     return "|".join(parts).encode("utf-8")
+
+
+def _normalize_pk_for_message(pk: str, *, with_prefix: bool) -> str:
+    """
+    Normalize miner_pk string formatting for canonical-message compatibility.
+    Input/output format: "x,y" where each coordinate may have or omit 0x.
+    """
+    try:
+        x, y = pk.split(",")
+    except Exception:
+        return pk
+
+    def norm(part: str) -> str:
+        raw = part.strip().lower()
+        if raw.startswith("0x"):
+            raw = raw[2:]
+        return f"0x{raw}" if with_prefix else raw
+
+    return f"{norm(x)},{norm(y)}"

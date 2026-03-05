@@ -12,7 +12,7 @@ export async function submitGradient(input: {
   minerPublicKey?: string; // Public key used to sign the submission
   scoreCommit: string;
   encryptedHash: string;
-  ciphertext?: string; // JSON array of EC points ["x_hex,y_hex", ...]
+  ciphertext: string; // JSON array of EC points ["x_hex,y_hex", ...]
   signature?: string; // Miner signature for submission verification
 }) {
   const normalizedAddress = input.minerAddress.toLowerCase();
@@ -42,6 +42,10 @@ export async function submitGradient(input: {
 
   if (!normalizedPublicKey) {
     throw new Error("miner_pk (public key) is required for gradient submission");
+  }
+
+  if (typeof input.ciphertext !== "string" || !input.ciphertext.trim()) {
+    throw new Error("ciphertext is required for gradient submission");
   }
 
   const miner = await prisma.miner.findUnique({
@@ -125,7 +129,7 @@ export async function submitGradient(input: {
       minerAddress: normalizedAddress,
       scoreCommit: input.scoreCommit,
       encryptedHash: input.encryptedHash,
-      ciphertext: input.ciphertext || null, // Store ciphertext if provided
+      ciphertext: input.ciphertext, // Encrypted gradient payload (required)
       signature: input.signature || null, // Store signature if provided
       status: GradientStatus.COMMITTED
     }

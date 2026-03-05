@@ -20,6 +20,8 @@ router.post(
     "miner_pk",
     "scoreCommit",
     "encryptedHash",
+    "ciphertext",
+    "minerSignature",
     "message",
     "signature"
   ]),
@@ -33,7 +35,7 @@ router.post(
         scoreCommit: req.body.scoreCommit,
         encryptedHash: req.body.encryptedHash,
         ciphertext: req.body.ciphertext, // Optional: JSON array of EC points
-        signature: req.body.minerSignature || req.body.signature // Miner signature (different from wallet auth signature)
+        signature: req.body.minerSignature // Miner signature (different from wallet auth signature)
       });
 
       res.json({ status: "SUBMITTED" });
