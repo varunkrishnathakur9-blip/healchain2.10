@@ -49,16 +49,10 @@ export default function MinerRegistrationForm({ taskID, onSuccess }: MinerRegist
       return;
     }
 
-    // Algorithm 2: Warn if public key is not provided (required for key derivation)
+    // Algorithm 2: Public key is required
     if (!publicKey || publicKey.trim() === '') {
-      const proceed = window.confirm(
-        'Warning: Public key not provided. Key derivation (Algorithm 2.2) requires all miners\' public keys. ' +
-        'You can still register, but key derivation will be delayed until all miners provide their public keys. ' +
-        'Continue without public key?'
-      );
-      if (!proceed) {
-        return;
-      }
+      setErrorMessage('Public key is required (Algorithm 2.2). Please derive it from your MINER_PRIVATE_KEY.');
+      return;
     }
 
     // Check stake eligibility (Algorithm 2.1 requirement)
@@ -68,7 +62,7 @@ export default function MinerRegistrationForm({ taskID, onSuccess }: MinerRegist
     }
 
     try {
-      await registerMiner(taskID, proof, publicKey.trim() || undefined);
+      await registerMiner(taskID, proof, publicKey.trim());
       setSuccess(true);
       if (onSuccess) {
         onSuccess();
@@ -195,11 +189,12 @@ export default function MinerRegistrationForm({ taskID, onSuccess }: MinerRegist
 
         <div>
           <label htmlFor="publicKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Public Key (Algorithm 2) <span className="text-yellow-600">⚠️ Recommended</span>
+            Public Key (Algorithm 2) <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             id="publicKey"
+            required
             value={publicKey}
             onChange={(e) => setPublicKey(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
@@ -209,7 +204,7 @@ export default function MinerRegistrationForm({ taskID, onSuccess }: MinerRegist
             Your EC point public key for NDD-FE encryption and key derivation (Algorithm 2.2). Format: <span className="font-mono">x_hex,y_hex</span> (64 hex digits each).
           </p>
           <p className="mt-1 text-xs text-yellow-600 dark:text-yellow-400">
-            <strong>Important:</strong> Key derivation requires all miners' public keys. You can derive your public key from your <span className="font-mono">MINER_PRIVATE_KEY</span> in your FL client.
+            <strong>Important:</strong> This field is required. Derive your public key from <span className="font-mono">MINER_PRIVATE_KEY</span> in your FL client.
           </p>
           <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
             How to get: Your FL client should provide this. If using <span className="font-mono">MINER_PRIVATE_KEY</span>, compute <span className="font-mono">{'g^{sk}'}</span> where <span className="font-mono">g</span> is the secp256r1 generator point.

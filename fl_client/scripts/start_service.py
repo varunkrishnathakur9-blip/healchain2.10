@@ -10,9 +10,11 @@ from pathlib import Path
 import sys
 import os
 import json
+import getpass
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from eth_account import Account
 
 # Load environment variables
 load_dotenv()
@@ -84,14 +86,99 @@ def get_task_details(task_id: str, backend_url: str = None):
         return None
 
 
-def check_miner_key_status(task_id: str, miner_address: str, backend_url: str = None, miner_private_key: str = None):
+def update_env_file(updates: dict):
+    """
+    Persist selected keys in fl_client/.env and mirror them into process env.
+    """
+    env_path = ROOT_DIR / ".env"
+    env_lines = []
+    if env_path.exists():
+        with open(env_path, "r", encoding="utf-8") as f:
+            env_lines = f.readlines()
+
+    applied = set()
+    new_lines = []
+    for line in env_lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            new_lines.append(line)
+            continue
+        key = stripped.split("=", 1)[0].strip()
+        if key in updates:
+            new_lines.append(f"{key}={updates[key]}\n")
+            applied.add(key)
+        else:
+            new_lines.append(line)
+
+    for key, value in updates.items():
+        if key not in applied:
+            new_lines.append(f"{key}={value}\n")
+
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+    for key, value in updates.items():
+        os.environ[key] = str(value)
+
+
+def fetch_task_public_keys(task_id: str, backend_url: str):
+    """
+    Fetch current task public keys from backend.
+    """
+    import requests
+    try:
+        resp = requests.get(f"{backend_url}/tasks/{task_id}/public-keys", timeout=8)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        return {
+            "tpPublicKey": data.get("tpPublicKey", ""),
+            "aggregatorPublicKey": data.get("aggregatorPublicKey", ""),
+        }
+    except Exception:
+        return None
+
+
+def prompt_and_set_miner_credentials():
+    """
+    Ask for miner private key on service startup and persist MINER_PRIVATE_KEY + MINER_ADDRESS.
+    """
+    global MINER_ADDRESS
+
+    # Clear persisted private key first (as requested) before accepting new input.
+    update_env_file({"MINER_PRIVATE_KEY": ""})
+
+    while True:
+        raw_key = getpass.getpass("[FL Client Service] Enter miner private key (0x...): ").strip()
+        if not raw_key:
+            print("[FL Client Service] Private key cannot be empty.")
+            continue
+        key = raw_key if raw_key.startswith(("0x", "0X")) else f"0x{raw_key}"
+
+        try:
+            # Validate wallet key format and derive corresponding address.
+            derived_address = Account.from_key(key).address.lower()
+            # Validate it also works for miner_pk derivation path.
+            _ = derive_public_key(key)
+            update_env_file({
+                "MINER_PRIVATE_KEY": key,
+                "MINER_ADDRESS": derived_address,
+            })
+            MINER_ADDRESS = derived_address
+            print(f"[FL Client Service] Loaded miner address: {derived_address}")
+            return
+        except Exception as e:
+            print(f"[FL Client Service] Invalid private key: {e}")
+
+
+def check_miner_key_status(task_id: str, miner_address: str, backend_url: str = None):
     """
     Preflight check: ensure this miner's derived public key is not already
     used by another miner for the same task.
     """
     import requests
 
-    miner_private_key = miner_private_key or os.getenv("MINER_PRIVATE_KEY", "")
+    miner_private_key = os.getenv("MINER_PRIVATE_KEY", "")
     if not miner_private_key:
         return False, "MINER_PRIVATE_KEY is not set in .env"
 
@@ -125,71 +212,10 @@ def check_miner_key_status(task_id: str, miner_address: str, backend_url: str = 
 
 def get_effective_miner_private_key(miner_address: str):
     """
-    Resolve per-miner private key.
-    Priority:
-    1. Dynamic config for this miner (minerPrivateKey)
-    2. MINER_PRIVATE_KEY from environment
+    Resolve miner private key from environment.
+    Manual mode: user updates .env and restarts service per miner.
     """
-    cfg = miner_configs.get(miner_address.lower(), {})
-    return cfg.get("minerPrivateKey") or os.getenv("MINER_PRIVATE_KEY", "")
-
-
-def update_env_file(miner_address: str, config: dict):
-    """
-    Optionally update .env file with configuration for persistence.
-    This allows the FL client service to remember configuration across restarts.
-    """
-    try:
-        env_path = ROOT_DIR / ".env"
-        
-        # Read existing .env file
-        env_lines = []
-        if env_path.exists():
-            with open(env_path, "r") as f:
-                env_lines = f.readlines()
-        
-        # Update or add configuration
-        updates = {
-            "MINER_ADDRESS": miner_address,
-            "BACKEND_URL": config.get("backendUrl", BACKEND_URL),
-        }
-        
-        if config.get("tpPublicKey"):
-            updates["TP_PUBLIC_KEY"] = config["tpPublicKey"]
-        if config.get("aggregatorPublicKey"):
-            updates["AGGREGATOR_PK"] = config["aggregatorPublicKey"]
-        if config.get("minerPrivateKey"):
-            updates["MINER_PRIVATE_KEY"] = config["minerPrivateKey"]
-        
-        # Update existing lines or append new ones
-        updated = set()
-        new_lines = []
-        for line in env_lines:
-            line_stripped = line.strip()
-            if not line_stripped or line_stripped.startswith("#"):
-                new_lines.append(line)
-                continue
-            
-            key = line_stripped.split("=")[0].strip()
-            if key in updates:
-                new_lines.append(f"{key}={updates[key]}\n")
-                updated.add(key)
-            else:
-                new_lines.append(line)
-        
-        # Add any new keys that weren't in the file
-        for key, value in updates.items():
-            if key not in updated:
-                new_lines.append(f"{key}={value}\n")
-        
-        # Write back to .env file
-        with open(env_path, "w") as f:
-            f.writelines(new_lines)
-        
-        print(f"[Service] Updated .env file with configuration for {miner_address}")
-    except Exception as e:
-        # Don't fail if .env update fails - just log it
-        print(f"[Service] Warning: Could not update .env file: {e}")
+    return os.getenv("MINER_PRIVATE_KEY", "")
 
 
 import threading
@@ -287,9 +313,7 @@ def trigger_training():
                 "backendUrl": config.get("backendUrl", BACKEND_URL),
                 "tpPublicKey": config.get("tpPublicKey", ""),
                 "aggregatorPublicKey": config.get("aggregatorPublicKey", ""),
-                "minerPrivateKey": config.get("minerPrivateKey", ""),
             }
-            update_env_file(miner_address, config)
 
         # Use stored config or defaults
         current_config = miner_configs.get(miner_address, {})
@@ -299,13 +323,13 @@ def trigger_training():
         if not effective_miner_private_key:
             return jsonify({
                 "error": "MINER_PRIVATE_KEY is not configured for this miner.",
-                "suggestion": "Set MINER_PRIVATE_KEY in fl_client/.env or pass config.minerPrivateKey for this miner instance."
+                "suggestion": "Set MINER_PRIVATE_KEY in fl_client/.env and restart the FL client service."
             }), 400
 
         # Guard against accidentally using one FL service instance for multiple miners
         # with a single shared key.
         configured_miner_address = (MINER_ADDRESS or "").lower()
-        if configured_miner_address and configured_miner_address != miner_address and not current_config.get("minerPrivateKey"):
+        if configured_miner_address and configured_miner_address != miner_address:
             return jsonify({
                 "error": (
                     f"FL service configured for miner {configured_miner_address} "
@@ -313,7 +337,7 @@ def trigger_training():
                 ),
                 "suggestion": (
                     "Run one FL service per miner (distinct .env with unique MINER_PRIVATE_KEY), "
-                    "or provide config.minerPrivateKey explicitly for this miner."
+                    "or restart this service after updating MINER_ADDRESS and MINER_PRIVATE_KEY."
                 )
             }), 400
 
@@ -322,13 +346,19 @@ def trigger_training():
         if not task:
             return jsonify({"error": f"Task {task_id} not found"}), 404
 
+        # Always fetch latest task keys from backend for this task.
+        latest_keys = fetch_task_public_keys(task_id, effective_backend_url)
+        if latest_keys:
+            task["tpPublicKey"] = latest_keys.get("tpPublicKey", "") or task.get("tpPublicKey", "")
+            task["aggregatorPublicKey"] = latest_keys.get("aggregatorPublicKey", "") or task.get("aggregatorPublicKey", "")
+            update_env_file({
+                "MINER_ADDRESS": miner_address,
+                "TP_PUBLIC_KEY": task.get("tpPublicKey", ""),
+                "AGGREGATOR_PK": task.get("aggregatorPublicKey", ""),
+            })
+
         # Preflight: ensure this miner uses a unique keypair for this task
-        key_ok, key_msg = check_miner_key_status(
-            task_id,
-            miner_address,
-            effective_backend_url,
-            effective_miner_private_key
-        )
+        key_ok, key_msg = check_miner_key_status(task_id, miner_address, effective_backend_url)
         if not key_ok:
             return jsonify({
                 "error": "Miner key validation failed",
@@ -500,12 +530,7 @@ def submit_gradient():
 
         # Preflight again before submission to fail fast with clear reason
         effective_miner_private_key = get_effective_miner_private_key(miner_address)
-        key_ok, key_msg = check_miner_key_status(
-            task_id,
-            miner_address,
-            backend_url,
-            effective_miner_private_key
-        )
+        key_ok, key_msg = check_miner_key_status(task_id, miner_address, backend_url)
         if not key_ok:
             return jsonify({
                 "error": "Miner key validation failed before submission",
@@ -648,6 +673,7 @@ def health_check():
 
 if __name__ == "__main__":
     port = int(os.getenv("FL_CLIENT_SERVICE_PORT", "5001"))
+    prompt_and_set_miner_credentials()
     print(f"[FL Client Service] Starting on port {port}")
     print(f"[FL Client Service] Miner Address: {MINER_ADDRESS}")
     print(f"[FL Client Service] Backend URL: {BACKEND_URL}")

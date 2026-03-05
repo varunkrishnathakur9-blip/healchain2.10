@@ -4,6 +4,7 @@ import { triggerTraining, getTrainingStatus, triggerSubmission } from "../servic
 import { requireFields } from "../middleware/validation.js";
 import { requireWalletAuth } from "../middleware/auth.js";
 import { prisma } from "../config/database.config.js";
+import { normalizeMinerPublicKey } from "../utils/publicKey.js";
 
 const router = Router();
 
@@ -169,7 +170,17 @@ router.get(
       }
 
       const normalizedAddress = address.toLowerCase();
-      const normalizedPublicKey = publicKey.trim();
+      let normalizedPublicKey: string;
+      try {
+        normalizedPublicKey = normalizeMinerPublicKey(publicKey);
+      } catch (e: any) {
+        return res.status(400).json({
+          valid: false,
+          conflict: false,
+          reason: "INVALID_PUBLIC_KEY_FORMAT",
+          message: e?.message || "Invalid publicKey format"
+        });
+      }
 
       const task = await prisma.task.findUnique({
         where: { taskID },
@@ -196,16 +207,24 @@ router.get(
         }
       });
 
-      const duplicate = await prisma.miner.findFirst({
+      const taskMiners = await prisma.miner.findMany({
         where: {
           taskID,
-          publicKey: normalizedPublicKey,
           address: {
             not: normalizedAddress
           }
         },
         select: {
-          address: true
+          address: true,
+          publicKey: true
+        }
+      });
+      const duplicate = taskMiners.find((m) => {
+        if (!m.publicKey) return false;
+        try {
+          return normalizeMinerPublicKey(m.publicKey) === normalizedPublicKey;
+        } catch {
+          return m.publicKey.trim().toLowerCase() === normalizedPublicKey;
         }
       });
 
@@ -218,13 +237,21 @@ router.get(
         });
       }
 
-      if (selfMiner?.publicKey && selfMiner.publicKey !== normalizedPublicKey) {
-        return res.json({
-          valid: false,
-          conflict: true,
-          reason: "PUBLIC_KEY_MISMATCH",
-          message: "Submitted publicKey does not match your existing registration for this task"
-        });
+      if (selfMiner?.publicKey) {
+        let selfNormalized = "";
+        try {
+          selfNormalized = normalizeMinerPublicKey(selfMiner.publicKey);
+        } catch {
+          selfNormalized = selfMiner.publicKey.trim().toLowerCase();
+        }
+        if (selfNormalized !== normalizedPublicKey) {
+          return res.json({
+            valid: false,
+            conflict: true,
+            reason: "PUBLIC_KEY_MISMATCH",
+            message: "Submitted publicKey does not match your existing registration for this task"
+          });
+        }
       }
 
       return res.json({

@@ -1,5 +1,6 @@
 import { prisma } from "../config/database.config.js";
 import { TaskStatus, GradientStatus } from "@prisma/client";
+import { normalizeMinerPublicKey } from "../utils/publicKey.js";
 
 /**
  * M3: Store encrypted update metadata
@@ -15,7 +16,9 @@ export async function submitGradient(input: {
   signature?: string; // Miner signature for submission verification
 }) {
   const normalizedAddress = input.minerAddress.toLowerCase();
-  const normalizedPublicKey = input.minerPublicKey?.trim();
+  const normalizedPublicKey = input.minerPublicKey?.trim()
+    ? normalizeMinerPublicKey(input.minerPublicKey)
+    : undefined;
 
   const task = await prisma.task.findUnique({
     where: { taskID: input.taskID }
@@ -57,23 +60,41 @@ export async function submitGradient(input: {
   }
 
   // Enforce one unique keypair per miner and uniqueness across miners in same task.
-  if (miner.publicKey && miner.publicKey !== normalizedPublicKey) {
+  const minerRegisteredPk = miner.publicKey
+    ? (() => {
+        try {
+          return normalizeMinerPublicKey(miner.publicKey);
+        } catch {
+          return miner.publicKey.trim().toLowerCase();
+        }
+      })()
+    : null;
+
+  if (minerRegisteredPk && minerRegisteredPk !== normalizedPublicKey) {
     throw new Error(
       "Submitted miner_pk does not match registered publicKey for this miner. " +
       "Key rotation during a task is not allowed."
     );
   }
 
-  const duplicateKeyMiner = await prisma.miner.findFirst({
+  const taskMiners = await prisma.miner.findMany({
     where: {
       taskID: input.taskID,
-      publicKey: normalizedPublicKey,
       address: {
         not: normalizedAddress
       }
     },
     select: {
-      address: true
+      address: true,
+      publicKey: true
+    }
+  });
+  const duplicateKeyMiner = taskMiners.find((m) => {
+    if (!m.publicKey) return false;
+    try {
+      return normalizeMinerPublicKey(m.publicKey) === normalizedPublicKey;
+    } catch {
+      return m.publicKey.trim().toLowerCase() === normalizedPublicKey;
     }
   });
   if (duplicateKeyMiner) {

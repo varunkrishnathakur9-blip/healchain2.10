@@ -5,6 +5,7 @@ import { deriveFunctionalEncryptionKey, validateKeyDerivationInputs } from "../c
 import { secureDeliverKey } from "../crypto/keyDelivery.js";
 import { verifyMinerProof } from "./minerProofVerification.js";
 import { isMinerEligible, getMinStake, getAvailableStake } from "../contracts/stakeRegistry.js";
+import { normalizeMinerPublicKey } from "../utils/publicKey.js";
 
 /**
  * M2: Register a miner for a task
@@ -25,7 +26,9 @@ export async function registerMiner(
   flClientUrl?: string  // FL Client service URL for distributed training
 ) {
   const normalizedAddress = address.toLowerCase();
-  const normalizedPublicKey = publicKey?.trim();
+  const normalizedPublicKey = publicKey?.trim()
+    ? normalizeMinerPublicKey(publicKey)
+    : undefined;
 
   // Check if task exists
   const task = await prisma.task.findUnique({
@@ -81,16 +84,24 @@ export async function registerMiner(
   }
 
   // Enforce unique miner public key per task.
-  const duplicateKeyMiner = await prisma.miner.findFirst({
+  const taskMiners = await prisma.miner.findMany({
     where: {
       taskID,
-      publicKey: normalizedPublicKey,
       address: {
         not: normalizedAddress
       }
     },
     select: {
-      address: true
+      address: true,
+      publicKey: true
+    }
+  });
+  const duplicateKeyMiner = taskMiners.find((m) => {
+    if (!m.publicKey) return false;
+    try {
+      return normalizeMinerPublicKey(m.publicKey) === normalizedPublicKey;
+    } catch {
+      return m.publicKey.trim().toLowerCase() === normalizedPublicKey;
     }
   });
   if (duplicateKeyMiner) {
