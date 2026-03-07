@@ -30,6 +30,8 @@ from typing import Dict
 import math
 import os
 import time
+import concurrent.futures
+import multiprocessing as mp
 
 from tinyec.ec import Point
 
@@ -173,33 +175,31 @@ def recover_vector(points: list[Point]) -> list[int]:
     """
     total = len(points)
     log_every = max(1, int(os.getenv("BSGS_LOG_EVERY", "200")))
+    workers = max(1, int(os.getenv("BSGS_WORKERS", "1")))
+    chunk_size = max(1, int(os.getenv("BSGS_CHUNK_SIZE", "5000")))
     start = time.time()
+
     logger.info(
         f"[M4][BSGS] Start recovery: coords={total}, log_every={log_every}, "
+        f"workers={workers}, chunk_size={chunk_size}, "
         f"range=[{BSGS_MIN_BOUND}, {BSGS_MAX_BOUND}]"
     )
 
-    recovered = []
-    for idx, pt in enumerate(points):
+    # Parallel mode (opt-in via BSGS_WORKERS>1). Falls back to serial on failure.
+    if workers > 1 and total > chunk_size:
         try:
-            val = recover_discrete_log(pt)
-            recovered.append(val)
-            done = idx + 1
-            if done % log_every == 0 or done == total:
-                elapsed = max(time.time() - start, 1e-6)
-                rate = done / elapsed
-                remaining = total - done
-                eta = remaining / rate if rate > 0 else 0.0
-                logger.info(
-                    f"[M4][BSGS] Progress: {done}/{total} "
-                    f"({100.0 * done / total:.2f}%), "
-                    f"rate={rate:.2f} coords/s, eta={eta:.1f}s"
-                )
+            return _recover_vector_parallel(
+                points=points,
+                workers=workers,
+                chunk_size=chunk_size,
+                start_time=start,
+            )
         except Exception as e:
-            raise ValueError(
-                f"BSGS failed at index {idx}"
-            ) from e
+            logger.warning(
+                f"[M4][BSGS] Parallel mode failed ({type(e).__name__}: {e}); falling back to serial."
+            )
 
+    recovered = _recover_vector_serial(points, log_every=log_every, start_time=start)
     logger.info(f"[M4][BSGS] Complete: coords={total}, elapsed={time.time() - start:.2f}s")
     return recovered
 
@@ -211,3 +211,75 @@ def dequantize_vector(q_values: list[int]) -> list[float]:
     float = q / SCALE
     """
     return [q / QUANTIZATION_SCALE for q in q_values]
+
+
+def _recover_vector_serial(points: list[Point], *, log_every: int, start_time: float) -> list[int]:
+    total = len(points)
+    recovered = []
+    for idx, pt in enumerate(points):
+        try:
+            val = recover_discrete_log(pt)
+            recovered.append(val)
+            done = idx + 1
+            if done % log_every == 0 or done == total:
+                elapsed = max(time.time() - start_time, 1e-6)
+                rate = done / elapsed
+                remaining = total - done
+                eta = remaining / rate if rate > 0 else 0.0
+                logger.info(
+                    f"[M4][BSGS] Progress: {done}/{total} "
+                    f"({100.0 * done / total:.2f}%), "
+                    f"rate={rate:.2f} coords/s, eta={eta:.1f}s"
+                )
+        except Exception as e:
+            raise ValueError(f"BSGS failed at index {idx}") from e
+    return recovered
+
+
+def _recover_vector_parallel(
+    *,
+    points: list[Point],
+    workers: int,
+    chunk_size: int,
+    start_time: float,
+) -> list[int]:
+    total = len(points)
+    chunks = []
+    for start in range(0, total, chunk_size):
+        end = min(start + chunk_size, total)
+        chunks.append((start, points[start:end]))
+
+    logger.info(f"[M4][BSGS] Parallel mode: {len(chunks)} chunks across {workers} workers")
+
+    results: Dict[int, list[int]] = {}
+    completed = 0
+    ctx = mp.get_context("spawn")
+    with concurrent.futures.ProcessPoolExecutor(max_workers=workers, mp_context=ctx) as executor:
+        futures = [executor.submit(_recover_chunk, start, chunk) for start, chunk in chunks]
+        for fut in concurrent.futures.as_completed(futures):
+            start_idx, vals = fut.result()
+            results[start_idx] = vals
+            completed += len(vals)
+            elapsed = max(time.time() - start_time, 1e-6)
+            rate = completed / elapsed
+            remaining = total - completed
+            eta = remaining / rate if rate > 0 else 0.0
+            logger.info(
+                f"[M4][BSGS] Parallel progress: {completed}/{total} "
+                f"({100.0 * completed / total:.2f}%), rate={rate:.2f} coords/s, eta={eta:.1f}s"
+            )
+
+    recovered: list[int] = []
+    for start_idx, _ in chunks:
+        recovered.extend(results[start_idx])
+    return recovered
+
+
+def _recover_chunk(start_idx: int, chunk: list[Point]):
+    vals = []
+    for rel_idx, pt in enumerate(chunk):
+        try:
+            vals.append(recover_discrete_log(pt))
+        except Exception as e:
+            raise ValueError(f"BSGS failed at index {start_idx + rel_idx}") from e
+    return start_idx, vals
