@@ -21,6 +21,7 @@ STRICT NON-RESPONSIBILITIES:
 - No encryption
 """
 
+import time
 from typing import Any, List, Dict
 
 from utils.logging import get_logger
@@ -97,6 +98,7 @@ def secure_aggregate(
     #         Output: EC points g^{⟨Δ′[j], y⟩}
     # ------------------------------------------------------------
     logger.info("[M4] Performing NDD-FE decryption")
+    t_ndd = time.time()
 
     aggregated_points: List[Point] = ndd_fe_decrypt(
         ciphertexts=ciphertexts,
@@ -106,26 +108,37 @@ def secure_aggregate(
         sk_agg=skA,
     )
 
-    logger.info("[M4] NDD-FE decryption successful")
+    logger.info(
+        f"[M4] NDD-FE decryption successful "
+        f"(coords={len(aggregated_points)}, elapsed={time.time() - t_ndd:.2f}s)"
+    )
 
     # ------------------------------------------------------------
     # Step 3: BSGS recovery (signed, bounded)
     # ------------------------------------------------------------
     logger.info("[M4] Recovering integer gradients via BSGS")
+    t_bsgs = time.time()
 
     quantized_update: List[int] = recover_vector(aggregated_points)
 
-    logger.info("[M4] BSGS recovery complete")
+    logger.info(
+        f"[M4] BSGS recovery complete "
+        f"(coords={len(quantized_update)}, elapsed={time.time() - t_bsgs:.2f}s)"
+    )
 
     # ------------------------------------------------------------
     # Step 4: Dequantization (fixed-point → float)
     # ------------------------------------------------------------
+    t_deq = time.time()
     aggregate_update: List[float] = dequantize_vector(quantized_update)
 
     # Validate final aggregate dimensions
     if len(aggregate_update) > MAX_MODEL_DIMENSION:
         raise ValueError(f"Aggregate vector too large: {len(aggregate_update)} > {MAX_MODEL_DIMENSION}")
 
-    logger.info("[M4] Dequantization complete")
+    logger.info(
+        f"[M4] Dequantization complete "
+        f"(coords={len(aggregate_update)}, elapsed={time.time() - t_deq:.2f}s)"
+    )
 
     return aggregate_update

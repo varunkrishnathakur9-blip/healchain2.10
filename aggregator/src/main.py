@@ -25,6 +25,7 @@ from typing import Dict, List
 from config.constants import (
     MIN_PARTICIPANTS,  # Default fallback
     AGGREGATION_TIMEOUT,
+    BACKEND_POLL_INTERVAL,
     FEEDBACK_TIMEOUT,
 )
 
@@ -228,7 +229,7 @@ class HealChainAggregator:
             if len(submissions_by_id) >= self.min_participants:
                 break
 
-            time.sleep(1)
+            time.sleep(BACKEND_POLL_INTERVAL)
 
         submissions = list(submissions_by_id.values())
 

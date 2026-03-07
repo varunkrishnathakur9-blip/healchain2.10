@@ -23,6 +23,7 @@ NON-RESPONSIBILITIES:
 - No backend communication
 """
 
+import os
 from typing import Dict, List
 
 from utils.validation import verify_signature
@@ -260,22 +261,34 @@ def _verify_submission_signature(sub: Dict):
         HASH(task_id || ciphertext_hash || score_commit || miner_pk)
     """
 
-    # Try message supplied by client first (when available), then fallback to
-    # canonical variants built from normalized fields.
-    message_variants = []
+    # Fast path: verify exact client-supplied canonical message first.
+    # This avoids expensive dense ciphertext string reconstruction.
     signed_message = sub.get("signed_message")
     if isinstance(signed_message, str) and signed_message:
-        message_variants.append(signed_message.encode("utf-8"))
+        if verify_signature(
+            public_key=sub["miner_pk"],
+            message=signed_message.encode("utf-8"),
+            signature=sub["signature"],
+        ):
+            return
 
-    ciphertext_default = ",".join(sub["ciphertext"])
-    ciphertext_variants = [ciphertext_default]
+    # Build fallback variants only if fast path did not verify.
+    message_variants = []
+    ciphertext_variants = []
     signed_ciphertext_concat = sub.get("signed_ciphertext_concat")
-    if (
-        isinstance(signed_ciphertext_concat, str)
-        and signed_ciphertext_concat
-        and signed_ciphertext_concat != ciphertext_default
-    ):
+    if isinstance(signed_ciphertext_concat, str) and signed_ciphertext_concat:
         ciphertext_variants.append(signed_ciphertext_concat)
+
+    # Dense reconstruction is extremely expensive for large payloads.
+    # Keep disabled by default; enable only for legacy debugging compatibility.
+    if os.getenv("VERIFY_WITH_DENSE_FALLBACK", "0") == "1":
+        ciphertext_default = ",".join(sub["ciphertext"])
+        if ciphertext_default not in ciphertext_variants:
+            ciphertext_variants.append(ciphertext_default)
+
+    # If no explicit ciphertext concat exists, we must fall back to dense string.
+    if not ciphertext_variants:
+        ciphertext_variants.append(",".join(sub["ciphertext"]))
 
     pk_no_prefix = _normalize_pk_for_message(sub["miner_pk"], with_prefix=False)
     pk_with_prefix = _normalize_pk_for_message(sub["miner_pk"], with_prefix=True)

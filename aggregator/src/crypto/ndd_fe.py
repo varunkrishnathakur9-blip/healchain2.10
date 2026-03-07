@@ -18,6 +18,8 @@ Assumptions (FIXED, do not change):
 - Aggregator is the designated decryptor
 """
 
+import os
+import time
 from typing import List
 from tinyec import registry
 from tinyec.ec import Point
@@ -30,6 +32,9 @@ from crypto.ec_utils import (
     point_mul,
     point_sub,
 )
+from utils.logging import get_logger
+
+logger = get_logger("crypto.ndd_fe")
 
 # -------------------------------------------------------------------
 # Hex Point Parser (matches FL client format)
@@ -104,12 +109,18 @@ def ndd_fe_decrypt(
         raise ValueError("Ciphertext / weight length mismatch")
 
     num_coords = len(ciphertexts[0])
+    miner_count = len(ciphertexts)
+    log_every = max(1, int(os.getenv("NDD_FE_LOG_EVERY", "50000")))
+    start = time.time()
+    logger.info(
+        f"[M4][NDD-FE] Start decrypt: miners={miner_count}, coords={num_coords}, log_every={log_every}"
+    )
     aggregated = [None] * num_coords
 
     # ------------------------------------------------------------
     # Step 1: ∏ U_i[j]^{y_i}
     # ------------------------------------------------------------
-    for miner_ct, w in zip(ciphertexts, weights):
+    for miner_idx, (miner_ct, w) in enumerate(zip(ciphertexts, weights), start=1):
         if len(miner_ct) != num_coords:
             raise ValueError("Inconsistent ciphertext vector length")
 
@@ -121,6 +132,14 @@ def ndd_fe_decrypt(
                 term if aggregated[j] is None
                 else point_add(aggregated[j], term)
             )
+            if (j + 1) % log_every == 0:
+                logger.info(
+                    f"[M4][NDD-FE] Combine progress: miner={miner_idx}/{miner_count}, "
+                    f"coord={j + 1}/{num_coords}, elapsed={time.time() - start:.1f}s"
+                )
+        logger.info(
+            f"[M4][NDD-FE] Miner combined: {miner_idx}/{miner_count}, elapsed={time.time() - start:.1f}s"
+        )
 
     # ------------------------------------------------------------
     # Step 2: Remove pk_TP^{∑ r_i y_i} using skFE
@@ -129,6 +148,10 @@ def ndd_fe_decrypt(
 
     for j in range(num_coords):
         aggregated[j] = point_sub(aggregated[j], fe_mask)
+        if (j + 1) % log_every == 0:
+            logger.info(
+                f"[M4][NDD-FE] FE-mask removal: coord={j + 1}/{num_coords}, elapsed={time.time() - start:.1f}s"
+            )
 
     # ------------------------------------------------------------
     # Step 3: Designated decryptor step
@@ -139,6 +162,14 @@ def ndd_fe_decrypt(
     recovered = []
     for j in range(num_coords):
         recovered.append(point_mul(aggregated[j], inv_sk_agg))
+        if (j + 1) % log_every == 0:
+            logger.info(
+                f"[M4][NDD-FE] Decrypt step: coord={j + 1}/{num_coords}, elapsed={time.time() - start:.1f}s"
+            )
+
+    logger.info(
+        f"[M4][NDD-FE] Complete: coords={num_coords}, total_elapsed={time.time() - start:.2f}s"
+    )
 
     return recovered
 

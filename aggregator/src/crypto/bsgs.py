@@ -28,6 +28,8 @@ Security & Correctness:
 
 from typing import Dict
 import math
+import os
+import time
 
 from tinyec.ec import Point
 
@@ -52,6 +54,9 @@ from config.limits import (
     QUANTIZATION_SCALE,
     BSGS_EFFECTIVE_BOUND,
 )
+from utils.logging import get_logger
+
+logger = get_logger("crypto.bsgs")
 
 
 # -------------------------------------------------------------------
@@ -166,15 +171,36 @@ def recover_vector(points: list[Point]) -> list[int]:
     Output:
         [x1, x2, ..., xn]  (int64, quantized)
     """
+    total = len(points)
+    log_every = max(1, int(os.getenv("BSGS_LOG_EVERY", "200")))
+    start = time.time()
+    logger.info(
+        f"[M4][BSGS] Start recovery: coords={total}, log_every={log_every}, "
+        f"range=[{BSGS_MIN_BOUND}, {BSGS_MAX_BOUND}]"
+    )
+
     recovered = []
     for idx, pt in enumerate(points):
         try:
             val = recover_discrete_log(pt)
             recovered.append(val)
+            done = idx + 1
+            if done % log_every == 0 or done == total:
+                elapsed = max(time.time() - start, 1e-6)
+                rate = done / elapsed
+                remaining = total - done
+                eta = remaining / rate if rate > 0 else 0.0
+                logger.info(
+                    f"[M4][BSGS] Progress: {done}/{total} "
+                    f"({100.0 * done / total:.2f}%), "
+                    f"rate={rate:.2f} coords/s, eta={eta:.1f}s"
+                )
         except Exception as e:
             raise ValueError(
                 f"BSGS failed at index {idx}"
             ) from e
+
+    logger.info(f"[M4][BSGS] Complete: coords={total}, elapsed={time.time() - start:.2f}s")
     return recovered
 
 

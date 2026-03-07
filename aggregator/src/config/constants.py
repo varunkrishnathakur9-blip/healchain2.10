@@ -15,6 +15,7 @@ IMPORTANT:
 - These are PROTOCOL constants, not cryptographic parameters.
 - Changing them alters system behavior and must be documented.
 """
+import os
 
 # -------------------------------------------------------------------
 # Task Lifecycle States
@@ -47,13 +48,15 @@ MAX_PARTICIPANTS = 1_000
 # -------------------------------------------------------------------
 
 # Time window to wait for miner submissions (M4)
-AGGREGATION_TIMEOUT = 120
+# Large local test payloads can be hundreds of MB per submission.
+# Keep this configurable via env for quick tuning without code edits.
+AGGREGATION_TIMEOUT = int(os.getenv("AGGREGATION_TIMEOUT", "600"))
 
 # Time window to wait for miner verification feedback (M5)
-FEEDBACK_TIMEOUT = 120
+FEEDBACK_TIMEOUT = int(os.getenv("FEEDBACK_TIMEOUT", "180"))
 
 # Polling interval when waiting on backend
-BACKEND_POLL_INTERVAL = 1.0
+BACKEND_POLL_INTERVAL = float(os.getenv("BACKEND_POLL_INTERVAL", "1.0"))
 
 
 # -------------------------------------------------------------------

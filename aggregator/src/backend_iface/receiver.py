@@ -36,6 +36,13 @@ class BackendReceiver:
     def __init__(self, task_id: str):
         self.task_id = task_id
         self.base_url = self._load_backend_url()
+        import os
+        # Use separate connect/read timeout to tolerate very large ciphertext payloads.
+        self._http_timeout = (
+            float(os.getenv("BACKEND_CONNECT_TIMEOUT", "5")),
+            float(os.getenv("BACKEND_READ_TIMEOUT", "120")),
+        )
+        self._ciphertext_retry_count = int(os.getenv("CIPHERTEXT_FETCH_RETRIES", "6"))
         # Cache ciphertext once fetched so we don't keep hitting backend/DB
         # for the same large payload on every polling cycle.
         self._ciphertext_cache: Dict[str, object] = {}
@@ -57,7 +64,7 @@ class BackendReceiver:
 
         try:
             # Submissions payload can be large (ciphertext vectors), so allow longer read time.
-            resp = requests.get(endpoint, timeout=20)
+            resp = requests.get(endpoint, timeout=self._http_timeout)
             if resp.status_code != 200:
                 logger.warning(
                     f"[BackendReceiver] Submissions fetch failed "
@@ -115,18 +122,25 @@ class BackendReceiver:
 
         # Retry a few times because backend may transiently fail while serving
         # large ciphertext rows.
-        for attempt in range(3):
+        for attempt in range(self._ciphertext_retry_count):
             try:
-                resp = requests.get(endpoint, timeout=20)
+                resp = requests.get(endpoint, timeout=self._http_timeout)
                 if resp.status_code == 200:
                     payload = resp.json()
                     return payload.get("ciphertext")
+                logger.warning(
+                    f"[BackendReceiver] Ciphertext fetch failed for {gradient_id} "
+                    f"(status={resp.status_code}, attempt={attempt + 1}/{self._ciphertext_retry_count})"
+                )
             except Exception:
-                pass
+                logger.warning(
+                    f"[BackendReceiver] Ciphertext fetch exception for {gradient_id} "
+                    f"(attempt={attempt + 1}/{self._ciphertext_retry_count})"
+                )
 
             # Small backoff before retrying
-            if attempt < 2:
-                time.sleep(0.4 * (attempt + 1))
+            if attempt < self._ciphertext_retry_count - 1:
+                time.sleep(0.8 * (attempt + 1))
 
         return None
 
