@@ -214,7 +214,7 @@ def _ndd_fe_decrypt_serial(
         recovered.append(point_mul(aggregated[j], inv_sk_agg))
         if (j + 1) % log_every == 0:
             done = j + 1
-            elapsed = max(time.time() - start, 1e-6)
+            elapsed = max(time.time() - start_time, 1e-6)
             rate = done / elapsed
             remaining = num_coords - done
             eta = remaining / rate if rate > 0 else 0.0
