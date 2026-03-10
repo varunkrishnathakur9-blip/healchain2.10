@@ -125,14 +125,15 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
         print(f"[M3] Starting Encryption (sparse format)...")
         
         ctr = 0  # Counter for randomness derivation
-        ciphertext_sparse = encrypt_update(
+        ciphertext_sparse, base_mask_hex = encrypt_update(
             delta_prime=nonzero_values,  # Only encrypt non-zero values!
             pk_tp_hex=pk_tp_hex,
             pk_agg_hex=pk_agg_hex,
             sk_miner=sk_miner,
             ctr=ctr,
             task_id=task["taskID"],
-            progress_callback=progress_callback
+            progress_callback=progress_callback,
+            return_base_mask=True,
         )
         
         end_time = time.time()
@@ -146,6 +147,7 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
         import torch
         warnings.warn("Public keys not available, using mock ciphertext")
         ciphertext_sparse = ["0xmockpoint1,0xmockpoint2", "0xmockpoint3,0xmockpoint4"]
+        base_mask_hex = "0xmockpoint1,0xmockpoint2"
         nonzero_indices = [0, 1]
         total_params = len(delta_p_quantized)
 
@@ -179,7 +181,14 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
         "format": "sparse",  # Indicate sparse format to aggregator
         "totalSize": total_params,  # Total number of parameters
         "nonzeroIndices": nonzero_indices,  # Indices of non-zero values
-        "ciphertext": ciphertext_sparse,  # Only non-zero encrypted values
+        # Ciphertext payload includes miner base mask so aggregator can decrypt sparse data exactly.
+        "ciphertext": {
+            "format": "sparse",
+            "totalSize": total_params,
+            "nonzeroIndices": nonzero_indices,
+            "values": ciphertext_sparse,
+            "baseMask": base_mask_hex,
+        },
         "ciphertext_concat": ciphertext_concat,  # For hashing and signature
         "encryptedHash": encrypted_hash,  # For backend
         "scoreCommit": commit,

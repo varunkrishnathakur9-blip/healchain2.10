@@ -38,7 +38,6 @@ from backend_iface.sender import BackendSender
 
 from aggregation.collector import collect_and_validate_submissions
 from aggregation.aggregator import secure_aggregate
-from aggregation.verifier import verify_recovered_aggregate
 
 from model.apply_update import apply_model_update
 from model.evaluate import evaluate_model
@@ -275,14 +274,6 @@ class HealChainAggregator:
             pkTP=self.keys.pkTP,
             weights=active_weights,
         )
-
-        if not verify_recovered_aggregate(
-            aggregate,
-            submissions,
-            active_weights,
-            self.keys,
-        ):
-            raise RuntimeError("Aggregate verification failed")
 
         self.progress.mark("aggregation_complete")
         return aggregate

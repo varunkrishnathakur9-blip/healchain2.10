@@ -65,6 +65,9 @@ logger = get_logger("crypto.bsgs")
 # Signed BSGS Implementation
 # -------------------------------------------------------------------
 
+def _is_identity(pt) -> bool:
+    return pt is None or pt.__class__.__name__ == "Inf"
+
 def recover_discrete_log(point: Point) -> int:
     """
     Recover signed integer x such that:
@@ -72,7 +75,7 @@ def recover_discrete_log(point: Point) -> int:
     with x in [BSGS_MIN_BOUND, BSGS_MAX_BOUND]
     """
 
-    if point is None:
+    if _is_identity(point):
         return 0  # identity = 0·G
 
     MIN = BSGS_MIN_BOUND
@@ -92,7 +95,7 @@ def recover_discrete_log(point: Point) -> int:
     cur = None  # identity
 
     for j in range(m):
-        key = "identity" if cur is None else serialize_point(cur)
+        key = "identity" if _is_identity(cur) else serialize_point(cur)
         baby_steps[key] = j
         cur = G if cur is None else point_add(cur, G)
 
@@ -105,7 +108,7 @@ def recover_discrete_log(point: Point) -> int:
     gamma = target
 
     for i in range(m + 1):
-        key = "identity" if gamma is None else serialize_point(gamma)
+        key = "identity" if _is_identity(gamma) else serialize_point(gamma)
         if key in baby_steps:
             k = i * m + baby_steps[key]
             x = k + MIN
@@ -185,19 +188,14 @@ def recover_vector(points: list[Point]) -> list[int]:
         f"range=[{BSGS_MIN_BOUND}, {BSGS_MAX_BOUND}]"
     )
 
-    # Parallel mode (opt-in via BSGS_WORKERS>1). Falls back to serial on failure.
+    # Parallel mode (opt-in via BSGS_WORKERS>1).
     if workers > 1 and total > chunk_size:
-        try:
-            return _recover_vector_parallel(
-                points=points,
-                workers=workers,
-                chunk_size=chunk_size,
-                start_time=start,
-            )
-        except Exception as e:
-            logger.warning(
-                f"[M4][BSGS] Parallel mode failed ({type(e).__name__}: {e}); falling back to serial."
-            )
+        return _recover_vector_parallel(
+            points=points,
+            workers=workers,
+            chunk_size=chunk_size,
+            start_time=start,
+        )
 
     recovered = _recover_vector_serial(points, log_every=log_every, start_time=start)
     logger.info(f"[M4][BSGS] Complete: coords={total}, elapsed={time.time() - start:.2f}s")

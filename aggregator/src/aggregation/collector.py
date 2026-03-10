@@ -23,7 +23,7 @@ NON-RESPONSIBILITIES:
 - No backend communication
 """
 
-import os
+import json
 from typing import Dict, List
 
 from utils.validation import verify_signature
@@ -131,7 +131,7 @@ def _normalize_submission(sub: Dict) -> Dict:
     Handles:
     - Field name mapping (camelCase → snake_case)
     - Ciphertext format (string → list)
-    - Sparse format reconstruction (sparse → dense)
+    - Sparse format normalization (without dense reconstruction)
     - Optional field preservation
     """
     
@@ -148,55 +148,45 @@ def _normalize_submission(sub: Dict) -> Dict:
     normalized["signed_ciphertext_concat"] = sub.get("ciphertext_concat")
     
     # Handle ciphertext format (sparse or dense)
-    if sub.get("format") == "sparse":
-        # Sparse format: reconstruct full dense tensor
-        logger.info("[M4] Processing sparse gradient format")
-        
-        total_size = sub.get("totalSize")
-        nonzero_indices = sub.get("nonzeroIndices", [])
-        ciphertext_sparse = sub.get("ciphertext", [])
-        
-        if not total_size or not isinstance(nonzero_indices, list) or not isinstance(ciphertext_sparse, list):
-            raise ValueError("Invalid sparse format: missing totalSize, nonzeroIndices, or ciphertext")
-        
-        if len(nonzero_indices) != len(ciphertext_sparse):
-            raise ValueError(f"Sparse format mismatch: {len(nonzero_indices)} indices but {len(ciphertext_sparse)} ciphertext values")
+    raw_cipher = sub.get("ciphertext")
+    sparse_format = sub.get("format") == "sparse"
+    if not sparse_format and isinstance(raw_cipher, dict):
+        sparse_format = raw_cipher.get("format") == "sparse"
+    if not sparse_format and isinstance(raw_cipher, str):
+        try:
+            parsed_cipher = json.loads(raw_cipher)
+        except Exception:
+            parsed_cipher = None
+        if isinstance(parsed_cipher, dict):
+            sparse_format = parsed_cipher.get("format") == "sparse"
+    if sparse_format:
+        # Sparse format: keep sparse representation end-to-end.
+        # Do NOT reconstruct dense ciphertext: it is both expensive and incorrect without
+        # per-miner base masks.
+        sparse_payload = _extract_sparse_payload(sub)
+        total_size = sparse_payload["total_size"]
+        nonzero_indices = sparse_payload["nonzero_indices"]
+        ciphertext_sparse = sparse_payload["ciphertext"]
+        base_mask = sparse_payload["base_mask"]
 
         # Keep the exact sparse concatenation that miners sign over.
         if not normalized.get("signed_ciphertext_concat"):
             normalized["signed_ciphertext_concat"] = ",".join(ciphertext_sparse)
-        
-        # Get the "encrypted zero" from the first ciphertext value
-        # In sparse format, we need a default value for zero gradients
-        # The FL client uses base_mask (r_i * G) as the encrypted zero
-        # We'll extract this from the environment or use the most common value
-        import os
-        encrypted_zero_hex = os.getenv("ENCRYPTED_ZERO", None)
-        
-        if not encrypted_zero_hex:
-            # Fallback: use a deterministic encrypted zero based on the curve
-            # This should match what the FL client produces for val=0
-            # For now, we'll use the first sparse ciphertext as a reference
-            # In production, this should be derived properly
-            logger.warning("[M4] ENCRYPTED_ZERO not set, using synthetic zero")
-            encrypted_zero_hex = "66c7f1cf71f26866fc2488f7e79eb96e0098b889479cf158526edeb8c6069058,e55330ef2db3b9d83cd02a12936461930be8790d3dfc1e6ba8d0acc48f737c24"
-        
-        # Reconstruct full dense tensor
-        ciphertext_dense = [encrypted_zero_hex] * total_size
-        for idx, encrypted_val in zip(nonzero_indices, ciphertext_sparse):
-            ciphertext_dense[idx] = encrypted_val
-        
-        normalized["ciphertext"] = ciphertext_dense
-        logger.info(f"[M4] Reconstructed dense tensor: {total_size:,} total, {len(nonzero_indices):,} non-zero ({100*len(nonzero_indices)/total_size:.2f}%)")
+
+        normalized["format"] = "sparse"
+        normalized["total_size"] = total_size
+        normalized["nonzero_indices"] = nonzero_indices
+        normalized["base_mask"] = base_mask
+        normalized["ciphertext"] = ciphertext_sparse
+        logger.info(
+            f"[M4] Accepted sparse tensor: {total_size:,} total, "
+            f"{len(nonzero_indices):,} non-zero "
+            f"({100 * len(nonzero_indices) / max(total_size, 1):.2f}%)"
+        )
     else:
         # Legacy dense format
-        ciphertext = sub.get("ciphertext", [])
-        if isinstance(ciphertext, str):
-            normalized["ciphertext"] = [ciphertext]
-        elif isinstance(ciphertext, list):
-            normalized["ciphertext"] = ciphertext
-        else:
-            raise ValueError("Invalid ciphertext format")
+        normalized["format"] = "dense"
+        normalized["ciphertext"] = _coerce_ciphertext_list(sub.get("ciphertext", []))
     
     # Preserve optional FL client fields
     if "quantization_scale" in sub:
@@ -231,9 +221,11 @@ def _validate_submission_structure(sub: Dict, task_id: str):
     if sub["task_id"] != task_id:
         raise ValueError("Task ID mismatch")
 
-    # After normalization, ciphertext should always be a list
-    if not isinstance(sub["ciphertext"], list) or not sub["ciphertext"]:
-        raise ValueError("Ciphertext must be non-empty list")
+    # After normalization, ciphertext should always be a list.
+    if not isinstance(sub["ciphertext"], list):
+        raise ValueError("Ciphertext must be list")
+    if sub.get("format") != "sparse" and not sub["ciphertext"]:
+        raise ValueError("Dense ciphertext must be non-empty list")
 
     if not isinstance(sub["score_commit"], str):
         raise ValueError("Invalid score_commit")
@@ -244,12 +236,30 @@ def _validate_submission_structure(sub: Dict, task_id: str):
     if not isinstance(sub["signature"], str):
         raise ValueError("Invalid signature")
 
-    # Validate ciphertext format (should be hex points)
+    if sub.get("format") == "sparse":
+        if "total_size" not in sub or "nonzero_indices" not in sub or "base_mask" not in sub:
+            raise ValueError("Sparse submission missing total_size/nonzero_indices/base_mask")
+        total_size = sub["total_size"]
+        if not isinstance(total_size, int) or total_size <= 0:
+            raise ValueError("Invalid sparse total_size")
+        nonzero_indices = sub["nonzero_indices"]
+        if not isinstance(nonzero_indices, list):
+            raise ValueError("Invalid sparse nonzero_indices")
+        if len(nonzero_indices) != len(sub["ciphertext"]):
+            raise ValueError("Sparse indices/ciphertext length mismatch")
+        if len(set(nonzero_indices)) != len(nonzero_indices):
+            raise ValueError("Sparse nonzero_indices contain duplicates")
+        for idx in nonzero_indices:
+            if not isinstance(idx, int) or idx < 0 or idx >= total_size:
+                raise ValueError("Sparse nonzero_indices out of bounds")
+        if not isinstance(sub["base_mask"], str) or "," not in sub["base_mask"]:
+            raise ValueError("Sparse base_mask format invalid")
+
+    # Validate ciphertext point format (should be hex points)
     for ct in sub["ciphertext"]:
         if not isinstance(ct, str):
             raise ValueError("Ciphertext entries must be strings")
-        # Basic hex format validation
-        if "," not in ct:  # Expected "x_hex,y_hex" format
+        if "," not in ct:
             raise ValueError("Invalid ciphertext point format")
 
 
@@ -279,14 +289,7 @@ def _verify_submission_signature(sub: Dict):
     if isinstance(signed_ciphertext_concat, str) and signed_ciphertext_concat:
         ciphertext_variants.append(signed_ciphertext_concat)
 
-    # Dense reconstruction is extremely expensive for large payloads.
-    # Keep disabled by default; enable only for legacy debugging compatibility.
-    if os.getenv("VERIFY_WITH_DENSE_FALLBACK", "0") == "1":
-        ciphertext_default = ",".join(sub["ciphertext"])
-        if ciphertext_default not in ciphertext_variants:
-            ciphertext_variants.append(ciphertext_default)
-
-    # If no explicit ciphertext concat exists, we must fall back to dense string.
+    # If no explicit ciphertext concat exists, fall back to joined ciphertext list.
     if not ciphertext_variants:
         ciphertext_variants.append(",".join(sub["ciphertext"]))
 
@@ -380,3 +383,103 @@ def _normalize_pk_for_message(pk: str, *, with_prefix: bool) -> str:
         return f"0x{raw}" if with_prefix else raw
 
     return f"{norm(x)},{norm(y)}"
+
+
+def _coerce_ciphertext_list(raw_ciphertext) -> List[str]:
+    """
+    Parse ciphertext payload into a list of "x_hex,y_hex" strings.
+    """
+    if isinstance(raw_ciphertext, list):
+        return raw_ciphertext
+    if isinstance(raw_ciphertext, str):
+        text = raw_ciphertext.strip()
+        if not text:
+            return []
+        try:
+            parsed = json.loads(text)
+        except Exception:
+            return [raw_ciphertext]
+        if isinstance(parsed, list):
+            return parsed
+        raise ValueError("Ciphertext JSON must decode to a list for dense format")
+    raise ValueError("Invalid ciphertext format")
+
+
+def _extract_sparse_payload(sub: Dict) -> Dict:
+    """
+    Extract sparse payload from submission.
+
+    Supported source layouts:
+    1) sub["ciphertext"] is dict payload (preferred):
+       {"format":"sparse","totalSize":...,"nonzeroIndices":[...],"values":[...],"baseMask":"..."}
+    2) legacy top-level sparse fields:
+       sub["format"]="sparse", sub["totalSize"], sub["nonzeroIndices"], sub["ciphertext"]=[...], sub["baseMask"]
+    """
+    payload = None
+    raw_cipher = sub.get("ciphertext")
+    if isinstance(raw_cipher, dict):
+        payload = raw_cipher
+    elif isinstance(raw_cipher, str):
+        text = raw_cipher.strip()
+        try:
+            parsed = json.loads(text)
+        except Exception:
+            parsed = None
+        if isinstance(parsed, dict):
+            payload = parsed
+        elif isinstance(parsed, list):
+            payload = {
+                "format": sub.get("format"),
+                "totalSize": sub.get("totalSize"),
+                "nonzeroIndices": sub.get("nonzeroIndices"),
+                "values": parsed,
+                "baseMask": sub.get("baseMask"),
+            }
+    elif isinstance(raw_cipher, list):
+        payload = {
+            "format": sub.get("format"),
+            "totalSize": sub.get("totalSize"),
+            "nonzeroIndices": sub.get("nonzeroIndices"),
+            "values": raw_cipher,
+            "baseMask": sub.get("baseMask"),
+        }
+
+    if not isinstance(payload, dict):
+        raise ValueError("Invalid sparse format: ciphertext payload missing")
+
+    if (payload.get("format") or sub.get("format")) != "sparse":
+        raise ValueError("Sparse format payload has invalid format tag")
+
+    total_size = payload.get("totalSize")
+    nonzero_indices = payload.get("nonzeroIndices")
+    ciphertext_sparse = payload.get("values", payload.get("ciphertext"))
+    base_mask = payload.get("baseMask")
+
+    if not isinstance(total_size, int) or total_size <= 0:
+        raise ValueError("Invalid sparse format: totalSize is required and must be > 0")
+    if not isinstance(nonzero_indices, list):
+        raise ValueError("Invalid sparse format: nonzeroIndices must be a list")
+    if not isinstance(ciphertext_sparse, list):
+        raise ValueError("Invalid sparse format: values/ciphertext must be a list")
+    if not isinstance(base_mask, str) or "," not in base_mask:
+        raise ValueError("Invalid sparse format: baseMask is required")
+
+    # Coerce indices to int strictly.
+    coerced_indices = []
+    for idx in nonzero_indices:
+        if not isinstance(idx, int):
+            raise ValueError("Invalid sparse format: nonzeroIndices must contain integers")
+        coerced_indices.append(idx)
+
+    if len(coerced_indices) != len(ciphertext_sparse):
+        raise ValueError(
+            f"Sparse format mismatch: {len(coerced_indices)} indices but "
+            f"{len(ciphertext_sparse)} ciphertext values"
+        )
+
+    return {
+        "total_size": total_size,
+        "nonzero_indices": coerced_indices,
+        "ciphertext": ciphertext_sparse,
+        "base_mask": base_mask,
+    }

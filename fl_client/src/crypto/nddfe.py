@@ -92,7 +92,8 @@ def encrypt_update(
     sk_miner: int,         # s_i
     ctr: int,
     task_id: str,
-    progress_callback=None # Optional callback(percent, message)
+    progress_callback=None, # Optional callback(percent, message)
+    return_base_mask: bool = False,
 ):
     """
     Implements:
@@ -217,5 +218,8 @@ def encrypt_update(
         hit_rate = (cache_hits / total_ops * 100) if total_ops > 0 else 0
         print(f"[Crypto] Cache Stats: {cache_hits} hits, {cache_misses} misses ({hit_rate:.1f}%)")
         progress_callback(100, f"Encryption Complete (Cache Hit: {hit_rate:.0f}%)")
+
+    if return_base_mask:
+        return ciphertext, base_mask_hex
 
     return ciphertext

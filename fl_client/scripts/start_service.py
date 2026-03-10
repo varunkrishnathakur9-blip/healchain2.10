@@ -589,7 +589,7 @@ def submit_gradient():
             "miner_pk": payload.get("miner_pk"),  # Public key used to sign submission
             "scoreCommit": payload["scoreCommit"],
             "encryptedHash": payload["encryptedHash"],
-            "ciphertext": json.dumps(payload["ciphertext"]),  # JSON array of EC points (required for aggregator)
+            "ciphertext": json.dumps(payload["ciphertext"]),  # JSON payload (sparse metadata + values)
             "minerSignature": payload.get("signature"),  # Miner signature for submission verification (separate from wallet auth)
             # Wallet auth fields (for API authentication - required by requireWalletAuth middleware)
             "address": api_address,
