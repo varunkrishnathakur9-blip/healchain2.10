@@ -9,6 +9,14 @@
 
 The HealChain Aggregator implements Modules M4-M6 of the HealChain federated learning workflow, providing secure aggregation, consensus management, and candidate block publishing with cryptographic guarantees.
 
+## Current Protocol Behavior (March 2026)
+
+- Aggregation is format-aware and supports `dense` and `sparse` submissions.
+- For sparse submissions, NDD-FE decryption and BSGS recovery run only on submitted non-zero coordinates.
+- Sparse payloads are strict: missing `totalSize`, `nonzeroIndices`, `values`, or `baseMask` causes hard failure.
+- Silent crypto fallbacks are removed in critical paths. If decryption/recovery fails, task aggregation stops with an explicit error.
+- Dense model reconstruction is performed only after sparse recovery succeeds, aligning with Algorithm 4 flow.
+
 ## 📋 Architecture
 
 ### **Core Modules Implemented**
@@ -125,6 +133,16 @@ FE_FUNCTION_KEY=fe_key               # Functional encryption key
 # Optional
 LOG_LEVEL=INFO                      # Logging level
 MODEL_ARTIFACT_DIR=./artifacts       # Model storage directory
+TASK_TIMEOUT=3600                    # Task timeout (seconds)
+
+# Optional crypto/runtime tuning
+VERIFY_WITH_DENSE_FALLBACK=0         # Keep disabled for strict flow
+NDD_FE_WORKERS=1                     # 1 = serial decrypt; >1 enables chunked multiprocessing
+NDD_FE_CHUNK_SIZE=50000              # Chunk size for parallel decrypt
+NDD_FE_LOG_EVERY=25000               # NDD-FE progress log frequency
+BSGS_WORKERS=4                       # Parallel workers for BSGS
+BSGS_CHUNK_SIZE=5000                 # Chunk size for BSGS parallel mode
+BSGS_LOG_EVERY=200                   # BSGS progress log frequency
 ```
 
 ## 🔐 Cryptographic Security
@@ -161,12 +179,30 @@ new_model, accuracy = apply_model_update(aggregate)
 candidate = build_candidate_block(model, accuracy, submissions)
 ```
 
+**Sparse submission contract (current):**
+
+```json
+{
+  "ciphertext": {
+    "format": "sparse",
+    "totalSize": 2578387,
+    "nonzeroIndices": [12, 71, 405],
+    "values": ["x1,y1", "x2,y2", "x3,y3"],
+    "baseMask": "xb,yb"
+  }
+}
+```
+
 **Key Operations:**
 1. **Submission Collection**: Validate miner submissions
-2. **NDD-FE Decryption**: Decrypt encrypted gradients
-3. **BSGS Recovery**: Recover quantized gradients
-4. **Model Update**: Apply aggregated gradients
-5. **Candidate Building**: Create candidate block
+2. **Sparse Payload Validation**: Enforce metadata (`totalSize`, `nonzeroIndices`, `values`, `baseMask`)
+3. **NDD-FE Decryption**: Decrypt ciphertext points on active coordinates
+4. **BSGS Recovery**: Recover quantized values from decrypted points
+5. **Encode-Verify Check**: Re-encode and verify recovered values
+6. **Dense Reconstruction + Model Update**: Rebuild dense update and apply it
+7. **Candidate Building**: Create candidate block
+
+If any cryptographic step fails, aggregation stops and task status is set to failure with a logged cause.
 
 ### **M5: Miner Consensus**
 
@@ -370,8 +406,8 @@ ws://localhost:8000/ws/tasks/{task_id}/progress
 
 | Operation | Expected Performance |
 |-----------|---------------------|
-| **BSGS Recovery** | < 100ms per vector element |
-| **NDD-FE Decryption** | < 50ms per submission |
+| **BSGS Recovery** | Depends on recovered coordinate count and bound |
+| **NDD-FE Decryption** | Depends on coordinate count, curve math cost, and worker setup |
 | **Signature Verification** | < 10ms per signature |
 | **Model Update** | < 200ms for typical models |
 
@@ -532,7 +568,7 @@ All required modules implemented:
 
 ---
 
-*Last updated: January 2026*  
+*Last updated: March 2026*  
 *BSGS Algorithm: ✅ FIXED & VALIDATED*  
 *Test Suite: ✅ 100% PASS RATE*  
 *Compliance: ✅ 100% (9/9 components)*

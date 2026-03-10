@@ -16,7 +16,7 @@ Current implementation status:
 - Discovers tasks and validates compatibility.
 - Runs local training.
 - Computes and compresses gradients.
-- Quantizes and encrypts update payloads.
+- Quantizes and encrypts sparse update payloads.
 - Creates score commitment and miner signature.
 - Submits payload to backend for aggregation.
 
@@ -136,6 +136,27 @@ python scripts/start_client.py
 - `POST /aggregator/submit-update` for gradient submission.
 - `GET /miners/:taskID/key-status` for preflight key uniqueness validation.
 
+## Submission Payload Format (Current)
+
+The client now submits sparse ciphertext metadata and values together:
+
+```json
+{
+  "ciphertext": {
+    "format": "sparse",
+    "totalSize": 2578387,
+    "nonzeroIndices": [12, 71, 405],
+    "values": ["x1,y1", "x2,y2", "x3,y3"],
+    "baseMask": "xb,yb"
+  }
+}
+```
+
+Notes:
+- `values` contains encrypted points only for `nonzeroIndices`.
+- `baseMask` is required by the aggregator for NDD-FE decrypt.
+- `totalSize` preserves target dense vector length for reconstruction.
+
 ## Useful Scripts
 - `python scripts/test_client.py` quick environment/connectivity validation.
 - `python scripts/derive_pubkey.py` derive miner public key from `MINER_PRIVATE_KEY`.
@@ -150,6 +171,8 @@ python scripts/start_client.py
 - FL service preflight checks key status before training/submission.
 - FL service prompts private key at startup and writes `MINER_PRIVATE_KEY` + `MINER_ADDRESS` to `.env`.
 - FL service syncs `TP_PUBLIC_KEY` + `AGGREGATOR_PK` from backend per task during training start.
+- Aggregator expects sparse ciphertext metadata (`format`, `totalSize`, `nonzeroIndices`, `values`, `baseMask`).
+- Legacy submissions without `baseMask` are rejected by current aggregator logic.
 - If key conflict exists, training/submission is rejected with a clear error.
 
 ## Troubleshooting
@@ -195,7 +218,8 @@ This section preserves detailed operational guidance from earlier documentation,
 6. Contribution scoring (`L2` norm).
 7. Score commit generation.
 8. NDD-FE encryption using `TP_PUBLIC_KEY` and `AGGREGATOR_PK`.
-9. Miner signature generation and submission.
+9. Build sparse ciphertext payload with `nonzeroIndices`, `values`, and `baseMask`.
+10. Miner signature generation and submission.
 
 ### M5/M7 Utilities
 - M5 verification: `python scripts/verify_candidate.py`
@@ -225,6 +249,8 @@ This section preserves detailed operational guidance from earlier documentation,
   - Verify each miner used distinct keypair and submitted successfully.
 - `Ciphertext/weight mismatch`:
   - Usually indicates participant/submission inconsistency; re-check miner submissions and metadata.
+- `Sparse payload rejected (missing baseMask/indices/totalSize)`:
+  - Client version or payload format is stale; update FL client and resubmit all miners for the task.
 
 ### Production Checklist
 - Python 3.11+ in active venv.
