@@ -179,6 +179,7 @@ export const taskAPI = {
   create: async (data: {
     taskID: string;
     publisher: string;
+    publisherPublicKey: string;
     address: string; // Required by auth middleware
     accuracy: string;
     deadline: string;

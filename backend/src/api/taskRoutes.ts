@@ -15,11 +15,11 @@ const router = Router();
  */
 router.post(
   "/create",
-  requireFields(["taskID", "publisher", "accuracy", "deadline", "commitHash", "nonceTP", "escrowTxHash", "message", "signature"]),
+  requireFields(["taskID", "publisher", "publisherPublicKey", "accuracy", "deadline", "commitHash", "nonceTP", "escrowTxHash", "message", "signature"]),
   requireWalletAuth,
   async (req, res, next) => {
     try {
-      const { taskID, publisher, accuracy, deadline, commitHash, nonceTP, escrowTxHash, dataset, initialModelLink, minMiners, maxMiners } = req.body;
+      const { taskID, publisher, publisherPublicKey, accuracy, deadline, commitHash, nonceTP, escrowTxHash, dataset, initialModelLink, minMiners, maxMiners } = req.body;
 
       // Validate commitHash and nonceTP are provided
       if (!commitHash || !nonceTP) {
@@ -45,6 +45,7 @@ router.post(
       const result = await createTask(
         taskID,
         publisher,
+        publisherPublicKey,
         BigInt(accuracy),
         BigInt(deadline),
         commitHash,
@@ -72,33 +73,29 @@ router.get("/:taskID/public-keys", async (req, res, next) => {
     const { taskID } = req.params;
     const task = await getTaskById(taskID);
 
-    // Fetch public keys from aggregator service
-    const aggregatorUrl = process.env.AGGREGATOR_URL || "http://localhost:5002";
-    let tpPublicKey = "";
+    const tpPublicKey = ((task as any).publisherPublicKey || "").trim();
+    const aggregatorAddress = ((task as any).aggregator || (task as any).aggregatorAddress || "").toLowerCase();
+
     let aggregatorPublicKey = "";
-
-    try {
-      const axios = (await import("axios")).default;
-      const response = await axios.get(`${aggregatorUrl}/api/public-keys`, {
-        timeout: 3000
+    if (aggregatorAddress) {
+      const { prisma } = await import("../config/database.config.js");
+      const aggregatorMiner = await prisma.miner.findUnique({
+        where: {
+          taskID_address: {
+            taskID,
+            address: aggregatorAddress,
+          },
+        },
+        select: { publicKey: true },
       });
-
-      if (response.data) {
-        tpPublicKey = response.data.tpPublicKey || "";
-        aggregatorPublicKey = response.data.aggregatorPublicKey || "";
-      }
-    } catch (error: any) {
-      console.warn(`[Public Keys] Failed to fetch from aggregator: ${error.message}`);
-      // Fallback to environment variables if aggregator is unavailable
-      tpPublicKey = process.env.TP_PUBLIC_KEY || "";
-      aggregatorPublicKey = process.env.AGGREGATOR_PK || "";
+      aggregatorPublicKey = (aggregatorMiner?.publicKey || "").trim();
     }
 
     res.json({
       taskID,
       tpPublicKey,
       aggregatorPublicKey,
-      aggregatorAddress: (task as any).aggregator
+      aggregatorAddress: aggregatorAddress || null,
     });
   } catch (err) {
     next(err);

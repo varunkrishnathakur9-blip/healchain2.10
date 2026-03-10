@@ -42,6 +42,7 @@ export default function PublishTaskForm({ onSuccess }: PublishTaskFormProps) {
     dataset: 'chestxray',  // D: Dataset requirements (Algorithm 1)
     initialModelLink: '',  // L: Initial model link (Algorithm 1) - optional
     nonceTP: '',           // Nonce for commit hash (Algorithm 1) - provided by publisher
+    publisherPublicKey: '', // Publisher EC public key for NDD-FE tpPublicKey
     description: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -275,6 +276,7 @@ export default function PublishTaskForm({ onSuccess }: PublishTaskFormProps) {
       const requestData = {
         taskID: formData.taskID,
         publisher: address,
+        publisherPublicKey: formData.publisherPublicKey.trim(),
         address: address,
         accuracy: Math.floor(accuracy * 1e6).toString(),
         deadline: deadlineTimestamp.toString(),
@@ -395,6 +397,13 @@ export default function PublishTaskForm({ onSuccess }: PublishTaskFormProps) {
     }
     if (maxMiners > 1000) {
       setError('Maximum miners cannot exceed 1000');
+      return;
+    }
+
+    const publisherPublicKey = formData.publisherPublicKey.trim();
+    const publicKeyPattern = /^(0x)?[0-9a-fA-F]+,(0x)?[0-9a-fA-F]+$/;
+    if (!publicKeyPattern.test(publisherPublicKey)) {
+      setError('Publisher public key must be in x_hex,y_hex format');
       return;
     }
 
@@ -684,6 +693,24 @@ export default function PublishTaskForm({ onSuccess }: PublishTaskFormProps) {
                 {autoGenerateNonce && ' A secure random nonce will be generated automatically.'}
               </p>
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="publisherPublicKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Publisher Public Key (EC) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="publisherPublicKey"
+              required
+              value={formData.publisherPublicKey}
+              onChange={(e) => setFormData({ ...formData, publisherPublicKey: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
+              placeholder="x_hex,y_hex"
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Required for NDD-FE key flow. Format: x_hex,y_hex.
+            </p>
           </div>
 
           <div>

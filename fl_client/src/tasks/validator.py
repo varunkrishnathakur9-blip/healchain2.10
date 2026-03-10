@@ -17,9 +17,11 @@ def is_task_acceptable(task, manifest):
         print(f"[Validator] Task missing model reference (modelURL, initialModelLink or modelIPFSHash)")
         # return False # Uncomment this to enforce strict validation
     
-    # Check public keys are available
-    if "aggregatorPublicKey" not in task or "tpPublicKey" not in task:
-        print(f"[Validator] Warning: Task missing public keys (continuing with mock keys if needed)")
-        # return False # Uncomment for production security
+    # Check public keys are available (strict).
+    tp_key = (task.get("tpPublicKey") or "").strip()
+    agg_key = (task.get("aggregatorPublicKey") or "").strip()
+    if not tp_key or not agg_key:
+        print("[Validator] Task missing required public keys (tpPublicKey/aggregatorPublicKey)")
+        return False
     
     return True

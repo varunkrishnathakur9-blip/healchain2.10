@@ -1,6 +1,7 @@
 import { prisma } from "../config/database.config.js";
 import { keccak256, solidityPacked } from "ethers";
 import { TaskStatus } from "@prisma/client";
+import { normalizeMinerPublicKey } from "../utils/publicKey.js";
 
 /**
  * Helper function to automatically update ESCROW_ADDRESS in .env.development
@@ -70,6 +71,7 @@ async function updateEscrowAddressInEnvFile(correctAddress: string) {
 export async function createTask(
   taskID: string,
   publisher: string,
+  publisherPublicKey: string,
   accuracy: bigint,
   deadline: bigint,
   commitHash: string,  // From frontend (generated with frontend nonce)
@@ -80,6 +82,8 @@ export async function createTask(
   minMiners?: number,  // Minimum miners required for PoS aggregator selection
   maxMiners?: number   // Maximum miners allowed for PoS aggregator selection
 ) {
+  const normalizedPublisherPublicKey = normalizeMinerPublicKey(publisherPublicKey);
+
   // Ensure uniqueness
   const existing = await prisma.task.findUnique({ where: { taskID } });
   if (existing) {
@@ -417,6 +421,7 @@ export async function createTask(
       data: {
         taskID,
         publisher,
+        publisherPublicKey: normalizedPublisherPublicKey,
         commitHash,
         nonceTP,
         deadline,
@@ -442,6 +447,7 @@ export async function createTask(
 
   return {
     taskID,
+    publisherPublicKey: normalizedPublisherPublicKey,
     commitHash,
     deadline: deadline.toString(),
     status: "OPEN"
@@ -553,6 +559,7 @@ export async function getTaskById(taskID: string) {
     id: task.id,
     taskID: task.taskID,
     publisher: task.publisher,
+    publisherPublicKey: task.publisherPublicKey,
     commitHash: task.commitHash,
     nonceTP: task.nonceTP,
     deadline: task.deadline.toString(), // Convert BigInt to string
@@ -629,6 +636,7 @@ export async function getAllTasks(filters: {
     return {
       taskID: task.taskID,
       publisher: task.publisher,
+      publisherPublicKey: task.publisherPublicKey,
       deadline: task.deadline.toString(),
       status: task.status,
       createdAt: task.createdAt,

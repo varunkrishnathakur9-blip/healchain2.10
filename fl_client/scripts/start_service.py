@@ -357,6 +357,22 @@ def trigger_training():
                 "AGGREGATOR_PK": task.get("aggregatorPublicKey", ""),
             })
 
+        # Hard requirement: task keys must be present for real NDD-FE encryption.
+        tp_key = (task.get("tpPublicKey") or "").strip()
+        agg_key = (task.get("aggregatorPublicKey") or "").strip()
+        if not tp_key or not agg_key:
+            return jsonify({
+                "error": "Missing task public keys for encryption",
+                "details": {
+                    "tpPublicKeyPresent": bool(tp_key),
+                    "aggregatorPublicKeyPresent": bool(agg_key),
+                },
+                "suggestion": (
+                    "Ensure publisherPublicKey is set on the task and the selected aggregator "
+                    "has a registered miner publicKey."
+                )
+            }), 400
+
         # Preflight: ensure this miner uses a unique keypair for this task
         key_ok, key_msg = check_miner_key_status(task_id, miner_address, effective_backend_url)
         if not key_ok:

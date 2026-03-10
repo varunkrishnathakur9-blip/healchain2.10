@@ -43,6 +43,7 @@ model Task {
   id                String     @id @default(cuid())
   taskID            String     @unique
   publisher         String
+  publisherPublicKey String?   @db.Text // Publisher EC public key used as tpPublicKey for NDD-FE
   commitHash        String
   nonceTP           String
   deadline          BigInt
