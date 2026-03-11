@@ -2,6 +2,92 @@ import { prisma } from "../config/database.config.js";
 import { TaskStatus, GradientStatus } from "@prisma/client";
 import { normalizeMinerPublicKey } from "../utils/publicKey.js";
 
+const HEX_POINT_RE = /^(0x)?[0-9a-fA-F]+,(0x)?[0-9a-fA-F]+$/;
+
+type SparseCiphertextPayload = {
+  format: "sparse";
+  totalSize: number;
+  nonzeroIndices: number[];
+  values: string[];
+  baseMask: string;
+};
+
+function isHexPointEncoding(value: unknown): value is string {
+  return typeof value === "string" && HEX_POINT_RE.test(value.trim());
+}
+
+function parseAndValidateSparseCiphertext(raw: string): string {
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(
+      "ciphertext must be a JSON object in sparse format: " +
+      "{format,totalSize,nonzeroIndices,values,baseMask}"
+    );
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("ciphertext must be a JSON object in sparse format");
+  }
+
+  if (parsed.format !== "sparse") {
+    throw new Error("ciphertext.format must be 'sparse'");
+  }
+
+  const totalSize = parsed.totalSize;
+  if (!Number.isInteger(totalSize) || totalSize <= 0) {
+    throw new Error("ciphertext.totalSize must be a positive integer");
+  }
+
+  const nonzeroIndices = parsed.nonzeroIndices;
+  if (!Array.isArray(nonzeroIndices)) {
+    throw new Error("ciphertext.nonzeroIndices must be an array of integers");
+  }
+
+  const values = parsed.values ?? parsed.ciphertext;
+  if (!Array.isArray(values)) {
+    throw new Error("ciphertext.values must be an array of EC points");
+  }
+
+  const baseMask = parsed.baseMask;
+  if (!isHexPointEncoding(baseMask)) {
+    throw new Error("ciphertext.baseMask must be a valid EC point x_hex,y_hex");
+  }
+
+  if (nonzeroIndices.length !== values.length) {
+    throw new Error("ciphertext nonzeroIndices/values length mismatch");
+  }
+
+  const seen = new Set<number>();
+  for (const idx of nonzeroIndices) {
+    if (!Number.isInteger(idx) || idx < 0 || idx >= totalSize) {
+      throw new Error("ciphertext.nonzeroIndices contains out-of-range index");
+    }
+    if (seen.has(idx)) {
+      throw new Error("ciphertext.nonzeroIndices contains duplicates");
+    }
+    seen.add(idx);
+  }
+
+  for (const point of values) {
+    if (!isHexPointEncoding(point)) {
+      throw new Error("ciphertext.values contains invalid EC point encoding");
+    }
+  }
+
+  const normalized: SparseCiphertextPayload = {
+    format: "sparse",
+    totalSize,
+    nonzeroIndices,
+    values,
+    baseMask,
+  };
+
+  // Store canonical sparse payload structure for downstream consumers.
+  return JSON.stringify(normalized);
+}
+
 /**
  * M3: Store encrypted update metadata
  * Algorithm 3: Stores ciphertext (encrypted gradient) for aggregator decryption
@@ -47,6 +133,13 @@ export async function submitGradient(input: {
   if (typeof input.ciphertext !== "string" || !input.ciphertext.trim()) {
     throw new Error("ciphertext is required for gradient submission");
   }
+  if (/mockpoint|0xmock/i.test(input.ciphertext)) {
+    throw new Error(
+      "Invalid ciphertext payload: mock point markers detected. " +
+      "Client must submit real NDD-FE ciphertext."
+    );
+  }
+  const normalizedCiphertext = parseAndValidateSparseCiphertext(input.ciphertext);
 
   const miner = await prisma.miner.findUnique({
     where: {
@@ -129,7 +222,7 @@ export async function submitGradient(input: {
       minerAddress: normalizedAddress,
       scoreCommit: input.scoreCommit,
       encryptedHash: input.encryptedHash,
-      ciphertext: input.ciphertext, // Encrypted gradient payload (required)
+      ciphertext: normalizedCiphertext, // Canonical sparse encrypted gradient payload
       signature: input.signature || null, // Store signature if provided
       status: GradientStatus.COMMITTED
     }

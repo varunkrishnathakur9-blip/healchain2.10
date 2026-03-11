@@ -24,12 +24,15 @@ NON-RESPONSIBILITIES:
 """
 
 import json
+import re
 from typing import Dict, List
 
 from utils.validation import verify_signature
 from utils.logging import get_logger
 
 logger = get_logger("aggregation.collector")
+
+_HEX_POINT_RE = re.compile(r"^(0x)?[0-9a-fA-F]+,(0x)?[0-9a-fA-F]+$")
 
 
 # -------------------------------------------------------------------
@@ -252,15 +255,22 @@ def _validate_submission_structure(sub: Dict, task_id: str):
         for idx in nonzero_indices:
             if not isinstance(idx, int) or idx < 0 or idx >= total_size:
                 raise ValueError("Sparse nonzero_indices out of bounds")
-        if not isinstance(sub["base_mask"], str) or "," not in sub["base_mask"]:
+        if not isinstance(sub["base_mask"], str) or not _is_hex_point_encoding(sub["base_mask"]):
             raise ValueError("Sparse base_mask format invalid")
 
     # Validate ciphertext point format (should be hex points)
     for ct in sub["ciphertext"]:
         if not isinstance(ct, str):
             raise ValueError("Ciphertext entries must be strings")
-        if "," not in ct:
-            raise ValueError("Invalid ciphertext point format")
+        if not _is_hex_point_encoding(ct):
+            raise ValueError("Invalid ciphertext point encoding")
+
+
+def _is_hex_point_encoding(value: str) -> bool:
+    """
+    Fast format guard for EC point strings expected as "x_hex,y_hex".
+    """
+    return isinstance(value, str) and bool(_HEX_POINT_RE.fullmatch(value.strip()))
 
 
 def _verify_submission_signature(sub: Dict):
