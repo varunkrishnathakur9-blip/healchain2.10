@@ -144,6 +144,8 @@ The client now submits sparse ciphertext metadata and values together:
 {
   "ciphertext": {
     "format": "sparse",
+    "protocolVersion": "nddfe_sparse_v1",
+    "ctr": 1,
     "totalSize": 2578387,
     "nonzeroIndices": [12, 71, 405],
     "values": ["x1,y1", "x2,y2", "x3,y3"],
@@ -156,6 +158,8 @@ Notes:
 - `values` contains encrypted points only for `nonzeroIndices`.
 - `baseMask` is required by the aggregator for NDD-FE decrypt.
 - `totalSize` preserves target dense vector length for reconstruction.
+- `protocolVersion` and `ctr` are mandatory and must match aggregator expectations.
+- Miner signature now binds the canonical sparse ciphertext JSON (not just joined point values).
 
 ## Useful Scripts
 - `python scripts/test_client.py` quick environment/connectivity validation.
@@ -171,8 +175,8 @@ Notes:
 - FL service preflight checks key status before training/submission.
 - FL service prompts private key at startup and writes `MINER_PRIVATE_KEY` + `MINER_ADDRESS` to `.env`.
 - FL service syncs `TP_PUBLIC_KEY` + `AGGREGATOR_PK` from backend per task during training start.
-- Aggregator expects sparse ciphertext metadata (`format`, `totalSize`, `nonzeroIndices`, `values`, `baseMask`).
-- Legacy submissions without `baseMask` are rejected by current aggregator logic.
+- Aggregator expects strict sparse ciphertext metadata (`format`, `protocolVersion`, `ctr`, `totalSize`, `nonzeroIndices`, `values`, `baseMask`).
+- Legacy submissions without strict sparse metadata are rejected.
 - If key conflict exists, training/submission is rejected with a clear error.
 
 ## Troubleshooting
@@ -218,7 +222,7 @@ This section preserves detailed operational guidance from earlier documentation,
 6. Contribution scoring (`L2` norm).
 7. Score commit generation.
 8. NDD-FE encryption using `TP_PUBLIC_KEY` and `AGGREGATOR_PK`.
-9. Build sparse ciphertext payload with `nonzeroIndices`, `values`, and `baseMask`.
+9. Build canonical sparse ciphertext payload with `protocolVersion`, `ctr`, `nonzeroIndices`, `values`, and `baseMask`.
 10. Miner signature generation and submission.
 
 ### M5/M7 Utilities
@@ -249,7 +253,7 @@ This section preserves detailed operational guidance from earlier documentation,
   - Verify each miner used distinct keypair and submitted successfully.
 - `Ciphertext/weight mismatch`:
   - Usually indicates participant/submission inconsistency; re-check miner submissions and metadata.
-- `Sparse payload rejected (missing baseMask/indices/totalSize)`:
+- `Sparse payload rejected (missing protocolVersion/ctr/baseMask/indices/totalSize)`:
   - Client version or payload format is stale; update FL client and resubmit all miners for the task.
 
 ### Production Checklist

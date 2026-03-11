@@ -33,6 +33,7 @@ from utils.logging import get_logger
 logger = get_logger("aggregation.collector")
 
 _HEX_POINT_RE = re.compile(r"^(0x)?[0-9a-fA-F]+,(0x)?[0-9a-fA-F]+$")
+SPARSE_PROTOCOL_VERSION = "nddfe_sparse_v1"
 
 
 # -------------------------------------------------------------------
@@ -171,19 +172,23 @@ def _normalize_submission(sub: Dict) -> Dict:
         nonzero_indices = sparse_payload["nonzero_indices"]
         ciphertext_sparse = sparse_payload["ciphertext"]
         base_mask = sparse_payload["base_mask"]
+        ctr = sparse_payload["ctr"]
+        protocol_version = sparse_payload["protocol_version"]
 
         # Keep the exact sparse concatenation that miners sign over.
         if not normalized.get("signed_ciphertext_concat"):
-            normalized["signed_ciphertext_concat"] = ",".join(ciphertext_sparse)
+            normalized["signed_ciphertext_concat"] = sparse_payload["ciphertext_canonical"]
 
         normalized["format"] = "sparse"
+        normalized["protocol_version"] = protocol_version
+        normalized["ctr"] = ctr
         normalized["total_size"] = total_size
         normalized["nonzero_indices"] = nonzero_indices
         normalized["base_mask"] = base_mask
         normalized["ciphertext"] = ciphertext_sparse
         logger.info(
             f"[M4] Accepted sparse tensor: {total_size:,} total, "
-            f"{len(nonzero_indices):,} non-zero "
+            f"{len(nonzero_indices):,} non-zero, ctr={ctr}, protocol={protocol_version} "
             f"({100 * len(nonzero_indices) / max(total_size, 1):.2f}%)"
         )
     else:
@@ -240,8 +245,20 @@ def _validate_submission_structure(sub: Dict, task_id: str):
         raise ValueError("Invalid signature")
 
     if sub.get("format") == "sparse":
-        if "total_size" not in sub or "nonzero_indices" not in sub or "base_mask" not in sub:
-            raise ValueError("Sparse submission missing total_size/nonzero_indices/base_mask")
+        if (
+            "protocol_version" not in sub
+            or "ctr" not in sub
+            or "total_size" not in sub
+            or "nonzero_indices" not in sub
+            or "base_mask" not in sub
+        ):
+            raise ValueError("Sparse submission missing protocol_version/ctr/total_size/nonzero_indices/base_mask")
+        if sub["protocol_version"] != SPARSE_PROTOCOL_VERSION:
+            raise ValueError(
+                f"Unsupported sparse protocol version: {sub['protocol_version']}"
+            )
+        if not isinstance(sub["ctr"], int) or sub["ctr"] < 0:
+            raise ValueError("Invalid sparse ctr")
         total_size = sub["total_size"]
         if not isinstance(total_size, int) or total_size <= 0:
             raise ValueError("Invalid sparse total_size")
@@ -421,9 +438,9 @@ def _extract_sparse_payload(sub: Dict) -> Dict:
 
     Supported source layouts:
     1) sub["ciphertext"] is dict payload (preferred):
-       {"format":"sparse","totalSize":...,"nonzeroIndices":[...],"values":[...],"baseMask":"..."}
+       {"format":"sparse","protocolVersion":"...","ctr":...,"totalSize":...,"nonzeroIndices":[...],"values":[...],"baseMask":"..."}
     2) legacy top-level sparse fields:
-       sub["format"]="sparse", sub["totalSize"], sub["nonzeroIndices"], sub["ciphertext"]=[...], sub["baseMask"]
+       sub["format"]="sparse", sub["protocolVersion"], sub["ctr"], sub["totalSize"], sub["nonzeroIndices"], sub["ciphertext"]=[...], sub["baseMask"]
     """
     payload = None
     raw_cipher = sub.get("ciphertext")
@@ -440,6 +457,8 @@ def _extract_sparse_payload(sub: Dict) -> Dict:
         elif isinstance(parsed, list):
             payload = {
                 "format": sub.get("format"),
+                "protocolVersion": sub.get("protocolVersion"),
+                "ctr": sub.get("ctr"),
                 "totalSize": sub.get("totalSize"),
                 "nonzeroIndices": sub.get("nonzeroIndices"),
                 "values": parsed,
@@ -448,6 +467,8 @@ def _extract_sparse_payload(sub: Dict) -> Dict:
     elif isinstance(raw_cipher, list):
         payload = {
             "format": sub.get("format"),
+            "protocolVersion": sub.get("protocolVersion"),
+            "ctr": sub.get("ctr"),
             "totalSize": sub.get("totalSize"),
             "nonzeroIndices": sub.get("nonzeroIndices"),
             "values": raw_cipher,
@@ -460,11 +481,19 @@ def _extract_sparse_payload(sub: Dict) -> Dict:
     if (payload.get("format") or sub.get("format")) != "sparse":
         raise ValueError("Sparse format payload has invalid format tag")
 
+    protocol_version = payload.get("protocolVersion")
+    ctr = payload.get("ctr")
     total_size = payload.get("totalSize")
     nonzero_indices = payload.get("nonzeroIndices")
     ciphertext_sparse = payload.get("values", payload.get("ciphertext"))
     base_mask = payload.get("baseMask")
 
+    if protocol_version != SPARSE_PROTOCOL_VERSION:
+        raise ValueError(
+            f"Invalid sparse format: protocolVersion must be '{SPARSE_PROTOCOL_VERSION}'"
+        )
+    if not isinstance(ctr, int) or ctr < 0:
+        raise ValueError("Invalid sparse format: ctr must be an integer >= 0")
     if not isinstance(total_size, int) or total_size <= 0:
         raise ValueError("Invalid sparse format: totalSize is required and must be > 0")
     if not isinstance(nonzero_indices, list):
@@ -487,9 +516,22 @@ def _extract_sparse_payload(sub: Dict) -> Dict:
             f"{len(ciphertext_sparse)} ciphertext values"
         )
 
+    canonical_payload = {
+        "baseMask": base_mask,
+        "ctr": ctr,
+        "format": "sparse",
+        "nonzeroIndices": coerced_indices,
+        "protocolVersion": protocol_version,
+        "totalSize": total_size,
+        "values": ciphertext_sparse,
+    }
+
     return {
+        "protocol_version": protocol_version,
+        "ctr": ctr,
         "total_size": total_size,
         "nonzero_indices": coerced_indices,
         "ciphertext": ciphertext_sparse,
         "base_mask": base_mask,
+        "ciphertext_canonical": json.dumps(canonical_payload, sort_keys=True, separators=(",", ":")),
     }

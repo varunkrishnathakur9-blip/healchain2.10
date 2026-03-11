@@ -3,9 +3,12 @@ import { TaskStatus, GradientStatus } from "@prisma/client";
 import { normalizeMinerPublicKey } from "../utils/publicKey.js";
 
 const HEX_POINT_RE = /^(0x)?[0-9a-fA-F]+,(0x)?[0-9a-fA-F]+$/;
+const SPARSE_PROTOCOL_VERSION = "nddfe_sparse_v1";
 
 type SparseCiphertextPayload = {
   format: "sparse";
+  protocolVersion: string;
+  ctr: number;
   totalSize: number;
   nonzeroIndices: number[];
   values: string[];
@@ -23,7 +26,7 @@ function parseAndValidateSparseCiphertext(raw: string): string {
   } catch {
     throw new Error(
       "ciphertext must be a JSON object in sparse format: " +
-      "{format,totalSize,nonzeroIndices,values,baseMask}"
+      "{format,protocolVersion,ctr,totalSize,nonzeroIndices,values,baseMask}"
     );
   }
 
@@ -33,6 +36,15 @@ function parseAndValidateSparseCiphertext(raw: string): string {
 
   if (parsed.format !== "sparse") {
     throw new Error("ciphertext.format must be 'sparse'");
+  }
+  if (parsed.protocolVersion !== SPARSE_PROTOCOL_VERSION) {
+    throw new Error(
+      `ciphertext.protocolVersion must be '${SPARSE_PROTOCOL_VERSION}'`
+    );
+  }
+  const ctr = parsed.ctr;
+  if (!Number.isInteger(ctr) || ctr < 0) {
+    throw new Error("ciphertext.ctr must be an integer >= 0");
   }
 
   const totalSize = parsed.totalSize;
@@ -78,6 +90,8 @@ function parseAndValidateSparseCiphertext(raw: string): string {
 
   const normalized: SparseCiphertextPayload = {
     format: "sparse",
+    protocolVersion: SPARSE_PROTOCOL_VERSION,
+    ctr,
     totalSize,
     nonzeroIndices,
     values,

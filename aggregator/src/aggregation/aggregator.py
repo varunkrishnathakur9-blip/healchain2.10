@@ -93,9 +93,7 @@ def secure_aggregate(
     if submission_format == "sparse":
         aggregate_update = _secure_aggregate_sparse(
             submissions=submissions,
-            skFE=skFE,
             skA=skA,
-            pkTP=pkTP,
             weights=weights,
         )
     elif submission_format == "dense":
@@ -186,24 +184,33 @@ def _secure_aggregate_dense(
 def _secure_aggregate_sparse(
     *,
     submissions: List[Dict],
-    skFE: int,
     skA: int,
-    pkTP: Point,
     weights: List[int],
 ) -> List[float]:
     sparse_submissions = []
     for idx, sub in enumerate(submissions):
-        missing = [k for k in ("total_size", "nonzero_indices", "base_mask", "ciphertext") if k not in sub]
+        missing = [
+            k
+            for k in ("protocol_version", "ctr", "total_size", "nonzero_indices", "base_mask", "ciphertext")
+            if k not in sub
+        ]
         if missing:
             raise ValueError(f"Sparse submission {idx} missing fields: {missing}")
         sparse_submissions.append(
             {
+                "protocol_version": sub["protocol_version"],
+                "ctr": sub["ctr"],
                 "total_size": sub["total_size"],
                 "nonzero_indices": sub["nonzero_indices"],
                 "base_mask": sub["base_mask"],
                 "ciphertext": sub["ciphertext"],
             }
         )
+
+    ctr_values = {sub["ctr"] for sub in sparse_submissions}
+    if len(ctr_values) != 1:
+        raise ValueError(f"Sparse submission ctr mismatch across miners: {sorted(ctr_values)}")
+    ctr = next(iter(ctr_values))
 
     # ------------------------------------------------------------
     # Step 2: NDD-FE decryption (sparse)
@@ -213,9 +220,8 @@ def _secure_aggregate_sparse(
     sparse_indices, sparse_points, total_size = ndd_fe_decrypt_sparse(
         sparse_submissions=sparse_submissions,
         weights=weights,
-        pk_tp=pkTP,
-        sk_fe=skFE,
         sk_agg=skA,
+        ctr=ctr,
     )
     logger.info(
         f"[M4] NDD-FE sparse decryption successful "

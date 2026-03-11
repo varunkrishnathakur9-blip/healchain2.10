@@ -13,6 +13,25 @@ from config.settings import LOCAL_EPOCHS, DGC_THRESHOLD
 from utils.quantize_gradients import quantize_gradients
 from config.gradient_bounds import QUANTIZATION_SCALE, MAX_GRAD_MAGNITUDE
 from crypto.keys import derive_public_key
+import json
+
+
+SPARSE_PROTOCOL_VERSION = "nddfe_sparse_v1"
+
+
+def _resolve_task_counter(task: dict) -> int:
+    """
+    Resolve the NDD-FE counter (ctr) from task metadata.
+    Uses task ctr when provided, otherwise falls back to currentRound.
+    """
+    raw_ctr = task.get("ctr", task.get("currentRound", 1))
+    try:
+        ctr = int(raw_ctr)
+    except Exception as e:
+        raise ValueError(f"Invalid task counter value: {raw_ctr!r}") from e
+    if ctr < 0:
+        raise ValueError(f"Task counter must be >= 0, got {ctr}")
+    return ctr
 
 def run_task(task, miner_addr, progress_callback=None, miner_private_key_override=None):
     task_id = task["taskID"]
@@ -131,7 +150,7 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
     print(f"[M3] Sparsity: {sparsity:.2f}%")
     print(f"[M3] Starting Encryption (sparse format)...")
     
-    ctr = 0  # Counter for randomness derivation
+    ctr = _resolve_task_counter(task)
     ciphertext_sparse, base_mask_hex = encrypt_update(
         delta_prime=nonzero_values,  # Only encrypt non-zero values!
         pk_tp_hex=pk_tp_hex,
@@ -148,8 +167,21 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
     print(f"[M3] ✅ Encryption complete. Time taken: {duration:.2f} seconds")
     print(f"[M3] Payload size reduced by ~{sparsity:.0f}%")
 
-    # Generate real signature for submission (using sparse ciphertext for signature)
-    ciphertext_concat = ",".join(ciphertext_sparse)
+    # Build canonical sparse payload.
+    sparse_cipher_payload = {
+        "format": "sparse",
+        "protocolVersion": SPARSE_PROTOCOL_VERSION,
+        "ctr": ctr,
+        "totalSize": total_params,
+        "nonzeroIndices": nonzero_indices,
+        "values": ciphertext_sparse,
+        "baseMask": base_mask_hex,
+    }
+    ciphertext_canonical = json.dumps(
+        sparse_cipher_payload,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     
     # Get miner private key from environment
     miner_private_key = miner_private_key_override or os.getenv("MINER_PRIVATE_KEY")
@@ -162,7 +194,7 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
 
     signature, canonical_msg = generate_miner_signature(
         task_id=task["taskID"],
-        ciphertext=ciphertext_concat,
+        ciphertext=ciphertext_canonical,
         score_commit=commit,
         miner_pk=real_miner_pk,
         miner_private_key=miner_private_key
@@ -170,7 +202,7 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
     
     # Compute encryptedHash (hash of ciphertext for backend storage)
     import hashlib
-    encrypted_hash = hashlib.sha256(ciphertext_concat.encode('utf-8')).hexdigest()
+    encrypted_hash = hashlib.sha256(ciphertext_canonical.encode('utf-8')).hexdigest()
     
     # Build full payload for submission (SPARSE FORMAT)
     payload = {
@@ -179,14 +211,10 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
         "totalSize": total_params,  # Total number of parameters
         "nonzeroIndices": nonzero_indices,  # Indices of non-zero values
         # Ciphertext payload includes miner base mask so aggregator can decrypt sparse data exactly.
-        "ciphertext": {
-            "format": "sparse",
-            "totalSize": total_params,
-            "nonzeroIndices": nonzero_indices,
-            "values": ciphertext_sparse,
-            "baseMask": base_mask_hex,
-        },
-        "ciphertext_concat": ciphertext_concat,  # For hashing and signature
+        "ciphertext": sparse_cipher_payload,
+        # Keep legacy key for aggregator verifier compatibility.
+        # It now carries canonical sparse payload, not a plain joined values list.
+        "ciphertext_concat": ciphertext_canonical,
         "encryptedHash": encrypted_hash,  # For backend
         "scoreCommit": commit,
         "signature": signature,

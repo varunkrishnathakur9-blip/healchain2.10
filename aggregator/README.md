@@ -13,7 +13,7 @@ The HealChain Aggregator implements Modules M4-M6 of the HealChain federated lea
 
 - Aggregation is format-aware and supports `dense` and `sparse` submissions.
 - For sparse submissions, NDD-FE decryption and BSGS recovery run only on submitted non-zero coordinates.
-- Sparse payloads are strict: missing `totalSize`, `nonzeroIndices`, `values`, or `baseMask` causes hard failure.
+- Sparse payloads are strict: missing `protocolVersion`, `ctr`, `totalSize`, `nonzeroIndices`, `values`, or `baseMask` causes hard failure.
 - Silent crypto fallbacks are removed in critical paths. If decryption/recovery fails, task aggregation stops with an explicit error.
 - Dense model reconstruction is performed only after sparse recovery succeeds, aligning with Algorithm 4 flow.
 
@@ -185,6 +185,8 @@ candidate = build_candidate_block(model, accuracy, submissions)
 {
   "ciphertext": {
     "format": "sparse",
+    "protocolVersion": "nddfe_sparse_v1",
+    "ctr": 1,
     "totalSize": 2578387,
     "nonzeroIndices": [12, 71, 405],
     "values": ["x1,y1", "x2,y2", "x3,y3"],
@@ -195,8 +197,8 @@ candidate = build_candidate_block(model, accuracy, submissions)
 
 **Key Operations:**
 1. **Submission Collection**: Validate miner submissions
-2. **Sparse Payload Validation**: Enforce metadata (`totalSize`, `nonzeroIndices`, `values`, `baseMask`)
-3. **NDD-FE Decryption**: Decrypt ciphertext points on active coordinates
+2. **Sparse Payload Validation**: Enforce metadata (`protocolVersion`, `ctr`, `totalSize`, `nonzeroIndices`, `values`, `baseMask`)
+3. **Sparse NDD-FE Decryption**: Remove per-miner `baseMask`, aggregate weighted active coordinates, apply designated decryptor inverse
 4. **BSGS Recovery**: Recover quantized values from decrypted points
 5. **Encode-Verify Check**: Re-encode and verify recovered values
 6. **Dense Reconstruction + Model Update**: Rebuild dense update and apply it

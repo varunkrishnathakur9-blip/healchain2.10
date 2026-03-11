@@ -483,6 +483,7 @@ export async function getOpenTasks() {
       deadline: true,
       status: true,
       dataset: true,
+      currentRound: true,
       createdAt: true
     },
     orderBy: {
@@ -563,6 +564,7 @@ export async function getTaskById(taskID: string) {
     commitHash: task.commitHash,
     nonceTP: task.nonceTP,
     deadline: task.deadline.toString(), // Convert BigInt to string
+    currentRound: task.currentRound,
     status: task.status,
     dataset: task.dataset,
     initialModelLink: task.initialModelLink,

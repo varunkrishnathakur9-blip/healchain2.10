@@ -37,6 +37,7 @@ from crypto.ec_utils import (
 from utils.logging import get_logger
 
 logger = get_logger("crypto.ndd_fe")
+SPARSE_PROTOCOL_VERSION = "nddfe_sparse_v1"
 
 # -------------------------------------------------------------------
 # Hex Point Parser (matches FL client format)
@@ -154,9 +155,8 @@ def ndd_fe_decrypt_sparse(
     *,
     sparse_submissions: List[Dict],
     weights: List[int],
-    pk_tp: Point,
-    sk_fe: int,
     sk_agg: int,
+    ctr: int,
 ) -> Tuple[List[int], List[Point], int]:
     """
     Sparse NDD-FE decrypt path.
@@ -172,25 +172,25 @@ def ndd_fe_decrypt_sparse(
         raise ValueError("No sparse submissions provided")
     if len(sparse_submissions) != len(weights):
         raise ValueError("Sparse submissions / weight length mismatch")
-    if not validate_keys(pk_tp, sk_fe, sk_agg):
-        raise ValueError("Invalid cryptographic keys")
+    if sk_agg <= 0 or sk_agg >= N:
+        raise ValueError("Invalid aggregator private key")
+    if not isinstance(ctr, int) or ctr < 0:
+        raise ValueError("Sparse decrypt ctr must be an integer >= 0")
 
     total_size = sparse_submissions[0].get("total_size")
     if not isinstance(total_size, int) or total_size <= 0:
         raise ValueError("Sparse submission total_size must be a positive integer")
 
     log_every = max(1, int(os.getenv("NDD_FE_LOG_EVERY", "50000")))
-    strict_sparse_baseline = os.getenv("NDD_FE_SPARSE_STRICT_BASELINE", "0") == "1"
     start_time = time.time()
 
     total_sparse_values = sum(len(sub.get("ciphertext", [])) for sub in sparse_submissions)
     logger.info(
         f"[M4][NDD-FE] Start sparse decrypt: miners={len(sparse_submissions)}, "
-        f"total_size={total_size}, sparse_values={total_sparse_values}, log_every={log_every}"
+        f"total_size={total_size}, sparse_values={total_sparse_values}, ctr={ctr}, log_every={log_every}"
     )
 
-    # Accumulate weighted base mask sum and sparse weighted gradient terms.
-    weighted_base_sum = None
+    # Aggregate sparse weighted gradient terms only.
     weighted_terms_by_index: Dict[int, Point] = {}
     processed = 0
 
@@ -204,6 +204,16 @@ def ndd_fe_decrypt_sparse(
             raise ValueError(
                 f"Sparse submission total_size mismatch: expected {total_size}, got {sub_total_size}"
             )
+        sub_protocol = sub.get("protocol_version")
+        if sub_protocol != SPARSE_PROTOCOL_VERSION:
+            raise ValueError(
+                f"Sparse submission protocol mismatch: expected {SPARSE_PROTOCOL_VERSION}, got {sub_protocol}"
+            )
+        sub_ctr = sub.get("ctr")
+        if sub_ctr != ctr:
+            raise ValueError(
+                f"Sparse submission ctr mismatch: expected {ctr}, got {sub_ctr}"
+            )
 
         nonzero_indices = sub.get("nonzero_indices")
         sparse_values = sub.get("ciphertext")
@@ -216,8 +226,6 @@ def ndd_fe_decrypt_sparse(
             raise ValueError("Sparse submission base_mask is missing")
 
         base_mask_pt = parse_hex_point(base_mask_hex)
-        weighted_base = point_mul(base_mask_pt, w)
-        weighted_base_sum = weighted_base if weighted_base_sum is None else point_add(weighted_base_sum, weighted_base)
 
         for idx, ui_hex in zip(nonzero_indices, sparse_values):
             if not isinstance(idx, int) or idx < 0 or idx >= total_size:
@@ -240,29 +248,12 @@ def ndd_fe_decrypt_sparse(
             f"miner_nonzero={len(nonzero_indices)}, elapsed={time.time() - start_time:.1f}s"
         )
 
-    if weighted_base_sum is None:
-        raise ValueError("Weighted base mask sum is empty; check aggregation weights")
-
-    # Optional baseline consistency check.
-    # NOTE:
-    # - In sparse mode miners submit explicit baseMask values per submission.
-    # - Current miner encryption computes base masks from per-miner randomness.
-    # - FE-derived mask may not match this aggregate baseline in all deployments.
-    # Keep this check opt-in so valid sparse runs do not hard-fail by default.
-    fe_mask = point_mul(pk_tp, sk_fe)
-    zero_encoded = point_sub(weighted_base_sum, fe_mask)
-    inv_sk_agg = pow(sk_agg, -1, N)
-    zero_decrypted = None if _is_identity(zero_encoded) else point_mul(zero_encoded, inv_sk_agg)
-    if zero_decrypted is not None:
-        msg = (
-            "Sparse decrypt baseline check failed: decrypted zero baseline is non-identity. "
-            "Check baseMask/counter/task binding consistency."
-        )
-        if strict_sparse_baseline:
-            raise ValueError(msg)
-        logger.warning(f"[M4][NDD-FE] {msg} Continuing because NDD_FE_SPARSE_STRICT_BASELINE=0")
+    if not weighted_terms_by_index:
+        logger.info("[M4][NDD-FE] Sparse decrypt complete: no non-zero coordinates")
+        return [], [], total_size
 
     # Decrypt sparse coordinates only.
+    inv_sk_agg = pow(sk_agg, -1, N)
     sparse_indices = sorted(weighted_terms_by_index.keys())
     recovered_points: List[Point] = []
     for done, idx in enumerate(sparse_indices, start=1):
