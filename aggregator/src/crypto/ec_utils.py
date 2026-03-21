@@ -19,6 +19,10 @@ IMPORTANT:
 from typing import Tuple, List
 import hashlib
 from tinyec.ec import Point
+try:
+    from Crypto.PublicKey import ECC
+except Exception:  # pragma: no cover - optional acceleration backend
+    ECC = None
 
 # -------------------------------------------------------------------
 # Curve setup (FIXED — do not change)
@@ -26,6 +30,8 @@ from tinyec.ec import Point
 
 # Import from centralized configuration for single source of truth
 from config.curve import curve, G, N, P
+
+FAST_ECC_CURVE = "P-256"
 
 
 # -------------------------------------------------------------------
@@ -139,6 +145,17 @@ def point_mul(pt: Point, scalar: int) -> Point:
     k = scalar % N
     if k == 0:
         raise ValueError("Scalar multiplication by zero not allowed")
+
+    # Fast-path via PyCryptodome (C-backed ECC) when available.
+    # We still return tinyec Point objects for compatibility across the codebase.
+    if ECC is not None:
+        try:
+            fast_pt = ECC.EccPoint(int(pt.x), int(pt.y), curve=FAST_ECC_CURVE)
+            fast_out = fast_pt * int(k)
+            return Point(curve, int(fast_out.x), int(fast_out.y))
+        except Exception:
+            # Safe fallback to tinyec implementation.
+            pass
 
     return k * pt
 

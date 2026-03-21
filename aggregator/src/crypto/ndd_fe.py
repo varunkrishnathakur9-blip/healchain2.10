@@ -21,9 +21,9 @@ Assumptions (FIXED, do not change):
 import os
 import time
 from typing import Dict, List, Tuple
+from functools import lru_cache
 import concurrent.futures
 import multiprocessing as mp
-from tinyec import registry
 from tinyec.ec import Point
 
 from crypto.ec_utils import (
@@ -38,6 +38,7 @@ from utils.logging import get_logger
 
 logger = get_logger("crypto.ndd_fe")
 SPARSE_PROTOCOL_VERSION = "nddfe_sparse_v1"
+_PARSE_CACHE_SIZE = max(1, int(os.getenv("NDD_FE_PARSE_CACHE_SIZE", "200000")))
 
 # -------------------------------------------------------------------
 # Hex Point Parser (matches FL client format)
@@ -49,7 +50,8 @@ def _is_identity(pt) -> bool:
     """
     return pt is None or pt.__class__.__name__ == "Inf"
 
-def parse_hex_point(serialized: str) -> Point:
+@lru_cache(maxsize=_PARSE_CACHE_SIZE)
+def _parse_hex_point_cached(serialized: str) -> Point:
     """
     Parse FL client hex format: "x_hex,y_hex"
     where x_hex and y_hex are 64-character hex strings.
@@ -69,6 +71,10 @@ def parse_hex_point(serialized: str) -> Point:
         raise ValueError("Point not on secp256r1 curve")
 
     return pt
+
+
+def parse_hex_point(serialized: str) -> Point:
+    return _parse_hex_point_cached(serialized.strip())
 
 
 # -------------------------------------------------------------------
@@ -232,7 +238,12 @@ def ndd_fe_decrypt_sparse(
                 raise ValueError(f"Sparse index out of bounds: {idx}")
             ui_pt = parse_hex_point(ui_hex)
             grad_term = point_sub(ui_pt, base_mask_pt)  # removes miner-specific base mask
-            weighted_term = None if _is_identity(grad_term) else point_mul(grad_term, w)
+            if _is_identity(grad_term):
+                weighted_term = None
+            elif w == 1:
+                weighted_term = grad_term
+            else:
+                weighted_term = point_mul(grad_term, w)
             existing = weighted_terms_by_index.get(idx)
             weighted_terms_by_index[idx] = weighted_term if existing is None else point_add(existing, weighted_term)
 
@@ -255,19 +266,33 @@ def ndd_fe_decrypt_sparse(
     # Decrypt sparse coordinates only.
     inv_sk_agg = pow(sk_agg, -1, N)
     sparse_indices = sorted(weighted_terms_by_index.keys())
-    recovered_points: List[Point] = []
-    for done, idx in enumerate(sparse_indices, start=1):
-        term = weighted_terms_by_index[idx]
-        recovered_points.append(None if _is_identity(term) else point_mul(term, inv_sk_agg))
-        if done % log_every == 0:
-            elapsed = max(time.time() - start_time, 1e-6)
-            rate = done / elapsed
-            remaining = len(sparse_indices) - done
-            eta = remaining / rate if rate > 0 else 0.0
-            logger.info(
-                f"[M4][NDD-FE] Sparse decrypt progress: {done}/{len(sparse_indices)}, "
-                f"elapsed={elapsed:.1f}s, rate={rate:.1f} coords/s, eta={eta:.1f}s"
-            )
+    sparse_workers = max(
+        1,
+        int(os.getenv("NDD_FE_SPARSE_WORKERS", os.getenv("NDD_FE_WORKERS", "1"))),
+    )
+    sparse_chunk_size = max(
+        1,
+        int(os.getenv("NDD_FE_SPARSE_CHUNK_SIZE", os.getenv("NDD_FE_CHUNK_SIZE", "50000"))),
+    )
+
+    if sparse_workers > 1 and len(sparse_indices) > sparse_chunk_size:
+        recovered_points = _sparse_designated_decrypt_parallel(
+            sparse_indices=sparse_indices,
+            weighted_terms_by_index=weighted_terms_by_index,
+            inv_sk_agg=inv_sk_agg,
+            workers=sparse_workers,
+            chunk_size=sparse_chunk_size,
+            log_every=log_every,
+            start_time=start_time,
+        )
+    else:
+        recovered_points = _sparse_designated_decrypt_serial(
+            sparse_indices=sparse_indices,
+            weighted_terms_by_index=weighted_terms_by_index,
+            inv_sk_agg=inv_sk_agg,
+            log_every=log_every,
+            start_time=start_time,
+        )
 
     logger.info(
         f"[M4][NDD-FE] Sparse decrypt complete: "
@@ -275,6 +300,111 @@ def ndd_fe_decrypt_sparse(
         f"elapsed={time.time() - start_time:.2f}s"
     )
     return sparse_indices, recovered_points, total_size
+
+
+def _sparse_designated_decrypt_serial(
+    *,
+    sparse_indices: List[int],
+    weighted_terms_by_index: Dict[int, Point],
+    inv_sk_agg: int,
+    log_every: int,
+    start_time: float,
+) -> List[Point]:
+    recovered_points: List[Point] = []
+    total = len(sparse_indices)
+    for done, idx in enumerate(sparse_indices, start=1):
+        term = weighted_terms_by_index[idx]
+        recovered_points.append(None if _is_identity(term) else point_mul(term, inv_sk_agg))
+        if done % log_every == 0:
+            elapsed = max(time.time() - start_time, 1e-6)
+            rate = done / elapsed
+            remaining = total - done
+            eta = remaining / rate if rate > 0 else 0.0
+            logger.info(
+                f"[M4][NDD-FE] Sparse decrypt progress: {done}/{total}, "
+                f"elapsed={elapsed:.1f}s, rate={rate:.1f} coords/s, eta={eta:.1f}s"
+            )
+    return recovered_points
+
+
+def _sparse_designated_decrypt_parallel(
+    *,
+    sparse_indices: List[int],
+    weighted_terms_by_index: Dict[int, Point],
+    inv_sk_agg: int,
+    workers: int,
+    chunk_size: int,
+    log_every: int,
+    start_time: float,
+) -> List[Point]:
+    total = len(sparse_indices)
+    chunks: List[Tuple[int, List[Point]]] = []
+    for start in range(0, total, chunk_size):
+        end = min(start + chunk_size, total)
+        idx_slice = sparse_indices[start:end]
+        term_slice = [weighted_terms_by_index[idx] for idx in idx_slice]
+        chunks.append((start, term_slice))
+
+    logger.info(
+        f"[M4][NDD-FE] Sparse decrypt parallel mode: "
+        f"chunks={len(chunks)}, workers={workers}, coords={total}"
+    )
+
+    ctx = mp.get_context("spawn")
+    results: Dict[int, List[Point]] = {}
+    completed = 0
+    next_log = log_every
+    try:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=workers, mp_context=ctx) as ex:
+            futs = [
+                ex.submit(_sparse_decrypt_chunk_task, start_idx, terms, inv_sk_agg)
+                for start_idx, terms in chunks
+            ]
+            for fut in concurrent.futures.as_completed(futs):
+                start_idx, recovered_chunk = fut.result()
+                results[start_idx] = recovered_chunk
+                completed += len(recovered_chunk)
+
+                if completed >= next_log or completed == total:
+                    elapsed = max(time.time() - start_time, 1e-6)
+                    rate = completed / elapsed
+                    remaining = total - completed
+                    eta = remaining / rate if rate > 0 else 0.0
+                    logger.info(
+                        f"[M4][NDD-FE] Sparse decrypt progress: {completed}/{total}, "
+                        f"elapsed={elapsed:.1f}s, rate={rate:.1f} coords/s, eta={eta:.1f}s"
+                    )
+                    while next_log <= completed:
+                        next_log += log_every
+    except Exception as e:
+        logger.warning(
+            f"[M4][NDD-FE] Sparse parallel decrypt unavailable ({e}); "
+            "falling back to serial path"
+        )
+        return _sparse_designated_decrypt_serial(
+            sparse_indices=sparse_indices,
+            weighted_terms_by_index=weighted_terms_by_index,
+            inv_sk_agg=inv_sk_agg,
+            log_every=log_every,
+            start_time=start_time,
+        )
+
+    recovered_points: List[Point] = []
+    for start_idx, _ in chunks:
+        recovered_points.extend(results[start_idx])
+    return recovered_points
+
+
+def _sparse_decrypt_chunk_task(
+    start_idx: int,
+    terms: List[Point],
+    inv_sk_agg: int,
+) -> Tuple[int, List[Point]]:
+    recovered = [
+        None if _is_identity(term) else point_mul(term, inv_sk_agg)
+        for term in terms
+    ]
+    return start_idx, recovered
 
 
 def _ndd_fe_decrypt_serial(
