@@ -17,6 +17,7 @@ Environment Variables:
 import os
 import sys
 import getpass
+import re
 
 # Load environment variables from .env file
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,12 +28,56 @@ if os.path.exists(ENV_FILE):
     load_dotenv(ENV_FILE)
 
 
+_ENV_ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=")
+
+
 def _is_valid_private_scalar(raw: str) -> bool:
     try:
         val = int(raw.strip(), 0)
         return val > 0
     except Exception:
         return False
+
+
+def _upsert_env_key(file_path: str, key: str, value: str):
+    line_value = f"{key}={value}"
+    lines = []
+    if os.path.exists(file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+
+    replaced = False
+    for idx, line in enumerate(lines):
+        m = _ENV_ASSIGN_RE.match(line)
+        if m and m.group(1) == key:
+            lines[idx] = line_value
+            replaced = True
+            break
+
+    if not replaced:
+        if lines and lines[-1].strip():
+            lines.append("")
+        lines.append(line_value)
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def _persist_aggregator_sk_if_enabled(sk_value: str):
+    """
+    Persist AGGREGATOR_SK into .env only when explicitly enabled.
+    Set PERSIST_AGGREGATOR_SK_ON_START=1 to opt in.
+    """
+    enabled = os.getenv("PERSIST_AGGREGATOR_SK_ON_START", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    if not enabled:
+        return
+    _upsert_env_key(ENV_FILE, "AGGREGATOR_SK", sk_value)
+    print("Persisted AGGREGATOR_SK to .env (PERSIST_AGGREGATOR_SK_ON_START=1).")
 
 
 def prompt_aggregator_private_key():
@@ -77,6 +122,7 @@ def prompt_aggregator_private_key():
             continue
 
         os.environ["AGGREGATOR_SK"] = candidate
+        _persist_aggregator_sk_if_enabled(candidate)
         return
 
 

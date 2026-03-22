@@ -42,16 +42,31 @@ def parse_point(serialized: str) -> Point:
     """
     Parse miner-submitted EC point.
 
-    Miner format (FIXED):
-        "x,y"  where x,y are base-10 integers
+    Supported formats:
+        "x,y" where x,y are either:
+        - base-10 integers, or
+        - hexadecimal strings (with or without 0x prefix)
 
     Raises:
         ValueError if invalid or off-curve
     """
+    def _parse_coord(token: str) -> int:
+        raw = token.strip()
+        if not raw:
+            raise ValueError("Empty coordinate")
+        # Hex with explicit 0x prefix.
+        if raw.lower().startswith("0x"):
+            return int(raw, 16)
+        # Hex without prefix (backend often returns this style).
+        if any(c in "abcdefABCDEF" for c in raw):
+            return int(raw, 16)
+        # Decimal.
+        return int(raw, 10)
+
     try:
         x_str, y_str = serialized.split(",")
-        x = int(x_str)
-        y = int(y_str)
+        x = _parse_coord(x_str)
+        y = _parse_coord(y_str)
     except Exception as e:
         raise ValueError(f"Invalid EC point encoding: {serialized}") from e
 

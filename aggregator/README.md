@@ -134,6 +134,7 @@ FE_FUNCTION_KEY=fe_key               # Functional encryption key
 LOG_LEVEL=INFO                      # Logging level
 MODEL_ARTIFACT_DIR=./artifacts       # Model storage directory
 TASK_TIMEOUT=3600                    # Task timeout (seconds)
+PERSIST_AGGREGATOR_SK_ON_START=0     # 1 = persist prompted AGGREGATOR_SK into .env
 
 # Optional crypto/runtime tuning
 VERIFY_WITH_DENSE_FALLBACK=0         # Keep disabled for strict flow
