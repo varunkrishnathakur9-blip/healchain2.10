@@ -109,7 +109,10 @@ def secure_aggregate(
 
     # Validate final aggregate dimensions
     if len(aggregate_update) > MAX_MODEL_DIMENSION:
-        raise ValueError(f"Aggregate vector too large: {len(aggregate_update)} > {MAX_MODEL_DIMENSION}")
+        raise ValueError(
+            f"Aggregate vector too large: {len(aggregate_update)} > {MAX_MODEL_DIMENSION} "
+            "(configure MAX_MODEL_DIMENSION in aggregator/.env if this task is expected)"
+        )
 
     return aggregate_update
 

@@ -18,6 +18,7 @@ import os
 import sys
 import getpass
 import re
+import multiprocessing as mp
 
 # Load environment variables from .env file
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -86,6 +87,11 @@ def prompt_aggregator_private_key():
     - Press Enter to keep current value (if present).
     - Accepts decimal or 0x-prefixed hex.
     """
+    # Never prompt from multiprocessing worker processes.
+    # On Windows, workers may import/execute the launcher script.
+    if mp.current_process().name != "MainProcess":
+        return
+
     prompt_enabled = os.getenv("PROMPT_FOR_AGGREGATOR_SK", "1") != "0"
     if not prompt_enabled:
         return
@@ -126,8 +132,6 @@ def prompt_aggregator_private_key():
         return
 
 
-prompt_aggregator_private_key()
-
 # Ensure src/ is on PYTHONPATH
 SRC_DIR = os.path.join(ROOT_DIR, "src")
 if SRC_DIR not in sys.path:
@@ -141,6 +145,10 @@ setup_logging(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = get_logger("api_service.startup")
 
 if __name__ == "__main__":
+    # Prompt only in the main startup process.
+    # Do NOT prompt during multiprocessing spawn imports.
+    prompt_aggregator_private_key()
+
     port = int(os.getenv("AGGREGATOR_PORT", "5002"))
     host = os.getenv("AGGREGATOR_HOST", "0.0.0.0")
     

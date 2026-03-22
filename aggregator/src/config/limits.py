@@ -16,6 +16,8 @@ IMPORTANT:
 - Do NOT modify after protocol freeze.
 """
 
+import os
+
 # -------------------------------------------------------------------
 # Gradient Quantization (FIXED-POINT)
 # -------------------------------------------------------------------
@@ -63,7 +65,26 @@ BSGS_EFFECTIVE_BOUND = BSGS_ABS_BOUND + BSGS_SAFETY_MARGIN
 MAX_MINERS = 1_000
 
 # Maximum supported model dimensionality (sanity bound)
-MAX_MODEL_DIMENSION = 10_000_000
+_MAX_MODEL_DIMENSION_DEFAULT = 10_000_000
+_max_model_dimension_raw = (
+    os.getenv("MAX_MODEL_DIMENSION")
+    or os.getenv("AGGREGATOR_MAX_MODEL_DIMENSION")
+)
+if _max_model_dimension_raw is None or str(_max_model_dimension_raw).strip() == "":
+    MAX_MODEL_DIMENSION = _MAX_MODEL_DIMENSION_DEFAULT
+else:
+    try:
+        MAX_MODEL_DIMENSION = int(str(_max_model_dimension_raw).strip())
+    except ValueError as e:
+        raise ValueError(
+            "MAX_MODEL_DIMENSION (or AGGREGATOR_MAX_MODEL_DIMENSION) "
+            f"must be an integer, got: {_max_model_dimension_raw!r}"
+        ) from e
+    if MAX_MODEL_DIMENSION <= 0:
+        raise ValueError(
+            "MAX_MODEL_DIMENSION (or AGGREGATOR_MAX_MODEL_DIMENSION) "
+            f"must be > 0, got: {MAX_MODEL_DIMENSION}"
+        )
 
 # -------------------------------------------------------------------
 # Validation Helpers

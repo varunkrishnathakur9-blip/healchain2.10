@@ -24,7 +24,7 @@ NON-RESPONSIBILITIES:
 from typing import Any, List
 
 from utils.logging import get_logger
-from config.limits import validate_aggregate_vector
+from config.limits import validate_aggregate_vector, MAX_MODEL_DIMENSION
 
 logger = get_logger("model.apply_update")
 
@@ -84,8 +84,11 @@ def apply_model_update(
     # Validate aggregate update dimensions and bounds
     # Note: aggregate_update is already dequantized (float), but we validate
     # the underlying quantized values were within bounds during BSGS recovery
-    if len(aggregate_update) > 10_000_000:  # MAX_MODEL_DIMENSION
-        raise ValueError("Aggregate update exceeds maximum model dimension")
+    if len(aggregate_update) > MAX_MODEL_DIMENSION:
+        raise ValueError(
+            f"Aggregate update exceeds maximum model dimension: "
+            f"{len(aggregate_update)} > {MAX_MODEL_DIMENSION}"
+        )
 
     logger.info(
         f"[M4] Applying model update | params={len(weights)}"
