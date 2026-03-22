@@ -253,6 +253,37 @@ class BackendReceiver:
             )
             return None
 
+    def fetch_task_public_keys(self) -> Optional[Dict]:
+        """
+        Fetch task-scoped NDD-FE public keys from backend.
+
+        Returns:
+        --------
+        {
+            "taskID": str,
+            "tpPublicKey": str,
+            "aggregatorPublicKey": str,
+            "aggregatorAddress": str | None,
+        }
+        """
+        endpoint = f"{self.base_url}/tasks/{self.task_id}/public-keys"
+        try:
+            resp = requests.get(endpoint, timeout=5)
+            if resp.status_code != 200:
+                logger.warning(
+                    f"[BackendReceiver] Task public-keys fetch failed "
+                    f"(status={resp.status_code})"
+                )
+                return None
+            data = resp.json()
+            if not isinstance(data, dict):
+                logger.warning("[BackendReceiver] Invalid task public-keys payload type")
+                return None
+            return data
+        except Exception as e:
+            logger.error(f"[BackendReceiver] Error fetching task public-keys: {e}")
+            return None
+
     # ------------------------------------------------------------------
     # Internal Helpers
     # ------------------------------------------------------------------

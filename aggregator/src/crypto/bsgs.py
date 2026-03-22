@@ -156,6 +156,11 @@ def recover_vector(points: list[Point], *, weight_sum: int = 1) -> list[int]:
     workers = max(1, int(os.getenv("BSGS_WORKERS", "1")))
     chunk_size = max(1, int(os.getenv("BSGS_CHUNK_SIZE", "5000")))
     cache_limit = max(0, int(os.getenv("BSGS_CACHE_LIMIT", "300000")))
+    dedup_enabled = os.getenv("BSGS_GLOBAL_DEDUP", "1") != "0"
+    dedup_min_coords = max(1, int(os.getenv("BSGS_DEDUP_MIN_COORDS", "200000")))
+    dedup_sample_size = max(1000, int(os.getenv("BSGS_DEDUP_SAMPLE_SIZE", "200000")))
+    dedup_sample_skip_ratio = float(os.getenv("BSGS_DEDUP_SAMPLE_SKIP_RATIO", "0.995"))
+    dedup_max_unique_ratio = float(os.getenv("BSGS_DEDUP_MAX_UNIQUE_RATIO", "0.99"))
     weight_scale = max(1, int(weight_sum))
     full_abs_bound = _BASE_FULL_ABS_BOUND * weight_scale
     start = time.time()
@@ -166,26 +171,94 @@ def recover_vector(points: list[Point], *, weight_sum: int = 1) -> list[int]:
         f"range=[{-full_abs_bound}, {full_abs_bound}] (weight_sum={weight_scale})"
     )
 
+    if dedup_enabled and total >= dedup_min_coords:
+        sampled = min(total, dedup_sample_size)
+        sample_unique = len({_point_key(points[i]) for i in range(sampled)})
+        sample_ratio = sample_unique / max(1, sampled)
+        logger.info(
+            f"[M4][BSGS] Dedup sample: unique={sample_unique}/{sampled} "
+            f"({100.0 * sample_ratio:.2f}%)"
+        )
+
+        if sample_ratio < dedup_sample_skip_ratio:
+            unique_map: Dict[Optional[Tuple[int, int]], Point] = {}
+            for pt in points:
+                key = _point_key(pt)
+                if key not in unique_map:
+                    unique_map[key] = pt
+            unique_keys = list(unique_map.keys())
+            unique_points = [unique_map[k] for k in unique_keys]
+            unique_total = len(unique_points)
+            unique_ratio = unique_total / max(1, total)
+
+            logger.info(
+                f"[M4][BSGS] Dedup full: unique={unique_total}/{total} "
+                f"({100.0 * unique_ratio:.2f}%)"
+            )
+
+            if unique_total < total and unique_ratio <= dedup_max_unique_ratio:
+                unique_recovered = _recover_points(
+                    points=unique_points,
+                    workers=workers,
+                    chunk_size=chunk_size,
+                    cache_limit=cache_limit,
+                    full_abs_bound=full_abs_bound,
+                    start_time=start,
+                )
+                val_by_key = {
+                    key: val for key, val in zip(unique_keys, unique_recovered)
+                }
+                recovered = [val_by_key[_point_key(pt)] for pt in points]
+                logger.info(
+                    f"[M4][BSGS] Dedup mapping complete: coords={total}, "
+                    f"unique_coords={unique_total}, elapsed={time.time() - start:.2f}s"
+                )
+                return recovered
+        else:
+            logger.info(
+                f"[M4][BSGS] Dedup skipped from sample ratio "
+                f"({100.0 * sample_ratio:.2f}% >= {100.0 * dedup_sample_skip_ratio:.2f}%)"
+            )
+
+    recovered = _recover_points(
+        points=points,
+        workers=workers,
+        chunk_size=chunk_size,
+        cache_limit=cache_limit,
+        full_abs_bound=full_abs_bound,
+        start_time=start,
+    )
+
+    logger.info(f"[M4][BSGS] Complete: coords={total}, elapsed={time.time() - start:.2f}s")
+    return recovered
+
+
+def _recover_points(
+    *,
+    points: list[Point],
+    workers: int,
+    chunk_size: int,
+    cache_limit: int,
+    full_abs_bound: int,
+    start_time: float,
+) -> list[int]:
+    total = len(points)
     if workers > 1 and total > chunk_size:
-        recovered = _recover_vector_parallel(
+        return _recover_vector_parallel(
             points=points,
             workers=workers,
             chunk_size=chunk_size,
             cache_limit=cache_limit,
             full_abs_bound=full_abs_bound,
-            start_time=start,
+            start_time=start_time,
         )
-    else:
-        recovered = _recover_vector_serial(
-            points,
-            log_every=log_every,
-            cache_limit=cache_limit,
-            full_abs_bound=full_abs_bound,
-            start_time=start,
-        )
-
-    logger.info(f"[M4][BSGS] Complete: coords={total}, elapsed={time.time() - start:.2f}s")
-    return recovered
+    return _recover_vector_serial(
+        points,
+        log_every=max(1, int(os.getenv("BSGS_LOG_EVERY", "200"))),
+        cache_limit=cache_limit,
+        full_abs_bound=full_abs_bound,
+        start_time=start_time,
+    )
 
 
 def dequantize_vector(q_values: list[int]) -> list[float]:
@@ -254,6 +327,7 @@ def _recover_vector_parallel(
     start_time: float,
 ) -> list[int]:
     total = len(points)
+    heartbeat_sec = max(5, int(os.getenv("BSGS_HEARTBEAT_SEC", "30")))
     chunks = []
     for start in range(0, total, chunk_size):
         end = min(start + chunk_size, total)
@@ -275,18 +349,38 @@ def _recover_vector_parallel(
                 executor.submit(_recover_chunk, start, chunk, cache_limit)
                 for start, chunk in chunks
             ]
-            for fut in concurrent.futures.as_completed(futures):
-                start_idx, vals = fut.result()
-                results[start_idx] = vals
-                completed += len(vals)
-                elapsed = max(time.time() - start_time, 1e-6)
-                rate = completed / elapsed
-                remaining = total - completed
-                eta = remaining / rate if rate > 0 else 0.0
-                logger.info(
-                    f"[M4][BSGS] Parallel progress: {completed}/{total} "
-                    f"({100.0 * completed / total:.2f}%), rate={rate:.2f} coords/s, eta={eta:.1f}s"
+            pending = set(futures)
+            while pending:
+                done, pending = concurrent.futures.wait(
+                    pending,
+                    timeout=heartbeat_sec,
+                    return_when=concurrent.futures.FIRST_COMPLETED,
                 )
+
+                if not done:
+                    elapsed = max(time.time() - start_time, 1e-6)
+                    rate = completed / elapsed if completed > 0 else 0.0
+                    remaining = total - completed
+                    eta = remaining / rate if rate > 0 else float("inf")
+                    eta_text = f"{eta:.1f}s" if rate > 0 else "unknown"
+                    logger.info(
+                        f"[M4][BSGS] Parallel heartbeat: {completed}/{total} "
+                        f"({100.0 * completed / total:.2f}%), rate={rate:.2f} coords/s, eta={eta_text}"
+                    )
+                    continue
+
+                for fut in done:
+                    start_idx, vals = fut.result()
+                    results[start_idx] = vals
+                    completed += len(vals)
+                    elapsed = max(time.time() - start_time, 1e-6)
+                    rate = completed / elapsed
+                    remaining = total - completed
+                    eta = remaining / rate if rate > 0 else 0.0
+                    logger.info(
+                        f"[M4][BSGS] Parallel progress: {completed}/{total} "
+                        f"({100.0 * completed / total:.2f}%), rate={rate:.2f} coords/s, eta={eta:.1f}s"
+                    )
     except Exception as e:
         logger.warning(
             f"[M4][BSGS] Parallel recovery unavailable ({e}); "

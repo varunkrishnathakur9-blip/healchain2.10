@@ -48,6 +48,7 @@ from consensus.feedback import collect_feedback
 from consensus.majority import has_majority
 
 from utils.logging import get_logger
+from utils.env_sync import sync_task_keys_to_env
 
 logger = get_logger("aggregator.main")
 
@@ -180,11 +181,22 @@ class HealChainAggregator:
         metadata = self.backend_rx.fetch_key_derivation_metadata()
         if not metadata:
             raise RuntimeError("Could not fetch task metadata from backend")
+        task_public_keys = self.backend_rx.fetch_task_public_keys() or {}
+
+        try:
+            changed_keys = sync_task_keys_to_env(self.task_id, task_public_keys)
+            if changed_keys:
+                logger.info(
+                    f"[Aggregator] Synced task keys into .env: {', '.join(changed_keys)}"
+                )
+        except Exception as e:
+            logger.warning(f"[Aggregator] Failed to sync task keys into .env: {e}")
 
         # Load keys (skFE will be derived from backend using metadata)
         self.keys.load(
             aggregator_address=aggregator_address,
-            metadata=metadata
+            metadata=metadata,
+            task_public_keys=task_public_keys,
         )
         # Load state metadata
         self.state.load_metadata(metadata=metadata)

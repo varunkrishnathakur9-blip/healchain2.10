@@ -61,7 +61,13 @@ class KeyManager:
     # Public API
     # ------------------------------------------------------------------
 
-    def load(self, backend_receiver=None, aggregator_address: str = None, metadata: Optional[Dict] = None):
+    def load(
+        self,
+        backend_receiver=None,
+        aggregator_address: str = None,
+        metadata: Optional[Dict] = None,
+        task_public_keys: Optional[Dict] = None,
+    ):
         """
         Load all required keys from environment / secure storage.
         
@@ -89,12 +95,21 @@ class KeyManager:
         # Aggregator private key
         self.skA = self._load_int_env("AGGREGATOR_SK")
 
-        # Aggregator public key
-        # Try to load from environment, but we'll validate it matches skA in sanity check
+        # Aggregator public key (from env, then normalized against skA in sanity checks)
         self.pkA = self._load_point_env("AGGREGATOR_PK")
 
-        # Task Publisher public key
-        self.pkTP = self._load_point_env("TP_PUBLIC_KEY")
+        # Task Publisher public key:
+        # Prefer backend task-scoped key when available for strict task alignment.
+        backend_tp_pk = None
+        if task_public_keys and isinstance(task_public_keys, dict):
+            backend_tp_pk = (task_public_keys.get("tpPublicKey") or "").strip()
+        if backend_tp_pk:
+            try:
+                self.pkTP = parse_point(backend_tp_pk)
+            except Exception as e:
+                raise ValueError(f"Invalid tpPublicKey from backend for task {self.task_id}: {e}") from e
+        else:
+            self.pkTP = self._load_point_env("TP_PUBLIC_KEY")
 
         # Functional Encryption key (Algorithm 2.2)
         # Derive from backend metadata (deterministic)
@@ -146,7 +161,7 @@ class KeyManager:
             )
             self.skFE = self._load_int_env("FE_FUNCTION_KEY")
 
-        self._sanity_check()
+        self._sanity_check(task_public_keys=task_public_keys)
 
         logger.info("[KeyManager] All keys loaded successfully")
 
@@ -172,9 +187,11 @@ class KeyManager:
         if val is None:
             raise EnvironmentError(f"Missing environment variable: {name}")
         try:
-            return int(val)
+            token = val.strip()
+            # Support both decimal and 0x-prefixed hex values.
+            return int(token, 0)
         except ValueError as e:
-            raise ValueError(f"Invalid integer for {name}") from e
+            raise ValueError(f"Invalid integer/hex scalar for {name}") from e
 
     def _load_point_env(self, name: str) -> Point:
         val = os.getenv(name)
@@ -268,7 +285,7 @@ class KeyManager:
         logger.info(f"[KeyManager] skFE derived: {skFE} (from {len(miner_public_keys)} miners)")
         return skFE
 
-    def _sanity_check(self):
+    def _sanity_check(self, task_public_keys: Optional[Dict] = None):
         """
         Ensure keys are internally consistent.
         """
@@ -293,6 +310,40 @@ class KeyManager:
                 "Consider updating AGGREGATOR_PK environment variable to match: "
                 f"{serialize_point(derived_pkA)}"
             )
+
+        # Strict task-scoped key alignment against backend task metadata, when available.
+        if task_public_keys and isinstance(task_public_keys, dict):
+            expected_agg_pk_raw = (task_public_keys.get("aggregatorPublicKey") or "").strip()
+            if expected_agg_pk_raw:
+                try:
+                    expected_agg_pk = parse_point(expected_agg_pk_raw)
+                except Exception as e:
+                    raise ValueError(
+                        f"Invalid aggregatorPublicKey from backend for task {self.task_id}: {e}"
+                    ) from e
+
+                if derived_pkA != expected_agg_pk:
+                    raise ValueError(
+                        "Aggregator key mismatch for this task: AGGREGATOR_SK does not match "
+                        "task-selected aggregatorPublicKey from backend. "
+                        f"derived_pkA={serialize_point(derived_pkA)} "
+                        f"expected_pkA={serialize_point(expected_agg_pk)}"
+                    )
+
+            expected_tp_pk_raw = (task_public_keys.get("tpPublicKey") or "").strip()
+            if expected_tp_pk_raw:
+                try:
+                    expected_tp_pk = parse_point(expected_tp_pk_raw)
+                except Exception as e:
+                    raise ValueError(
+                        f"Invalid tpPublicKey from backend for task {self.task_id}: {e}"
+                    ) from e
+                if self.pkTP != expected_tp_pk:
+                    raise ValueError(
+                        "Task publisher public key mismatch for this task. "
+                        f"configured_tp={serialize_point(self.pkTP)} "
+                        f"expected_tp={serialize_point(expected_tp_pk)}"
+                    )
 
         if self.skFE <= 0:
             raise ValueError("Invalid FE function key")
