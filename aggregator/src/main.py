@@ -44,6 +44,7 @@ from model.evaluate import evaluate_model
 from model.artifact import publish_model_artifact
 from model.vector_model import VectorModel
 from model.loader import load_base_model_from_link
+from model.runtime_evaluator import build_runtime_evaluator
 
 from consensus.candidate import build_candidate_block
 from consensus.feedback import collect_feedback
@@ -93,6 +94,8 @@ class HealChainAggregator:
         self.backend_tx = BackendSender(task_id)
 
         self.running = False
+        self.runtime_evaluator = None
+        self.runtime_evaluator_source = None
 
     # ------------------------------------------------------------------
     # Entry point
@@ -227,15 +230,40 @@ class HealChainAggregator:
         task_details = self.backend_rx.fetch_task_details() or {}
         self.state.initial_model_link = task_details.get("initialModelLink")
 
+        self.runtime_evaluator, self.runtime_evaluator_source = build_runtime_evaluator(
+            task_id=self.task_id,
+            task_details=task_details,
+        )
+        if self.runtime_evaluator is not None:
+            logger.info(
+                f"[Aggregator] Runtime evaluator configured ({self.runtime_evaluator_source})"
+            )
+
         allow_zero_base = _env_flag("AGGREGATOR_ALLOW_ZERO_BASE_MODEL", default=False)
+        require_runtime_eval = _env_flag(
+            "AGGREGATOR_REQUIRE_RUNTIME_EVALUATOR", default=False
+        )
         static_acc = _env_float("AGGREGATOR_STATIC_ACCURACY")
+        has_runtime_eval = self.runtime_evaluator is not None
+
+        if require_runtime_eval and not has_runtime_eval:
+            raise RuntimeError(
+                "AGGREGATOR_REQUIRE_RUNTIME_EVALUATOR=1 but no runtime evaluator is configured. "
+                "Set AGGREGATOR_EVALUATOR_HOOK or AGGREGATOR_VALIDATION_DATA_PATH/"
+                "AGGREGATOR_VALIDATION_DATA_LINK."
+            )
+
+        if has_runtime_eval and static_acc is not None:
+            logger.info(
+                "[Aggregator] Runtime evaluator is active; AGGREGATOR_STATIC_ACCURACY is ignored."
+            )
 
         if self.state.current_model is None and self.state.initial_model_link:
             try:
                 self.state.current_model = load_base_model_from_link(
                     task_id=self.task_id,
                     model_link=self.state.initial_model_link,
-                    static_accuracy=static_acc,
+                    static_accuracy=None if has_runtime_eval else static_acc,
                 )
                 logger.info(
                     "[Aggregator] Loaded base model from task initialModelLink "
@@ -259,17 +287,20 @@ class HealChainAggregator:
                 "fallback with AGGREGATOR_ALLOW_ZERO_BASE_MODEL=1 and AGGREGATOR_STATIC_ACCURACY."
             )
 
-        if allow_zero_base and static_acc is None:
+        if allow_zero_base and static_acc is None and not has_runtime_eval:
             raise RuntimeError(
                 "AGGREGATOR_ALLOW_ZERO_BASE_MODEL=1 requires AGGREGATOR_STATIC_ACCURACY "
-                "(float in [0.0, 1.0]) to be set."
+                "(float in [0.0, 1.0]) to be set, unless a runtime evaluator is configured."
             )
 
-        if isinstance(self.state.current_model, VectorModel) and static_acc is None:
+        if (
+            isinstance(self.state.current_model, VectorModel)
+            and static_acc is None
+            and not has_runtime_eval
+        ):
             raise RuntimeError(
                 "Vector-model runtime requires AGGREGATOR_STATIC_ACCURACY "
-                "(float in [0.0, 1.0]) because no dataset-bound evaluator is configured "
-                "in aggregator."
+                "(float in [0.0, 1.0]) or a runtime evaluator hook/data configuration."
             )
 
         self.min_participants = self._get_min_participants()
@@ -370,7 +401,11 @@ class HealChainAggregator:
 
         if self.state.current_model is None:
             # Explicit, non-strict fallback for environments without a real base-model runtime.
-            static_acc = _env_float("AGGREGATOR_STATIC_ACCURACY")
+            static_acc = (
+                None
+                if self.runtime_evaluator is not None
+                else _env_float("AGGREGATOR_STATIC_ACCURACY")
+            )
             self.state.current_model = VectorModel(
                 [0.0] * len(aggregate),
                 static_accuracy=static_acc,
@@ -386,7 +421,7 @@ class HealChainAggregator:
             aggregate_update=aggregate,
         )
 
-        acc = evaluate_model(new_model)
+        acc = evaluate_model(new_model, evaluator=self.runtime_evaluator)
 
         self.state.update_model(new_model)
         self.progress.mark("model_evaluated")

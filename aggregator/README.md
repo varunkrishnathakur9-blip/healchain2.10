@@ -142,10 +142,19 @@ MAX_MODEL_DIMENSION=30000000         # Increase if task model vector exceeds def
 # Base-model bootstrap / strictness
 AGGREGATOR_ALLOW_ZERO_BASE_MODEL=0   # 1 = non-strict testing mode if backend provides no runtime model object
 AGGREGATOR_STATIC_ACCURACY=           # Required for VectorModel runtime (base-link JSON/H5 or zero-base mode), 0.0-1.0
+AGGREGATOR_REQUIRE_RUNTIME_EVALUATOR=0 # 1 = hard-fail unless a real runtime evaluator is configured
+
+# Runtime evaluator hook (preferred for strict Algorithm-4 evaluation)
+AGGREGATOR_EVALUATOR_HOOK=            # module:function (called as fn(model=..., task_id=..., task_details=...))
+
+# Built-in sparse validation evaluator (dataset-based, no static accuracy)
+AGGREGATOR_VALIDATION_DATA_PATH=      # Local .json/.jsonl validation file path
+AGGREGATOR_VALIDATION_DATA_LINK=      # Optional HTTP/IPFS validation dataset link
+AGGREGATOR_VALIDATION_THRESHOLD=0.0   # Binary decision threshold for dot(w,x)
 
 # Optional IPFS publish for model artifacts (Algorithm 4 modelLink)
 MODEL_ARTIFACT_USE_IPFS=0             # 1 = upload artifact JSON to IPFS
-MODEL_ARTIFACT_IPFS_API_URL=http://localhost:5001
+MODEL_ARTIFACT_IPFS_API_URL=http://localhost:5001   # Also accepts IPFS Desktop form: /ip4/127.0.0.1/tcp/5003
 MODEL_ARTIFACT_IPFS_GATEWAY_URL=http://127.0.0.1:8080/ipfs
 
 # Base model fetch fallback for ipfs.dweb.link links
@@ -159,6 +168,22 @@ NDD_FE_LOG_EVERY=25000               # NDD-FE progress log frequency
 BSGS_WORKERS=4                       # Parallel workers for BSGS
 BSGS_CHUNK_SIZE=5000                 # Chunk size for BSGS parallel mode
 BSGS_LOG_EVERY=200                   # BSGS progress log frequency
+```
+
+**Built-in sparse validation dataset format (`AGGREGATOR_VALIDATION_DATA_PATH`)**
+
+```json
+{"samples":[
+  {"label":1, "indices":[10,52,7001], "values":[0.2,1.0,-0.7]},
+  {"label":0, "indices":[9,300], "values":[1.0,0.4]}
+]}
+```
+
+Or JSONL:
+
+```json
+{"label":1,"indices":[10,52,7001],"values":[0.2,1.0,-0.7]}
+{"label":0,"indices":[9,300],"values":[1.0,0.4]}
 ```
 
 ## 🔐 Cryptographic Security

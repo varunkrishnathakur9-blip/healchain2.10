@@ -23,6 +23,7 @@ NON-RESPONSIBILITIES:
 import os
 import json
 import hashlib
+import re
 from typing import Any, Tuple
 import requests
 
@@ -38,8 +39,37 @@ logger = get_logger("model.artifact")
 ARTIFACT_DIR = os.getenv("MODEL_ARTIFACT_DIR", "./artifacts")
 
 
+def _normalize_ipfs_api_base(raw: str) -> str:
+    """
+    Normalize IPFS Desktop / Kubo API address formats into HTTP base URL.
+
+    Supported inputs:
+    - http://127.0.0.1:5001
+    - 127.0.0.1:5001
+    - /ip4/127.0.0.1/tcp/5003
+    """
+    token = (raw or "").strip()
+    if not token:
+        return "http://localhost:5001"
+
+    if token.startswith("http://") or token.startswith("https://"):
+        return token.rstrip("/")
+
+    m = re.match(r"^/ip4/([^/]+)/tcp/(\d+)$", token)
+    if m:
+        host, port = m.groups()
+        return f"http://{host}:{port}"
+
+    if ":" in token and "/" not in token:
+        return f"http://{token}".rstrip("/")
+
+    return token.rstrip("/")
+
+
 def _upload_json_to_ipfs(*, filename: str, payload: bytes) -> str:
-    api_base = os.getenv("MODEL_ARTIFACT_IPFS_API_URL", "http://localhost:5001").rstrip("/")
+    api_base = _normalize_ipfs_api_base(
+        os.getenv("MODEL_ARTIFACT_IPFS_API_URL", "http://localhost:5001")
+    )
     add_url = f"{api_base}/api/v0/add?pin=true"
     files = {"file": (filename, payload, "application/json")}
     resp = requests.post(add_url, files=files, timeout=60)
