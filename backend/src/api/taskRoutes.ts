@@ -19,7 +19,21 @@ router.post(
   requireWalletAuth,
   async (req, res, next) => {
     try {
-      const { taskID, publisher, publisherPublicKey, accuracy, deadline, commitHash, nonceTP, escrowTxHash, dataset, initialModelLink, minMiners, maxMiners } = req.body;
+      const {
+        taskID,
+        publisher,
+        publisherPublicKey,
+        accuracy,
+        deadline,
+        commitHash,
+        nonceTP,
+        escrowTxHash,
+        dataset,
+        initialModelLink,
+        validationDataLink,
+        minMiners,
+        maxMiners
+      } = req.body;
 
       // Validate commitHash and nonceTP are provided
       if (!commitHash || !nonceTP) {
@@ -53,6 +67,7 @@ router.post(
         escrowTxHash,   // Escrow transaction hash for verification
         dataset,        // D: Dataset requirements (Algorithm 1)
         initialModelLink,  // L: Initial model link (Algorithm 1)
+        validationDataLink, // Validation dataset link for strict runtime evaluation
         minMiners ? parseInt(minMiners.toString()) : undefined,  // Min miners (optional, defaults to 3)
         maxMiners ? parseInt(maxMiners.toString()) : undefined   // Max miners (optional, defaults to 5)
       );

@@ -41,6 +41,7 @@ export default function PublishTaskForm({ onSuccess }: PublishTaskFormProps) {
     maxMiners: '5',  // Maximum miners allowed for PoS aggregator selection
     dataset: 'chestxray',  // D: Dataset requirements (Algorithm 1)
     initialModelLink: '',  // L: Initial model link (Algorithm 1) - optional
+    validationDataLink: '', // Validation dataset link for strict runtime evaluation
     nonceTP: '',           // Nonce for commit hash (Algorithm 1) - provided by publisher
     publisherPublicKey: '', // Publisher EC public key for NDD-FE tpPublicKey
     description: '',
@@ -285,6 +286,7 @@ export default function PublishTaskForm({ onSuccess }: PublishTaskFormProps) {
         escrowTxHash: txHash,
         dataset: formData.dataset,
         initialModelLink: formData.initialModelLink || undefined,
+        validationDataLink: formData.validationDataLink || undefined,
         minMiners: parseInt(formData.minMiners),
         maxMiners: parseInt(formData.maxMiners),
         message,
@@ -748,6 +750,23 @@ export default function PublishTaskForm({ onSuccess }: PublishTaskFormProps) {
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Link to initial model for miners to start training from (Algorithm 1: L). Can be IPFS link or HTTP URL.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="validationDataLink" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Validation Data Link <span className="text-gray-400 text-xs">(Optional but recommended for strict M4)</span>
+            </label>
+            <input
+              type="url"
+              id="validationDataLink"
+              value={formData.validationDataLink}
+              onChange={(e) => setFormData({ ...formData, validationDataLink: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              placeholder="https://ipfs.io/ipfs/... or ipfs://..."
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Used by aggregator for real validation-set accuracy evaluation (Algorithm 4 strict mode).
             </p>
           </div>
 

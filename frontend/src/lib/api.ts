@@ -126,6 +126,7 @@ export interface Task {
   createdAt?: string;
   updatedAt?: string;
   dataset?: string;
+  validationDataLink?: string;
   commitHash?: string;
   rewardAmount?: number;
   accuracyRequired?: number;
@@ -188,6 +189,7 @@ export const taskAPI = {
     escrowTxHash: string; // Transaction hash of escrow lock - required for verification
     dataset?: string;   // D: Dataset requirements (Algorithm 1)
     initialModelLink?: string;  // L: Initial model link (Algorithm 1) - optional
+    validationDataLink?: string; // Validation dataset link for strict Algorithm 4 runtime evaluation
     minMiners?: number;  // Minimum miners required for PoS aggregator selection
     maxMiners?: number;  // Maximum miners allowed for PoS aggregator selection
     message: string;

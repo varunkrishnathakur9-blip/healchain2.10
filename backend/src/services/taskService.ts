@@ -79,6 +79,7 @@ export async function createTask(
   escrowTxHash: string, // Escrow transaction hash for verification
   dataset?: string,    // D: Dataset requirements (Algorithm 1)
   initialModelLink?: string,  // L: Initial model link (Algorithm 1)
+  validationDataLink?: string, // Validation dataset link for strict Algorithm 4 runtime evaluation
   minMiners?: number,  // Minimum miners required for PoS aggregator selection
   maxMiners?: number   // Maximum miners allowed for PoS aggregator selection
 ) {
@@ -427,6 +428,7 @@ export async function createTask(
         deadline,
         dataset: dataset || "chestxray",  // Default dataset if not provided
         initialModelLink: initialModelLink || null,  // Optional initial model link
+        validationDataLink: validationDataLink || null, // Optional validation data link
         minMiners: finalMinMiners,  // Store min miners
         maxMiners: finalMaxMiners,  // Store max miners
         status: TaskStatus.OPEN,  // Task is OPEN because escrow is verified as locked
@@ -450,7 +452,8 @@ export async function createTask(
     publisherPublicKey: normalizedPublisherPublicKey,
     commitHash,
     deadline: deadline.toString(),
-    status: "OPEN"
+    status: "OPEN",
+    validationDataLink: validationDataLink || null
   };
 }
 
@@ -568,6 +571,7 @@ export async function getTaskById(taskID: string) {
     status: task.status,
     dataset: task.dataset,
     initialModelLink: task.initialModelLink,
+    validationDataLink: (task as any).validationDataLink || null,
     aggregatorAddress: task.aggregatorAddress,
     minMiners: task.minMiners,
     maxMiners: task.maxMiners,
