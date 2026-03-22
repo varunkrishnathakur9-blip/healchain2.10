@@ -135,6 +135,11 @@ LOG_LEVEL=INFO                      # Logging level
 MODEL_ARTIFACT_DIR=./artifacts       # Model storage directory
 TASK_TIMEOUT=3600                    # Task timeout (seconds)
 PERSIST_AGGREGATOR_SK_ON_START=0     # 1 = persist prompted AGGREGATOR_SK into .env
+MAX_MODEL_DIMENSION=30000000         # Increase if task model vector exceeds default 10,000,000
+
+# Base-model bootstrap / strictness
+AGGREGATOR_ALLOW_ZERO_BASE_MODEL=0   # 1 = non-strict testing mode if backend provides no runtime model object
+AGGREGATOR_STATIC_ACCURACY=           # Required when AGGREGATOR_ALLOW_ZERO_BASE_MODEL=1 (0.0-1.0)
 
 # Optional crypto/runtime tuning
 VERIFY_WITH_DENSE_FALLBACK=0         # Keep disabled for strict flow

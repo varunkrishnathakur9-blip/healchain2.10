@@ -51,6 +51,7 @@ class TaskState:
         self.publisher_pk: Optional[str] = None
         self.required_accuracy: Optional[float] = None
         self.max_rounds: Optional[int] = None
+        self.initial_model_link: Optional[str] = None
 
         # ------------------------------
         # Aggregation parameters
@@ -100,6 +101,7 @@ class TaskState:
         self.required_accuracy = metadata.get("required_accuracy") or metadata.get("targetAccuracy", 0.8)
         self.max_rounds = metadata.get("max_rounds", 1)
         self.round = metadata.get("currentRound", 1)
+        self.initial_model_link = metadata.get("initial_model_link") or metadata.get("initialModelLink")
 
         self.participants = metadata.get("participants", []) or metadata.get("minerPublicKeys", [])
         self.weights = metadata.get("weights", [])

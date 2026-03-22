@@ -20,7 +20,7 @@ This file coordinates task-scoped execution only.
 import os
 import time
 import threading
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from config.constants import (
     MIN_PARTICIPANTS,  # Default fallback
@@ -42,6 +42,7 @@ from aggregation.aggregator import secure_aggregate
 from model.apply_update import apply_model_update
 from model.evaluate import evaluate_model
 from model.artifact import publish_model_artifact
+from model.vector_model import VectorModel
 
 from consensus.candidate import build_candidate_block
 from consensus.feedback import collect_feedback
@@ -51,6 +52,26 @@ from utils.logging import get_logger
 from utils.env_sync import sync_task_keys_to_env
 
 logger = get_logger("aggregator.main")
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_float(name: str) -> Optional[float]:
+    raw = os.getenv(name)
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        val = float(str(raw).strip())
+    except Exception as e:
+        raise ValueError(f"{name} must be a float in [0.0, 1.0], got: {raw!r}") from e
+    if not (0.0 <= val <= 1.0):
+        raise ValueError(f"{name} must be in [0.0, 1.0], got: {val}")
+    return val
 
 
 class HealChainAggregator:
@@ -201,6 +222,30 @@ class HealChainAggregator:
         # Load state metadata
         self.state.load_metadata(metadata=metadata)
 
+        # Fetch full task details (includes initialModelLink and status fields).
+        task_details = self.backend_rx.fetch_task_details() or {}
+        self.state.initial_model_link = task_details.get("initialModelLink")
+
+        allow_zero_base = _env_flag("AGGREGATOR_ALLOW_ZERO_BASE_MODEL", default=False)
+        static_acc = _env_float("AGGREGATOR_STATIC_ACCURACY")
+
+        # Strict-by-default: fail before expensive crypto if no base model is available.
+        if self.state.current_model is None and not allow_zero_base:
+            initial_link = self.state.initial_model_link
+            raise RuntimeError(
+                "Base model is missing before aggregation (current_model is None). "
+                f"Task initialModelLink={initial_link!r}. "
+                "Current aggregator runtime does not auto-load initialModelLink into a live model object. "
+                "Either provide a preloaded model object in metadata, or explicitly enable non-strict "
+                "fallback with AGGREGATOR_ALLOW_ZERO_BASE_MODEL=1 and AGGREGATOR_STATIC_ACCURACY."
+            )
+
+        if allow_zero_base and static_acc is None:
+            raise RuntimeError(
+                "AGGREGATOR_ALLOW_ZERO_BASE_MODEL=1 requires AGGREGATOR_STATIC_ACCURACY "
+                "(float in [0.0, 1.0]) to be set."
+            )
+
         self.min_participants = self._get_min_participants()
         self.max_participants = self._get_max_participants()
 
@@ -296,6 +341,19 @@ class HealChainAggregator:
 
     def _update_and_evaluate(self, aggregate):
         logger.info("[Aggregator] Applying update and evaluating model")
+
+        if self.state.current_model is None:
+            # Explicit, non-strict fallback for environments without a real base-model runtime.
+            static_acc = _env_float("AGGREGATOR_STATIC_ACCURACY")
+            self.state.current_model = VectorModel(
+                [0.0] * len(aggregate),
+                static_accuracy=static_acc,
+            )
+            logger.warning(
+                "[Aggregator] Using zero-initialized base model "
+                "(AGGREGATOR_ALLOW_ZERO_BASE_MODEL=1). "
+                "This mode is for controlled testing only."
+            )
 
         new_model = apply_model_update(
             base_model=self.state.current_model,

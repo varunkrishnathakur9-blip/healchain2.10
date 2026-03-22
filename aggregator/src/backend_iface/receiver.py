@@ -284,6 +284,32 @@ class BackendReceiver:
             logger.error(f"[BackendReceiver] Error fetching task public-keys: {e}")
             return None
 
+    def fetch_task_details(self) -> Optional[Dict]:
+        """
+        Fetch task details from backend /tasks/:taskID.
+
+        Returns:
+        --------
+        Task dict or None on error.
+        """
+        endpoint = f"{self.base_url}/tasks/{self.task_id}"
+        try:
+            resp = requests.get(endpoint, timeout=5)
+            if resp.status_code != 200:
+                logger.warning(
+                    f"[BackendReceiver] Task details fetch failed "
+                    f"(status={resp.status_code})"
+                )
+                return None
+            data = resp.json()
+            if not isinstance(data, dict):
+                logger.warning("[BackendReceiver] Invalid task details payload type")
+                return None
+            return data
+        except Exception as e:
+            logger.error(f"[BackendReceiver] Error fetching task details: {e}")
+            return None
+
     # ------------------------------------------------------------------
     # Internal Helpers
     # ------------------------------------------------------------------
