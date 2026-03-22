@@ -92,14 +92,15 @@ class _BsgsContext:
         )
 
 
-_FULL_ABS_BOUND = max(abs(BSGS_MIN_BOUND), abs(BSGS_MAX_BOUND))
-_DEFAULT_TIER_BOUNDS = f"1000000,10000000,100000000,1000000000,{_FULL_ABS_BOUND}"
+_BASE_FULL_ABS_BOUND = max(abs(BSGS_MIN_BOUND), abs(BSGS_MAX_BOUND))
+_DEFAULT_TIER_BOUNDS = f"1000000,10000000,100000000,1000000000,{_BASE_FULL_ABS_BOUND}"
 
 _BSGS_CTX_BY_BOUND: Dict[int, _BsgsContext] = {}
 _WORKER_CTX_BY_BOUND: Optional[Dict[int, _BsgsContext]] = None
+_WORKER_FULL_ABS_BOUND: int = _BASE_FULL_ABS_BOUND
 
 
-def _tier_abs_bounds() -> list[int]:
+def _tier_abs_bounds(full_abs_bound: int) -> list[int]:
     raw = os.getenv("BSGS_TIER_BOUNDS", _DEFAULT_TIER_BOUNDS)
     bounds = []
     for part in raw.split(","):
@@ -111,16 +112,14 @@ def _tier_abs_bounds() -> list[int]:
         except ValueError:
             continue
         if val > 0:
-            bounds.append(min(val, _FULL_ABS_BOUND))
-    if _FULL_ABS_BOUND not in bounds:
-        bounds.append(_FULL_ABS_BOUND)
+            bounds.append(min(val, full_abs_bound))
+    if full_abs_bound not in bounds:
+        bounds.append(full_abs_bound)
     return sorted(set(bounds))
 
 
 def _ctx_min_max(abs_bound: int) -> Tuple[int, int]:
-    lo = max(BSGS_MIN_BOUND, -abs_bound)
-    hi = min(BSGS_MAX_BOUND, abs_bound)
-    return lo, hi
+    return -abs_bound, abs_bound
 
 
 def _get_bsgs_ctx(abs_bound: int) -> _BsgsContext:
@@ -137,7 +136,7 @@ def recover_discrete_log(point: Point) -> int:
     Recover signed integer x such that point == x*G.
     """
     last_err = None
-    for abs_bound in _tier_abs_bounds():
+    for abs_bound in _tier_abs_bounds(_BASE_FULL_ABS_BOUND):
         try:
             return _get_bsgs_ctx(abs_bound).recover(point)
         except ValueError as e:
@@ -148,7 +147,7 @@ def recover_discrete_log(point: Point) -> int:
     raise ValueError("BSGS recovery failed")
 
 
-def recover_vector(points: list[Point]) -> list[int]:
+def recover_vector(points: list[Point], *, weight_sum: int = 1) -> list[int]:
     """
     Recover a vector of signed integers from EC points.
     """
@@ -157,12 +156,14 @@ def recover_vector(points: list[Point]) -> list[int]:
     workers = max(1, int(os.getenv("BSGS_WORKERS", "1")))
     chunk_size = max(1, int(os.getenv("BSGS_CHUNK_SIZE", "5000")))
     cache_limit = max(0, int(os.getenv("BSGS_CACHE_LIMIT", "300000")))
+    weight_scale = max(1, int(weight_sum))
+    full_abs_bound = _BASE_FULL_ABS_BOUND * weight_scale
     start = time.time()
 
     logger.info(
         f"[M4][BSGS] Start recovery: coords={total}, log_every={log_every}, "
         f"workers={workers}, chunk_size={chunk_size}, cache_limit={cache_limit}, "
-        f"range=[{BSGS_MIN_BOUND}, {BSGS_MAX_BOUND}]"
+        f"range=[{-full_abs_bound}, {full_abs_bound}] (weight_sum={weight_scale})"
     )
 
     if workers > 1 and total > chunk_size:
@@ -171,6 +172,7 @@ def recover_vector(points: list[Point]) -> list[int]:
             workers=workers,
             chunk_size=chunk_size,
             cache_limit=cache_limit,
+            full_abs_bound=full_abs_bound,
             start_time=start,
         )
     else:
@@ -178,6 +180,7 @@ def recover_vector(points: list[Point]) -> list[int]:
             points,
             log_every=log_every,
             cache_limit=cache_limit,
+            full_abs_bound=full_abs_bound,
             start_time=start,
         )
 
@@ -197,10 +200,11 @@ def _recover_vector_serial(
     *,
     log_every: int,
     cache_limit: int,
+    full_abs_bound: int,
     start_time: float,
 ) -> list[int]:
     total = len(points)
-    tier_bounds = _tier_abs_bounds()
+    tier_bounds = _tier_abs_bounds(full_abs_bound)
     cache: Dict[Optional[Tuple[int, int]], int] = {}
     recovered = []
 
@@ -246,6 +250,7 @@ def _recover_vector_parallel(
     workers: int,
     chunk_size: int,
     cache_limit: int,
+    full_abs_bound: int,
     start_time: float,
 ) -> list[int]:
     total = len(points)
@@ -264,6 +269,7 @@ def _recover_vector_parallel(
             max_workers=workers,
             mp_context=ctx,
             initializer=_init_bsgs_worker,
+            initargs=(full_abs_bound,),
         ) as executor:
             futures = [
                 executor.submit(_recover_chunk, start, chunk, cache_limit)
@@ -290,6 +296,7 @@ def _recover_vector_parallel(
             points,
             log_every=max(1, int(os.getenv("BSGS_LOG_EVERY", "200"))),
             cache_limit=cache_limit,
+            full_abs_bound=full_abs_bound,
             start_time=start_time,
         )
 
@@ -299,8 +306,9 @@ def _recover_vector_parallel(
     return recovered
 
 
-def _init_bsgs_worker():
-    global _WORKER_CTX_BY_BOUND
+def _init_bsgs_worker(full_abs_bound: int):
+    global _WORKER_CTX_BY_BOUND, _WORKER_FULL_ABS_BOUND
+    _WORKER_FULL_ABS_BOUND = max(_BASE_FULL_ABS_BOUND, int(full_abs_bound))
     _WORKER_CTX_BY_BOUND = {}
 
 
@@ -310,7 +318,7 @@ def _recover_chunk(start_idx: int, chunk: list[Point], cache_limit: int):
     if ctx_map is None:
         ctx_map = {}
         _WORKER_CTX_BY_BOUND = ctx_map
-    tier_bounds = _tier_abs_bounds()
+    tier_bounds = _tier_abs_bounds(_WORKER_FULL_ABS_BOUND)
     cache: Dict[Optional[Tuple[int, int]], int] = {}
     vals = []
     for rel_idx, pt in enumerate(chunk):

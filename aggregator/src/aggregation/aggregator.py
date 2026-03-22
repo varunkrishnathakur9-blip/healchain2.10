@@ -122,6 +122,7 @@ def _secure_aggregate_dense(
     pkTP: Point,
     weights: List[int],
 ) -> List[float]:
+    weight_sum = max(1, sum(abs(int(w)) for w in weights))
     # ------------------------------------------------------------
     # Step 1: Extract ciphertext vectors
     # ------------------------------------------------------------
@@ -157,7 +158,7 @@ def _secure_aggregate_dense(
     logger.info("[M4] Recovering integer gradients via BSGS (dense)")
     t_bsgs = time.time()
 
-    quantized_update: List[int] = recover_vector(aggregated_points)
+    quantized_update: List[int] = recover_vector(aggregated_points, weight_sum=weight_sum)
 
     logger.info(
         f"[M4] BSGS recovery complete "
@@ -187,6 +188,7 @@ def _secure_aggregate_sparse(
     skA: int,
     weights: List[int],
 ) -> List[float]:
+    weight_sum = max(1, sum(abs(int(w)) for w in weights))
     sparse_submissions = []
     for idx, sub in enumerate(submissions):
         missing = [
@@ -234,7 +236,7 @@ def _secure_aggregate_sparse(
     # ------------------------------------------------------------
     logger.info("[M4] Recovering integer gradients via BSGS (sparse)")
     t_bsgs = time.time()
-    quantized_sparse: List[int] = recover_vector(sparse_points)
+    quantized_sparse: List[int] = recover_vector(sparse_points, weight_sum=weight_sum)
     logger.info(
         f"[M4] Sparse BSGS recovery complete "
         f"(sparse_coords={len(quantized_sparse)}, elapsed={time.time() - t_bsgs:.2f}s)"
