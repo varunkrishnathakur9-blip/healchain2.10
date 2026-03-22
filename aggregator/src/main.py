@@ -43,6 +43,7 @@ from model.apply_update import apply_model_update
 from model.evaluate import evaluate_model
 from model.artifact import publish_model_artifact
 from model.vector_model import VectorModel
+from model.loader import load_base_model_from_link
 
 from consensus.candidate import build_candidate_block
 from consensus.feedback import collect_feedback
@@ -229,14 +230,32 @@ class HealChainAggregator:
         allow_zero_base = _env_flag("AGGREGATOR_ALLOW_ZERO_BASE_MODEL", default=False)
         static_acc = _env_float("AGGREGATOR_STATIC_ACCURACY")
 
+        if self.state.current_model is None and self.state.initial_model_link:
+            try:
+                self.state.current_model = load_base_model_from_link(
+                    task_id=self.task_id,
+                    model_link=self.state.initial_model_link,
+                    static_accuracy=static_acc,
+                )
+                logger.info(
+                    "[Aggregator] Loaded base model from task initialModelLink "
+                    f"({self.state.initial_model_link})"
+                )
+            except Exception as e:
+                logger.warning(
+                    "[Aggregator] Could not load base model from initialModelLink: "
+                    f"{e}"
+                )
+
         # Strict-by-default: fail before expensive crypto if no base model is available.
         if self.state.current_model is None and not allow_zero_base:
             initial_link = self.state.initial_model_link
             raise RuntimeError(
                 "Base model is missing before aggregation (current_model is None). "
                 f"Task initialModelLink={initial_link!r}. "
-                "Current aggregator runtime does not auto-load initialModelLink into a live model object. "
-                "Either provide a preloaded model object in metadata, or explicitly enable non-strict "
+                "Aggregator failed to load a runtime model from this link (or link is unavailable). "
+                "Either provide a loadable model artifact link, a preloaded model object in metadata, "
+                "or explicitly enable non-strict "
                 "fallback with AGGREGATOR_ALLOW_ZERO_BASE_MODEL=1 and AGGREGATOR_STATIC_ACCURACY."
             )
 
@@ -244,6 +263,13 @@ class HealChainAggregator:
             raise RuntimeError(
                 "AGGREGATOR_ALLOW_ZERO_BASE_MODEL=1 requires AGGREGATOR_STATIC_ACCURACY "
                 "(float in [0.0, 1.0]) to be set."
+            )
+
+        if isinstance(self.state.current_model, VectorModel) and static_acc is None:
+            raise RuntimeError(
+                "Vector-model runtime requires AGGREGATOR_STATIC_ACCURACY "
+                "(float in [0.0, 1.0]) because no dataset-bound evaluator is configured "
+                "in aggregator."
             )
 
         self.min_participants = self._get_min_participants()
@@ -383,6 +409,7 @@ class HealChainAggregator:
 
         candidate = build_candidate_block(
             task_id=self.task_id,
+            round_no=self.state.round,
             model_hash=model_hash,
             model_link=model_link,
             accuracy=acc,

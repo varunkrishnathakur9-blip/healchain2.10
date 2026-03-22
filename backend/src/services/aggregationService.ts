@@ -8,12 +8,13 @@ import { TaskStatus, BlockStatus } from "@prisma/client";
 export async function submitCandidate(
   taskID: string,
   modelHash: string,
-  accuracy: bigint
+  accuracy: bigint,
+  modelLink?: string
 ) {
   const task = await prisma.task.findUnique({ where: { taskID } });
 
-  if (!task || task.status !== TaskStatus.OPEN) {
-    throw new Error("Task not in aggregation phase");
+  if (!task || ![TaskStatus.OPEN, TaskStatus.AGGREGATING].includes(task.status as any)) {
+    throw new Error(`Task not in aggregation phase (status=${task?.status ?? "missing"})`);
   }
 
   const existing = await prisma.block.findUnique({
@@ -24,18 +25,28 @@ export async function submitCandidate(
     throw new Error("Candidate already submitted");
   }
 
-  const block = await prisma.block.create({
-    data: {
-      taskID,
-      modelHash,
-      accuracy,
-      status: BlockStatus.FINALIZED
-    }
-  });
+  const block = await prisma.$transaction(async (tx) => {
+    const created = await tx.block.create({
+      data: {
+        taskID,
+        modelHash,
+        accuracy,
+        status: BlockStatus.FINALIZED
+      }
+    });
 
-  await prisma.task.update({
-    where: { taskID },
-    data: { status: TaskStatus.REVEAL_OPEN }
+    const taskUpdate: any = { status: TaskStatus.REVEAL_OPEN };
+    if (typeof modelLink === "string" && modelLink.trim().length > 0) {
+      // Persist latest global model link so next round starts from W_round.
+      taskUpdate.initialModelLink = modelLink.trim();
+    }
+
+    await tx.task.update({
+      where: { taskID },
+      data: taskUpdate
+    });
+
+    return created;
   });
 
   return block;

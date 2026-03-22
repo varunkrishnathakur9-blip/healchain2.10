@@ -16,6 +16,8 @@ The HealChain Aggregator implements Modules M4-M6 of the HealChain federated lea
 - Sparse payloads are strict: missing `protocolVersion`, `ctr`, `totalSize`, `nonzeroIndices`, `values`, or `baseMask` causes hard failure.
 - Silent crypto fallbacks are removed in critical paths. If decryption/recovery fails, task aggregation stops with an explicit error.
 - Dense model reconstruction is performed only after sparse recovery succeeds, aligning with Algorithm 4 flow.
+- Candidate payload now includes `modelLink` (`ml`) and backend persists it as task's current model link for the next round.
+- Base model bootstrap is strict-by-default: aggregator loads current model from task `initialModelLink` and fails early if unavailable.
 
 ## 📋 Architecture
 
@@ -139,7 +141,15 @@ MAX_MODEL_DIMENSION=30000000         # Increase if task model vector exceeds def
 
 # Base-model bootstrap / strictness
 AGGREGATOR_ALLOW_ZERO_BASE_MODEL=0   # 1 = non-strict testing mode if backend provides no runtime model object
-AGGREGATOR_STATIC_ACCURACY=           # Required when AGGREGATOR_ALLOW_ZERO_BASE_MODEL=1 (0.0-1.0)
+AGGREGATOR_STATIC_ACCURACY=           # Required for VectorModel runtime (base-link JSON/H5 or zero-base mode), 0.0-1.0
+
+# Optional IPFS publish for model artifacts (Algorithm 4 modelLink)
+MODEL_ARTIFACT_USE_IPFS=0             # 1 = upload artifact JSON to IPFS
+MODEL_ARTIFACT_IPFS_API_URL=http://localhost:5001
+MODEL_ARTIFACT_IPFS_GATEWAY_URL=http://127.0.0.1:8080/ipfs
+
+# Base model fetch fallback for ipfs.dweb.link links
+IPFS_GATEWAY_URL=http://127.0.0.1:8080/ipfs
 
 # Optional crypto/runtime tuning
 VERIFY_WITH_DENSE_FALLBACK=0         # Keep disabled for strict flow
@@ -208,7 +218,8 @@ candidate = build_candidate_block(model, accuracy, submissions)
 4. **BSGS Recovery**: Recover quantized values from decrypted points
 5. **Encode-Verify Check**: Re-encode and verify recovered values
 6. **Dense Reconstruction + Model Update**: Rebuild dense update and apply it
-7. **Candidate Building**: Create candidate block
+7. **Candidate Building**: Create candidate block with `modelHash` + `modelLink (ml)`
+8. **Round continuity**: backend stores latest `modelLink` as next-round base model pointer
 
 If any cryptographic step fails, aggregation stops and task status is set to failure with a logged cause.
 

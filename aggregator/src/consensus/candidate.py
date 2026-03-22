@@ -72,6 +72,7 @@ def _canonical_block_bytes(block: Dict) -> bytes:
 def build_candidate_block(
     *,
     task_id: str,
+    round_no: int = 0,
     model_hash: str,
     model_link: str,
     accuracy: float,
@@ -140,7 +141,7 @@ def build_candidate_block(
     # ------------------------------------------------------------
     block = {
         "task_id": task_id,
-        "round": 0,  # updated by TaskState externally if needed
+        "round": int(round_no),
         "model_hash": model_hash,
         "model_link": model_link,
         "accuracy": accuracy,

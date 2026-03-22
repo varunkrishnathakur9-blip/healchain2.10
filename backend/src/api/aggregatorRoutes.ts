@@ -53,12 +53,13 @@ router.post(
   requireFields(["taskID", "modelHash", "accuracy"]),
   async (req, res, next) => {
     try {
-      const { taskID, modelHash, accuracy } = req.body;
+      const { taskID, modelHash, modelLink, accuracy } = req.body;
 
       const block = await submitCandidate(
         taskID,
         modelHash,
-        BigInt(accuracy)
+        BigInt(accuracy),
+        modelLink
       );
 
       res.json(block);

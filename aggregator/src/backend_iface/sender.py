@@ -59,6 +59,7 @@ class BackendSender:
         normalized_payload = {
             "taskID": candidate_block.get("task_id"),
             "modelHash": candidate_block.get("model_hash"),
+            "modelLink": candidate_block.get("model_link"),
             "accuracy": int(candidate_block.get("accuracy", 0) * 1000000), # Scale to 6 decimal places for BigInt
             "miners": candidate_block.get("participants", []),
             "scoreCommits": candidate_block.get("score_commits", []),

@@ -24,6 +24,7 @@ import os
 import json
 import hashlib
 from typing import Any, Tuple
+import requests
 
 from utils.logging import get_logger
 
@@ -35,6 +36,22 @@ logger = get_logger("model.artifact")
 # -------------------------------------------------------------------
 
 ARTIFACT_DIR = os.getenv("MODEL_ARTIFACT_DIR", "./artifacts")
+
+
+def _upload_json_to_ipfs(*, filename: str, payload: bytes) -> str:
+    api_base = os.getenv("MODEL_ARTIFACT_IPFS_API_URL", "http://localhost:5001").rstrip("/")
+    add_url = f"{api_base}/api/v0/add?pin=true"
+    files = {"file": (filename, payload, "application/json")}
+    resp = requests.post(add_url, files=files, timeout=60)
+    resp.raise_for_status()
+    data = resp.json()
+    cid = data.get("Hash")
+    if not cid:
+        raise RuntimeError(f"Unexpected IPFS add response: {data}")
+    gateway = os.getenv("MODEL_ARTIFACT_IPFS_GATEWAY_URL", "http://127.0.0.1:8080/ipfs").rstrip("/")
+    if gateway.endswith("/ipfs"):
+        return f"{gateway}/{cid}"
+    return f"{gateway}/ipfs/{cid}"
 
 
 # -------------------------------------------------------------------
@@ -93,14 +110,17 @@ def publish_model_artifact(
     with open(filepath, "wb") as f:
         f.write(artifact_bytes)
 
+    use_ipfs = os.getenv("MODEL_ARTIFACT_USE_IPFS", "0").strip().lower() in {"1", "true", "yes", "on"}
+    model_link = filepath
+    if use_ipfs:
+        model_link = _upload_json_to_ipfs(filename=filename, payload=artifact_bytes)
+
     logger.info(
         f"[M4] Model artifact published | "
-        f"path={filepath}, hash={model_hash[:12]}..."
+        f"path={filepath}, link={model_link}, hash={model_hash[:12]}..."
     )
 
-    # For now, model_link is a filesystem path.
-    # This can later be replaced with IPFS / S3 / DB ref.
-    return filepath, model_hash
+    return model_link, model_hash
 
 
 # -------------------------------------------------------------------
