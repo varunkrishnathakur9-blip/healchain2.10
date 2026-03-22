@@ -50,6 +50,7 @@ model Task {
   status            TaskStatus @default(CREATED)
   dataset           String     @default("chestxray") // D: Dataset requirements (Algorithm 1)
   initialModelLink  String?    @db.Text // L: Initial model link (Algorithm 1)
+  validationDataLink String?   @db.Text // Validation dataset link for strict Algorithm 4 evaluation
   aggregatorAddress String? // M2: Selected aggregator
   minMiners         Int        @default(3) // Minimum miners required for PoS aggregator selection
   maxMiners         Int        @default(5) // Maximum miners allowed for PoS aggregator selection
