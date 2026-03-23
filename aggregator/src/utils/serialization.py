@@ -173,16 +173,22 @@ def canonical_candidate_block(block: Dict) -> bytes:
     aggregator_pk, timestamp
     """
 
+    def _stringify(value: Any) -> str:
+        # Accept tinyec Point objects directly.
+        if hasattr(value, "x") and hasattr(value, "y"):
+            return serialize_point(value)
+        return str(value)
+
     fields = [
-        block["task_id"],
-        str(block["round"]),
-        block["model_hash"],
-        block["model_link"],
-        f"{block['accuracy']:.8f}",
-        ",".join(block["participants"]),
-        ",".join(block["score_commits"]),
-        block["aggregator_pk"],
-        str(block["timestamp"]),
+        _stringify(block["task_id"]),
+        _stringify(block["round"]),
+        _stringify(block["model_hash"]),
+        _stringify(block["model_link"]),
+        f"{float(block['accuracy']):.8f}",
+        ",".join(_stringify(v) for v in block["participants"]),
+        ",".join(_stringify(v) for v in block["score_commits"]),
+        _stringify(block["aggregator_pk"]),
+        _stringify(block["timestamp"]),
     ]
 
     return "|".join(fields).encode("utf-8")

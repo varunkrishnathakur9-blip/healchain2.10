@@ -25,10 +25,11 @@ NON-RESPONSIBILITIES:
 
 import time
 import hashlib
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from utils.logging import get_logger
 from utils.serialization import canonical_candidate_block
+from crypto.ec_utils import serialize_point
 
 logger = get_logger("consensus.candidate")
 
@@ -50,16 +51,21 @@ def _canonical_block_bytes(block: Dict) -> bytes:
     - Lists MUST already be ordered
     """
 
+    def _stringify(value: Any) -> str:
+        if hasattr(value, "x") and hasattr(value, "y"):
+            return serialize_point(value)
+        return str(value)
+
     fields = [
-        block["task_id"],
-        str(block["round"]),
-        block["model_hash"],
-        block["model_link"],
-        f"{block['accuracy']:.8f}",
-        ",".join(block["participants"]),
-        ",".join(block["score_commits"]),
-        block["aggregator_pk"],
-        str(block["timestamp"]),
+        _stringify(block["task_id"]),
+        _stringify(block["round"]),
+        _stringify(block["model_hash"]),
+        _stringify(block["model_link"]),
+        f"{float(block['accuracy']):.8f}",
+        ",".join(_stringify(v) for v in block["participants"]),
+        ",".join(_stringify(v) for v in block["score_commits"]),
+        _stringify(block["aggregator_pk"]),
+        _stringify(block["timestamp"]),
     ]
 
     return "|".join(fields).encode("utf-8")
@@ -77,7 +83,7 @@ def build_candidate_block(
     model_link: str,
     accuracy: float,
     submissions: List[Dict],
-    aggregator_pk: str,
+    aggregator_pk: Any,
 ) -> Dict:
     """
     Build a deterministic candidate block.
@@ -105,8 +111,8 @@ def build_candidate_block(
               ...
             }
 
-    aggregator_pk : str
-        Aggregator public key (string form)
+    aggregator_pk : Any
+        Aggregator public key (string or EC Point)
 
     Returns:
     --------
@@ -139,6 +145,12 @@ def build_candidate_block(
     # ------------------------------------------------------------
     # Assemble candidate block
     # ------------------------------------------------------------
+    aggregator_pk_value = (
+        serialize_point(aggregator_pk)
+        if hasattr(aggregator_pk, "x") and hasattr(aggregator_pk, "y")
+        else str(aggregator_pk)
+    )
+
     block = {
         "task_id": task_id,
         "round": int(round_no),
@@ -147,7 +159,7 @@ def build_candidate_block(
         "accuracy": accuracy,
         "participants": participants,
         "score_commits": score_commits,
-        "aggregator_pk": aggregator_pk,
+        "aggregator_pk": aggregator_pk_value,
         "timestamp": int(time.time()),
     }
 
