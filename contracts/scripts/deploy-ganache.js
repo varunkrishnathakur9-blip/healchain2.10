@@ -23,6 +23,16 @@ async function main() {
   // Read RewardDistribution ABI
   const rewardArtifactPath = path.join(process.cwd(), 'artifacts', 'src', 'RewardDistribution.sol', 'RewardDistribution.json');
   const rewardArtifact = JSON.parse(await fs.readFile(rewardArtifactPath, 'utf8'));
+
+  // Read BlockPublisher ABI (optional)
+  const blockPublisherArtifactPath = path.join(process.cwd(), 'artifacts', 'src', 'BlockPublisher.sol', 'BlockPublisher.json');
+  let blockPublisherArtifact;
+  try {
+    blockPublisherArtifact = JSON.parse(await fs.readFile(blockPublisherArtifactPath, 'utf8'));
+  } catch (error) {
+    console.log("⚠️  BlockPublisher artifact not found. Skipping BlockPublisher deployment.");
+    blockPublisherArtifact = null;
+  }
   
   // Read StakeRegistry ABI (optional - may not be compiled)
   const stakeRegistryArtifactPath = path.join(process.cwd(), 'artifacts', 'src', 'StakeRegistry.sol', 'StakeRegistry.json');
@@ -59,6 +69,24 @@ async function main() {
   await reward.waitForDeployment();
   const rewardAddress = await reward.getAddress();
   console.log("RewardDistribution deployed to:", rewardAddress);
+
+  // Deploy BlockPublisher (if artifact exists)
+  let blockPublisherAddress = null;
+  if (blockPublisherArtifact) {
+    const BlockPublisherFactory = new ethers.ContractFactory(
+      blockPublisherArtifact.abi,
+      blockPublisherArtifact.bytecode,
+      wallet
+    );
+
+    console.log("Deploying BlockPublisher...");
+    const blockPublisher = await BlockPublisherFactory.deploy(wallet.address);
+    await blockPublisher.waitForDeployment();
+    blockPublisherAddress = await blockPublisher.getAddress();
+    console.log("BlockPublisher deployed to:", blockPublisherAddress);
+  } else {
+    console.log("⚠️  Skipping BlockPublisher deployment (contract not compiled)");
+  }
 
   // Deploy StakeRegistry (if artifact exists)
   let stakeRegistryAddress = null;
@@ -124,6 +152,9 @@ async function main() {
     if (frontendEnv) {
       frontendEnv = updateEnvVar(frontendEnv, 'NEXT_PUBLIC_ESCROW_ADDRESS', escrowAddress);
       frontendEnv = updateEnvVar(frontendEnv, 'NEXT_PUBLIC_REWARD_ADDRESS', rewardAddress);
+      if (blockPublisherAddress) {
+        frontendEnv = updateEnvVar(frontendEnv, 'NEXT_PUBLIC_BLOCK_PUBLISHER_ADDRESS', blockPublisherAddress);
+      }
       if (stakeRegistryAddress) {
         frontendEnv = updateEnvVar(frontendEnv, 'NEXT_PUBLIC_STAKE_REGISTRY_ADDRESS', stakeRegistryAddress);
       }
@@ -180,6 +211,9 @@ BACKEND_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4
     backendEnv = updateBackendVar(backendEnv, 'ESCROW_ADDRESS', escrowAddress);
     backendEnv = updateBackendVar(backendEnv, 'ESCROW_CONTRACT_ADDRESS', escrowAddress);
     backendEnv = updateBackendVar(backendEnv, 'REWARD_CONTRACT_ADDRESS', rewardAddress);
+    if (blockPublisherAddress) {
+      backendEnv = updateBackendVar(backendEnv, 'BLOCK_PUBLISHER_ADDRESS', blockPublisherAddress);
+    }
     if (stakeRegistryAddress) {
       backendEnv = updateBackendVar(backendEnv, 'STAKE_REGISTRY_ADDRESS', stakeRegistryAddress);
     }
@@ -203,6 +237,9 @@ BACKEND_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4
   console.log(`ESCROW_ADDRESS=${escrowAddress}`);
   console.log(`ESCROW_CONTRACT_ADDRESS=${escrowAddress}`);
   console.log(`REWARD_CONTRACT_ADDRESS=${rewardAddress}`);
+  if (blockPublisherAddress) {
+    console.log(`BLOCK_PUBLISHER_ADDRESS=${blockPublisherAddress}`);
+  }
   if (stakeRegistryAddress) {
     console.log(`STAKE_REGISTRY_ADDRESS=${stakeRegistryAddress}`);
   }

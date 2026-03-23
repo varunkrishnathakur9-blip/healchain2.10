@@ -85,6 +85,17 @@ async function main() {
   // Read RewardDistribution ABI
   const rewardArtifactPath = path.join(process.cwd(), 'artifacts', 'src', 'RewardDistribution.sol', 'RewardDistribution.json');
   const rewardArtifact = JSON.parse(await fs.readFile(rewardArtifactPath, 'utf8'));
+
+  // Read BlockPublisher ABI
+  const blockPublisherArtifactPath = path.join(process.cwd(), 'artifacts', 'src', 'BlockPublisher.sol', 'BlockPublisher.json');
+  let blockPublisherArtifact;
+  try {
+    blockPublisherArtifact = JSON.parse(await fs.readFile(blockPublisherArtifactPath, 'utf8'));
+  } catch (error) {
+    console.log("⚠️  BlockPublisher artifact not found. Make sure contract is compiled:");
+    console.log("   cd contracts && npm run compile");
+    blockPublisherArtifact = null;
+  }
   
   // Read StakeRegistry ABI
   const stakeRegistryArtifactPath = path.join(process.cwd(), 'artifacts', 'src', 'StakeRegistry.sol', 'StakeRegistry.json');
@@ -141,6 +152,28 @@ async function main() {
     await reward.waitForDeployment();
     const rewardAddress = await reward.getAddress();
     console.log("✅ RewardDistribution deployed to:", rewardAddress);
+
+    // Deploy BlockPublisher (if artifact exists)
+    let blockPublisherAddress = null;
+    if (blockPublisherArtifact) {
+      const BlockPublisherFactory = new ethers.ContractFactory(
+        blockPublisherArtifact.abi,
+        blockPublisherArtifact.bytecode,
+        wallet
+      );
+
+      console.log("Deploying BlockPublisher...");
+      const blockPublisher = await BlockPublisherFactory.deploy(deployerAddress, {
+        gasLimit: 5000000
+      });
+
+      console.log("Transaction hash:", blockPublisher.deploymentTransaction().hash);
+      await blockPublisher.waitForDeployment();
+      blockPublisherAddress = await blockPublisher.getAddress();
+      console.log("✅ BlockPublisher deployed to:", blockPublisherAddress);
+    } else {
+      console.log("⚠️  Skipping BlockPublisher deployment (contract not compiled)");
+    }
 
     // Deploy StakeRegistry (if artifact exists)
     let stakeRegistryAddress = null;
@@ -244,6 +277,11 @@ NEXT_PUBLIC_DEBUG=false
       
       // Update or add REWARD_ADDRESS
       frontendEnv = updateEnvVar(frontendEnv, 'NEXT_PUBLIC_REWARD_ADDRESS', rewardAddress);
+
+      // Update or add BLOCK_PUBLISHER_ADDRESS (if deployed)
+      if (blockPublisherAddress) {
+        frontendEnv = updateEnvVar(frontendEnv, 'NEXT_PUBLIC_BLOCK_PUBLISHER_ADDRESS', blockPublisherAddress);
+      }
       
       // Update or add STAKE_REGISTRY_ADDRESS (if deployed)
       if (stakeRegistryAddress) {
@@ -270,6 +308,9 @@ NEXT_PUBLIC_DEBUG=false
       console.log(`   📋 Manually add to frontend/.env.local:`);
       console.log(`      NEXT_PUBLIC_ESCROW_ADDRESS=${escrowAddress}`);
       console.log(`      NEXT_PUBLIC_REWARD_ADDRESS=${rewardAddress}`);
+      if (blockPublisherAddress) {
+        console.log(`      NEXT_PUBLIC_BLOCK_PUBLISHER_ADDRESS=${blockPublisherAddress}`);
+      }
       if (stakeRegistryAddress) {
         console.log(`      NEXT_PUBLIC_STAKE_REGISTRY_ADDRESS=${stakeRegistryAddress}`);
       }
@@ -330,6 +371,11 @@ BACKEND_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4
       
       // Update or add REWARD_CONTRACT_ADDRESS
       backendEnv = updateEnvVar(backendEnv, 'REWARD_CONTRACT_ADDRESS', rewardAddress);
+
+      // Update or add BLOCK_PUBLISHER_ADDRESS (if deployed)
+      if (blockPublisherAddress) {
+        backendEnv = updateEnvVar(backendEnv, 'BLOCK_PUBLISHER_ADDRESS', blockPublisherAddress);
+      }
       
       // Update or add STAKE_REGISTRY_ADDRESS (if deployed)
       if (stakeRegistryAddress) {
@@ -357,6 +403,9 @@ BACKEND_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4
       console.log(`      ESCROW_ADDRESS=${escrowAddress}`);
       console.log(`      ESCROW_CONTRACT_ADDRESS=${escrowAddress}`);
       console.log(`      REWARD_CONTRACT_ADDRESS=${rewardAddress}`);
+      if (blockPublisherAddress) {
+        console.log(`      BLOCK_PUBLISHER_ADDRESS=${blockPublisherAddress}`);
+      }
       if (stakeRegistryAddress) {
         console.log(`      STAKE_REGISTRY_ADDRESS=${stakeRegistryAddress}`);
       }

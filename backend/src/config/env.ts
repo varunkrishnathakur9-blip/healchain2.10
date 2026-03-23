@@ -53,5 +53,6 @@ export const env = {
 
   BACKEND_PRIVATE_KEY: requirePrivateKey("BACKEND_PRIVATE_KEY"),
   ESCROW_ADDRESS: requireAddress("ESCROW_ADDRESS"),
+  BLOCK_PUBLISHER_ADDRESS: optionalAddress("BLOCK_PUBLISHER_ADDRESS"),
   STAKE_REGISTRY_ADDRESS: optionalAddress("STAKE_REGISTRY_ADDRESS"), // Optional: can be undefined if not deployed yet
 };
