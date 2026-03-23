@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAccount } from 'wagmi';
 import { useReadContract } from 'wagmi';
 import { useTaskList } from '@/hooks/useTask';
@@ -149,9 +149,15 @@ function MinerRevealStatus({ taskID, minerAddress, chainConfig, onRevealed }: {
     query: { enabled: !!chainConfig?.contracts.rewardDistribution && !!minerAddress },
   });
 
+  const lastReportedRef = useRef<boolean | null>(null);
+
   useEffect(() => {
     if (minerReveal) {
-      onRevealed((minerReveal as any).revealed === true);
+      const revealed = (minerReveal as any).revealed === true;
+      // Avoid parent-state update loops when effect reruns with equivalent value.
+      if (lastReportedRef.current === revealed) return;
+      lastReportedRef.current = revealed;
+      onRevealed(revealed);
     }
   }, [minerReveal, onRevealed]);
 
@@ -188,6 +194,10 @@ function PublisherTaskCard({ task }: { task: any }) {
 
   const handleMinerRevealed = (minerAddress: string) => (revealed: boolean) => {
     setRevealedMiners((prev) => {
+      const alreadyHas = prev.has(minerAddress);
+      if ((revealed && alreadyHas) || (!revealed && !alreadyHas)) {
+        return prev;
+      }
       const next = new Set(prev);
       if (revealed) {
         next.add(minerAddress);

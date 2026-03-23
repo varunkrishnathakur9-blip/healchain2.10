@@ -88,7 +88,7 @@ class BackendSender:
             if resp.status_code != 200:
                 logger.warning(
                     f"[BackendSender] Candidate broadcast failed "
-                    f"(status={resp.status_code})"
+                    f"(status={resp.status_code}): {resp.text}"
                 )
                 return False
 

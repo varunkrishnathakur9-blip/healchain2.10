@@ -62,7 +62,13 @@ router.post(
         modelLink
       );
 
-      res.json(block);
+      res.json({
+        ...block,
+        accuracy:
+          typeof (block as any).accuracy === "bigint"
+            ? (block as any).accuracy.toString()
+            : (block as any).accuracy,
+      });
     } catch (err) {
       next(err);
     }

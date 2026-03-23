@@ -242,6 +242,12 @@ class HealChainAggregator:
 
         # Fetch full task details (includes initialModelLink and status fields).
         task_details = self.backend_rx.fetch_task_details() or {}
+        task_status = str(task_details.get("status") or "").upper()
+        if task_status and task_status not in {"OPEN", "AGGREGATING"}:
+            raise RuntimeError(
+                f"Task {self.task_id} status is '{task_status}'. "
+                "Aggregation can run only when task status is OPEN or AGGREGATING."
+            )
         self.state.initial_model_link = task_details.get("initialModelLink")
 
         self.runtime_evaluator, self.runtime_evaluator_source = build_runtime_evaluator(
@@ -466,7 +472,10 @@ class HealChainAggregator:
             aggregator_pk=self.keys.pkA,
         )
 
-        self.backend_tx.broadcast_candidate(candidate)
+        if not self.backend_tx.broadcast_candidate(candidate):
+            raise RuntimeError(
+                "Candidate broadcast failed. Backend rejected /submit-candidate."
+            )
         self.progress.mark("candidate_built")
 
         return candidate
