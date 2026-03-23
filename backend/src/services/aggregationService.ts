@@ -58,7 +58,7 @@ export async function submitCandidate(
  * - Increments the current round counter
  * - Resets task status to OPEN to allow new submissions
  */
-export async function resetRound(taskID: string) {
+export async function resetRound(taskID: string, modelLink?: string) {
   const task = await prisma.task.findUnique({ where: { taskID } });
 
   if (!task) {
@@ -72,13 +72,18 @@ export async function resetRound(taskID: string) {
       where: { taskID }
     });
 
-    // 2. Increment round and reset status
+    // 2. Increment round, carry-forward model link (if provided), and reset status
+    const taskUpdate: any = {
+      currentRound: { increment: 1 },
+      status: TaskStatus.OPEN
+    };
+    if (typeof modelLink === "string" && modelLink.trim().length > 0) {
+      taskUpdate.initialModelLink = modelLink.trim();
+    }
+
     const updatedTask = await tx.task.update({
       where: { taskID },
-      data: {
-        currentRound: { increment: 1 },
-        status: TaskStatus.OPEN
-      } as any
+      data: taskUpdate
     });
 
     return updatedTask;

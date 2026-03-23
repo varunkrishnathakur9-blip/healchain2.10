@@ -125,7 +125,21 @@ class HealChainAggregator:
                 f"[Aggregator] Accuracy {acc:.4f} < {self.state.required_accuracy:.4f}. "
                 f"Starting next round (current round: {self.state.round})."
             )
-            if self.backend_tx.reset_round():
+
+            # Strict iterative Algorithm-4 retrain flow:
+            # carry W_new into next round as the new base model link.
+            retrain_model_link, retrain_model_hash = publish_model_artifact(
+                updated_model,
+                task_id=self.task_id,
+                round_no=self.state.round,
+            )
+            logger.info(
+                "[Aggregator] Low-accuracy retrain artifact published "
+                f"(round={self.state.round}, modelLink={retrain_model_link}, "
+                f"modelHash={retrain_model_hash[:12]}...)"
+            )
+
+            if self.backend_tx.reset_round(model_link=retrain_model_link):
                 logger.info("[Aggregator] Round reset successful. Aggregator exiting.")
                 self.running = False
                 return

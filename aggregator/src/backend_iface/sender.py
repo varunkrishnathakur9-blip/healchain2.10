@@ -18,8 +18,11 @@ SECURITY MODEL:
 - All payloads are assumed to be validated upstream
 """
 
-import requests
+import os
+import time
 from typing import Dict
+
+import requests
 
 from utils.logging import get_logger
 
@@ -34,6 +37,14 @@ class BackendSender:
     def __init__(self, task_id: str):
         self.task_id = task_id
         self.base_url = self._load_backend_url()
+        self._http_timeout = (
+            float(os.getenv("BACKEND_CONNECT_TIMEOUT", "5")),
+            float(os.getenv("BACKEND_READ_TIMEOUT", "120")),
+        )
+        self._round_reset_retry_count = int(os.getenv("ROUND_RESET_RETRIES", "8"))
+        self._round_reset_backoff_seconds = float(
+            os.getenv("ROUND_RESET_BACKOFF_SECONDS", "1.0")
+        )
 
     # ------------------------------------------------------------------
     # Public API
@@ -71,7 +82,7 @@ class BackendSender:
             resp = requests.post(
                 endpoint,
                 json=normalized_payload,
-                timeout=5,
+                timeout=self._http_timeout,
             )
 
             if resp.status_code != 200:
@@ -121,7 +132,7 @@ class BackendSender:
             resp = requests.post(
                 endpoint,
                 json=normalized_payload,
-                timeout=5,
+                timeout=self._http_timeout,
             )
 
             if resp.status_code != 200:
@@ -138,25 +149,45 @@ class BackendSender:
             logger.error(f"[BackendSender] Error publishing payload: {e}")
             return False
 
-    def reset_round(self) -> bool:
+    def reset_round(self, model_link: str | None = None) -> bool:
         """
         Trigger a new FL round in the backend (Algorithm 4 lines 35-40).
         - Increments round counter
         - Clears old gradients
         """
         endpoint = f"{self.base_url}/aggregator/{self.task_id}/reset-round"
+        payload = {}
+        if isinstance(model_link, str) and model_link.strip():
+            payload["modelLink"] = model_link.strip()
 
-        try:
-            resp = requests.post(endpoint, timeout=5)
-            if resp.status_code == 200:
-                logger.info(f"[BackendSender] Round reset triggered successfully for {self.task_id}")
-                return True
-            else:
-                logger.warning(f"[BackendSender] Round reset failed: {resp.text}")
-                return False
-        except Exception as e:
-            logger.error(f"[BackendSender] Error triggering round reset: {e}")
-            return False
+        for attempt in range(self._round_reset_retry_count):
+            try:
+                resp = requests.post(
+                    endpoint,
+                    json=payload if payload else None,
+                    timeout=self._http_timeout,
+                )
+                if resp.status_code == 200:
+                    logger.info(
+                        "[BackendSender] Round reset triggered successfully "
+                        f"for {self.task_id} (attempt {attempt + 1}/{self._round_reset_retry_count})"
+                    )
+                    return True
+
+                logger.warning(
+                    "[BackendSender] Round reset failed "
+                    f"(status={resp.status_code}, attempt={attempt + 1}/{self._round_reset_retry_count})"
+                )
+            except Exception as e:
+                logger.warning(
+                    "[BackendSender] Error triggering round reset "
+                    f"(attempt={attempt + 1}/{self._round_reset_retry_count}): {e}"
+                )
+
+            if attempt < self._round_reset_retry_count - 1:
+                time.sleep(self._round_reset_backoff_seconds * (attempt + 1))
+
+        return False
 
     # ------------------------------------------------------------------
     # Internal Helpers
@@ -166,9 +197,6 @@ class BackendSender:
         """
         Load backend base URL from environment.
         """
-
-        import os
-
         url = os.getenv("BACKEND_URL")
         if not url:
             raise EnvironmentError("BACKEND_URL not set")

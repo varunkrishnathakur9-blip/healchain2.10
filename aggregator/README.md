@@ -17,6 +17,7 @@ The HealChain Aggregator implements Modules M4-M6 of the HealChain federated lea
 - Silent crypto fallbacks are removed in critical paths. If decryption/recovery fails, task aggregation stops with an explicit error.
 - Dense model reconstruction is performed only after sparse recovery succeeds, aligning with Algorithm 4 flow.
 - Candidate payload now includes `modelLink` (`ml`) and backend persists it as task's current model link for the next round.
+- For `acc < target`, aggregator now performs strict iterative retrain carry-forward: it publishes `W_new`, passes that `modelLink` to backend `reset-round`, and next round starts from this updated global model.
 - Base model bootstrap is strict-by-default: aggregator loads current model from task `initialModelLink` and fails early if unavailable.
 
 ## 📋 Architecture
@@ -168,6 +169,10 @@ NDD_FE_LOG_EVERY=25000               # NDD-FE progress log frequency
 BSGS_WORKERS=4                       # Parallel workers for BSGS
 BSGS_CHUNK_SIZE=5000                 # Chunk size for BSGS parallel mode
 BSGS_LOG_EVERY=200                   # BSGS progress log frequency
+BACKEND_CONNECT_TIMEOUT=5            # HTTP connect timeout (seconds) for backend calls
+BACKEND_READ_TIMEOUT=120             # HTTP read timeout (seconds) for backend calls
+ROUND_RESET_RETRIES=8                # Retries for /reset-round when backend is slow
+ROUND_RESET_BACKOFF_SECONDS=1.0      # Linear backoff base between round-reset retries
 ```
 
 **Built-in sparse validation dataset format (`AGGREGATOR_VALIDATION_DATA_PATH`)**

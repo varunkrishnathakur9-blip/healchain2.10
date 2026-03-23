@@ -769,15 +769,17 @@ router.post(
   async (req, res, next) => {
     try {
       const { taskID } = req.params;
+      const { modelLink } = req.body || {};
       const { resetRound } = await import("../services/aggregationService.js");
 
-      const task = await resetRound(taskID);
+      const task = await resetRound(taskID, modelLink);
 
       res.json({
         success: true,
         message: `Task ${taskID} reset to round ${(task as any).currentRound}`,
         currentRound: (task as any).currentRound,
-        status: task.status
+        status: task.status,
+        initialModelLink: (task as any).initialModelLink || null
       });
     } catch (err: any) {
       next(err);
