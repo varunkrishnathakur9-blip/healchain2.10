@@ -12,6 +12,7 @@ import {
   canonicalFeedbackMessage,
   verifyFeedbackSignature,
 } from "../crypto/feedbackSignature.js";
+import { verifyCandidateBlockSignature } from "../crypto/candidateSignature.js";
 
 /**
  * M5: Submit miner verification vote
@@ -113,6 +114,8 @@ export async function submitVerification(
   if (!task.block) {
     throw new Error(`No candidate block for task ${taskID}`);
   }
+  const block = task.block as any;
+
   if ((task.block as any).candidateHash && (task.block as any).candidateHash !== normalizedCandidateHash) {
     throw new Error("candidateHash does not match current candidate block");
   }
@@ -122,6 +125,73 @@ export async function submitVerification(
   );
   if (candidateParticipants.length > 0 && !candidateParticipants.includes(normalizedMinerPk)) {
     throw new Error("Miner is not in candidate participant list");
+  }
+
+  // ------------------------------------------------------------------
+  // Strict Algorithm-5 Step 1 (backend-side): verify aggregator signature
+  // over HASH(B), with B canonicalized exactly as candidate construction.
+  // ------------------------------------------------------------------
+  if (!block.aggregatorPK || !block.signatureA || !block.candidateTimestamp) {
+    throw new Error("Candidate block is missing aggregator signature fields");
+  }
+
+  const blockAccuracyScaled =
+    typeof block.accuracy === "bigint"
+      ? Number(block.accuracy)
+      : Number(block.accuracy ?? 0);
+
+  if (!Number.isFinite(blockAccuracyScaled)) {
+    throw new Error("Candidate block has invalid accuracy");
+  }
+
+  const signatureValid = verifyCandidateBlockSignature({
+    taskID: task.taskID,
+    round:
+      typeof block.round === "number"
+        ? block.round
+        : Number((task as any).currentRound ?? 1),
+    modelHash: String(block.modelHash || ""),
+    modelLink: String(block.modelLink || ""),
+    accuracy: blockAccuracyScaled / 1_000_000,
+    participants: Array.isArray(block.participants)
+      ? block.participants.map((v: unknown) => String(v))
+      : [],
+    scoreCommits: Array.isArray(block.scoreCommits)
+      ? block.scoreCommits.map((v: unknown) => String(v))
+      : [],
+    aggregatorPK: String(block.aggregatorPK || ""),
+    candidateTimestamp: block.candidateTimestamp,
+    candidateHash: String(block.candidateHash || ""),
+    signatureA: String(block.signatureA || ""),
+  });
+
+  if (!signatureValid) {
+    throw new Error("Invalid candidate block aggregator signature");
+  }
+
+  // ------------------------------------------------------------------
+  // Strict Algorithm-5 Step 2 (backend-side): this miner's scoreCommit
+  // must be present in B.scoreCommits.
+  // ------------------------------------------------------------------
+  const minerGradient = await prisma.gradient.findFirst({
+    where: {
+      taskID,
+      minerAddress: normalizedAddress,
+    },
+    orderBy: { createdAt: "desc" },
+    select: { scoreCommit: true },
+  });
+
+  if (!minerGradient?.scoreCommit) {
+    throw new Error("missing scoreCommit for miner");
+  }
+
+  const blockScoreCommits = Array.isArray(block.scoreCommits)
+    ? block.scoreCommits.map((v: unknown) => String(v))
+    : [];
+
+  if (!blockScoreCommits.includes(String(minerGradient.scoreCommit))) {
+    throw new Error("missing scoreCommit");
   }
 
   // Check if already voted

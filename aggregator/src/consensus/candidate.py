@@ -29,7 +29,7 @@ from typing import Any, Dict, List
 
 from utils.logging import get_logger
 from utils.serialization import canonical_candidate_block
-from crypto.ec_utils import serialize_point
+from crypto.ec_utils import serialize_hex_point
 
 logger = get_logger("consensus.candidate")
 
@@ -53,7 +53,7 @@ def _canonical_block_bytes(block: Dict) -> bytes:
 
     def _stringify(value: Any) -> str:
         if hasattr(value, "x") and hasattr(value, "y"):
-            return serialize_point(value)
+            return serialize_hex_point(value)
         return str(value)
 
     fields = [
@@ -146,7 +146,7 @@ def build_candidate_block(
     # Assemble candidate block
     # ------------------------------------------------------------
     aggregator_pk_value = (
-        serialize_point(aggregator_pk)
+        serialize_hex_point(aggregator_pk)
         if hasattr(aggregator_pk, "x") and hasattr(aggregator_pk, "y")
         else str(aggregator_pk)
     )

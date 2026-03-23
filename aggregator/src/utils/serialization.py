@@ -23,7 +23,7 @@ Design Principles:
 import json
 from typing import Any, Dict, List
 
-from crypto.ec_utils import serialize_point, parse_point
+from crypto.ec_utils import serialize_point, serialize_hex_point, parse_point
 
 
 # -------------------------------------------------------------------
@@ -176,7 +176,7 @@ def canonical_candidate_block(block: Dict) -> bytes:
     def _stringify(value: Any) -> str:
         # Accept tinyec Point objects directly.
         if hasattr(value, "x") and hasattr(value, "y"):
-            return serialize_point(value)
+            return serialize_hex_point(value)
         return str(value)
 
     fields = [
