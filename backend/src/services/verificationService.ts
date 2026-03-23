@@ -33,7 +33,14 @@ export async function submitVerification(
     throw new Error(`Task ${taskID} not found`);
   }
 
-  if (task.status !== TaskStatus.REVEAL_OPEN && task.status !== TaskStatus.VERIFIED) {
+  // Verification belongs to the post-candidate, pre-publish phase.
+  // Keep REVEAL_OPEN/VERIFIED for backward compatibility with tasks created
+  // before status-alignment patches.
+  if (
+    task.status !== TaskStatus.AGGREGATING &&
+    task.status !== TaskStatus.REVEAL_OPEN &&
+    task.status !== TaskStatus.VERIFIED
+  ) {
     throw new Error(`Task ${taskID} is not in verification phase`);
   }
 

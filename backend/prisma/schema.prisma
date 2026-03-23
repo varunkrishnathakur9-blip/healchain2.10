@@ -111,7 +111,16 @@ model Block {
   id        String      @id @default(cuid())
   taskID    String      @unique
   modelHash String
+  modelLink String?     @db.Text
   accuracy  BigInt
+  candidateHash     String?
+  participants      String[] @default([])
+  scoreCommits      String[] @default([])
+  aggregatorPK      String?  @db.Text
+  signatureA        String?  @db.Text
+  artifactHash      String?
+  modelMetadata     Json?
+  candidateTimestamp BigInt?
   status    BlockStatus @default(PENDING)
 
   task Task @relation(fields: [taskID], references: [taskID])

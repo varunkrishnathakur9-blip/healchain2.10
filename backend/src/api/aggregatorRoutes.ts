@@ -8,6 +8,19 @@ import { requireWalletAuth } from "../middleware/auth.js";
 
 const router = Router();
 
+function _toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((v) => String(v));
+}
+
+function _serializeBigInts<T>(obj: T): T {
+  return JSON.parse(
+    JSON.stringify(obj, (_key, value) =>
+      typeof value === "bigint" ? value.toString() : value
+    )
+  ) as T;
+}
+
 /**
  * M3: Miner submits encrypted update metadata
  * Algorithm 3: Accepts ciphertext (encrypted gradient) for aggregator decryption
@@ -50,25 +63,58 @@ router.post(
  */
 router.post(
   "/submit-candidate",
-  requireFields(["taskID", "modelHash", "accuracy"]),
+  requireFields([
+    "taskID",
+    "modelHash",
+    "modelLink",
+    "accuracy",
+    "miners",
+    "scoreCommits",
+    "aggregatorPK",
+    "hash",
+    "signatureA",
+  ]),
   async (req, res, next) => {
     try {
-      const { taskID, modelHash, modelLink, accuracy } = req.body;
+      const {
+        taskID,
+        modelHash,
+        modelLink,
+        accuracy,
+        miners,
+        scoreCommits,
+        aggregatorPK,
+        hash,
+        signatureA,
+        artifactHash,
+        modelMetadata,
+        timestamp,
+      } = req.body;
+
+      const parsedAccuracy = BigInt(accuracy);
+      const parsedTimestamp =
+        timestamp !== undefined && timestamp !== null && `${timestamp}`.trim() !== ""
+          ? BigInt(timestamp)
+          : BigInt(Math.floor(Date.now() / 1000));
 
       const block = await submitCandidate(
         taskID,
         modelHash,
-        BigInt(accuracy),
-        modelLink
+        parsedAccuracy,
+        {
+          modelLink,
+          participants: _toStringArray(miners),
+          scoreCommits: _toStringArray(scoreCommits),
+          aggregatorPK: typeof aggregatorPK === "string" ? aggregatorPK : String(aggregatorPK),
+          candidateHash: typeof hash === "string" ? hash : String(hash),
+          signatureA: typeof signatureA === "string" ? signatureA : String(signatureA),
+          artifactHash: artifactHash === undefined || artifactHash === null ? undefined : String(artifactHash),
+          modelMetadata,
+          candidateTimestamp: parsedTimestamp,
+        }
       );
 
-      res.json({
-        ...block,
-        accuracy:
-          typeof (block as any).accuracy === "bigint"
-            ? (block as any).accuracy.toString()
-            : (block as any).accuracy,
-      });
+      res.json(_serializeBigInts(block));
     } catch (err) {
       next(err);
     }
@@ -83,13 +129,14 @@ router.post(
   requireFields(["taskID", "modelHash", "accuracy", "miners"]),
   async (req, res, next) => {
     try {
-      const { taskID, modelHash, accuracy, miners } = req.body;
+      const { taskID, modelHash, accuracy, miners, scoreCommits } = req.body;
 
       const txHash = await publishOnChain(
         taskID,
         modelHash,
         BigInt(accuracy),
-        miners
+        miners,
+        Array.isArray(scoreCommits) ? scoreCommits : []
       );
 
       res.json({ txHash });

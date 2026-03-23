@@ -338,14 +338,21 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
 
   const m7aDone = accuracyRevealed === true;
   const myScoreRevealed = minerReveal && (minerReveal as any).revealed === true;
-  
-  // Get score commit from published block or task data
+
+  // Prefer backend-recorded commit keyed by miner address.
+  const taskScoreCommitsByMiner = ((task as any).scoreCommitsByMiner || {}) as Record<string, string>;
+  const myRawScoreCommitFromTask = taskScoreCommitsByMiner[address.toLowerCase()];
+
+  // Fallback to on-chain score commit list only when there is exactly one commit.
+  // With multiple commits, index-to-miner mapping is not guaranteed in this view.
   const scoreCommits = publishedBlock && (publishedBlock as any).scoreCommits 
     ? (publishedBlock as any).scoreCommits 
     : [];
-  const myScoreCommit = scoreCommits.length > 0 
-    ? `${scoreCommits[0]?.slice(0, 10)}...${scoreCommits[0]?.slice(-6)}` 
-    : task.scoreCommit || '0x000...000';
+  const myRawScoreCommit = myRawScoreCommitFromTask || (scoreCommits.length === 1 ? scoreCommits[0] : '');
+  const hasValidScoreCommit = /^0x[a-fA-F0-9]{64}$/.test(myRawScoreCommit || '');
+  const myScoreCommit = hasValidScoreCommit
+    ? `${myRawScoreCommit.slice(0, 10)}...${myRawScoreCommit.slice(-6)}`
+    : 'Unavailable';
   
   // Get revealed score from contract if available
   const myRevealedScore = minerReveal && (minerReveal as any).score 
@@ -372,7 +379,9 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
         </div>
         <div>
           <dt className="text-gray-600 dark:text-gray-400">My Score Commit:</dt>
-          <dd className="text-gray-900 dark:text-white font-mono text-xs break-all">{myScoreCommit}</dd>
+          <dd className="text-gray-900 dark:text-white font-mono text-xs break-all">
+            {myScoreCommit}
+          </dd>
         </div>
         <div>
           <dt className="text-gray-600 dark:text-gray-400">My Score Revealed:</dt>
@@ -382,7 +391,7 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
         </div>
       </dl>
 
-      {m7aDone && !myScoreRevealed && (
+      {m7aDone && !myScoreRevealed && hasValidScoreCommit && (
         <div className="space-y-2">
           <Button variant="primary" size="sm" onClick={() => setShowRevealForm(true)}>
             Reveal Score (M7b)
@@ -391,7 +400,7 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
             <div className="mt-2">
               <ScoreRevealForm
                 taskID={task.taskID}
-                scoreCommit={myScoreCommit}
+                scoreCommit={myRawScoreCommit}
                 onSuccess={() => {
                   setShowRevealForm(false);
                 }}
@@ -399,6 +408,12 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
             </div>
           )}
         </div>
+      )}
+
+      {m7aDone && !myScoreRevealed && !hasValidScoreCommit && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          Score commit not available yet for this miner. Wait for backend sync before revealing.
+        </p>
       )}
 
       {myScoreRevealed && (

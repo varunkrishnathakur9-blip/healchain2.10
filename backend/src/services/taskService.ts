@@ -507,6 +507,7 @@ export async function getTaskById(taskID: string) {
   const task = await prisma.task.findUnique({
     where: { taskID },
     include: {
+      block: true,
       miners: {
         select: {
           address: true,
@@ -520,6 +521,7 @@ export async function getTaskById(taskID: string) {
       gradients: {
         select: {
           minerAddress: true,
+          scoreCommit: true,
           status: true
         }
       },
@@ -583,9 +585,38 @@ export async function getTaskById(taskID: string) {
     })),
     gradients: task.gradients.map(gradient => ({
       minerAddress: gradient.minerAddress,
+      scoreCommit: gradient.scoreCommit,
       status: gradient.status
     })),
+    scoreCommitsByMiner: task.gradients.reduce((acc, gradient) => {
+      if (gradient.scoreCommit) {
+        acc[gradient.minerAddress.toLowerCase()] = gradient.scoreCommit;
+      }
+      return acc;
+    }, {} as Record<string, string>),
     _count: task._count,
+    block: task.block
+      ? {
+          id: task.block.id,
+          taskID: task.block.taskID,
+          modelHash: task.block.modelHash,
+          modelLink: (task.block as any).modelLink ?? null,
+          accuracy: task.block.accuracy.toString(),
+          candidateHash: (task.block as any).candidateHash ?? null,
+          participants: (task.block as any).participants ?? [],
+          scoreCommits: (task.block as any).scoreCommits ?? [],
+          aggregatorPK: (task.block as any).aggregatorPK ?? null,
+          signatureA: (task.block as any).signatureA ?? null,
+          artifactHash: (task.block as any).artifactHash ?? null,
+          modelMetadata: (task.block as any).modelMetadata ?? null,
+          candidateTimestamp:
+            (task.block as any).candidateTimestamp !== null &&
+            (task.block as any).candidateTimestamp !== undefined
+              ? String((task.block as any).candidateTimestamp)
+              : null,
+          status: task.block.status,
+        }
+      : null,
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
     aggregator, // Add aggregator to response
@@ -619,6 +650,12 @@ export async function getAllTasks(filters: {
           id: 'asc' // Deterministic order for aggregator selection
         }
       },
+      gradients: {
+        select: {
+          minerAddress: true,
+          scoreCommit: true
+        }
+      },
       _count: {
         select: {
           miners: true,
@@ -648,6 +685,12 @@ export async function getAllTasks(filters: {
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       miners: task.miners,
+      scoreCommitsByMiner: task.gradients.reduce((acc, gradient) => {
+        if (gradient.scoreCommit) {
+          acc[gradient.minerAddress.toLowerCase()] = gradient.scoreCommit;
+        }
+        return acc;
+      }, {} as Record<string, string>),
       aggregator,
       _count: task._count
     };
@@ -776,13 +819,17 @@ export async function checkRevealDeadlines() {
 }
 
 /**
- * Check consensus for REVEAL_OPEN tasks and update to VERIFIED if consensus reached
+ * Check consensus for verification-phase tasks and update to VERIFIED if consensus reached.
+ * Primary phase is AGGREGATING; REVEAL_OPEN with publishTx=null is supported for
+ * backward compatibility with older status transitions.
  */
 export async function checkConsensusAndUpdate() {
-  // Get all REVEAL_OPEN tasks with verifications
-  const revealOpenTasks = await prisma.task.findMany({
+  const verificationTasks = await prisma.task.findMany({
     where: {
-      status: TaskStatus.REVEAL_OPEN
+      OR: [
+        { status: TaskStatus.AGGREGATING },
+        { status: TaskStatus.REVEAL_OPEN, publishTx: null }
+      ]
     },
     include: {
       miners: true,
@@ -793,7 +840,7 @@ export async function checkConsensusAndUpdate() {
 
   let updatedCount = 0;
 
-  for (const task of revealOpenTasks) {
+  for (const task of verificationTasks) {
     // Only check if block exists (aggregation completed)
     if (!task.block) {
       continue;
@@ -814,7 +861,7 @@ export async function checkConsensusAndUpdate() {
         data: { status: TaskStatus.VERIFIED }
       });
       updatedCount++;
-      console.log(`[TaskScheduler] Updated task ${task.taskID}: REVEAL_OPEN → VERIFIED (consensus reached: ${validVotes}/${totalMiners} valid votes)`);
+      console.log(`[TaskScheduler] Updated task ${task.taskID}: ${task.status} → VERIFIED (consensus reached: ${validVotes}/${totalMiners} valid votes)`);
     }
   }
 

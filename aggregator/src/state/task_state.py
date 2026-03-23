@@ -19,6 +19,7 @@ NON-RESPONSIBILITIES:
 - No persistence beyond process lifetime
 """
 
+import os
 from typing import Any, Dict, List, Optional
 
 from utils.logging import get_logger
@@ -69,6 +70,7 @@ class TaskState:
         # Task status
         # ------------------------------
         self.status: str = "INITIALIZED"
+        self.candidate_block: Optional[Dict] = None
 
     # ------------------------------------------------------------------
     # Metadata Loading
@@ -99,7 +101,21 @@ class TaskState:
 
         self.publisher_pk = metadata.get("publisher_pk") or metadata.get("publisher")
         self.required_accuracy = metadata.get("required_accuracy") or metadata.get("targetAccuracy", 0.8)
-        self.max_rounds = metadata.get("max_rounds", 1)
+
+        # maxRounds may come from various metadata keys; fallback to env for strict iterative retrain.
+        max_rounds_raw = (
+            metadata.get("max_rounds")
+            or metadata.get("maxRounds")
+            or (metadata.get("meta") or {}).get("maxRounds")
+            or os.getenv("AGGREGATOR_MAX_ROUNDS", "5")
+        )
+        try:
+            self.max_rounds = int(max_rounds_raw)
+        except Exception as e:
+            raise ValueError(f"Invalid max rounds value: {max_rounds_raw!r}") from e
+        if self.max_rounds <= 0:
+            raise ValueError(f"max_rounds must be >= 1, got {self.max_rounds}")
+
         self.round = metadata.get("currentRound", 1)
         self.initial_model_link = metadata.get("initial_model_link") or metadata.get("initialModelLink")
 
@@ -123,11 +139,25 @@ class TaskState:
         """
         self.current_model = new_model
         self.round += 1
-        self.status = "MODEL_UPDATED"
+        self.status = TASK_STATE_EVALUATED
 
         logger.info(
             f"[TaskState] Model updated | round={self.round}"
         )
+
+    def set_candidate_block(self, block: Dict):
+        """
+        Store latest candidate block payload for this task.
+        """
+        self.candidate_block = block
+        self.status = TASK_STATE_CANDIDATE_BUILT
+
+    def set_status(self, status: str):
+        """
+        Explicitly set task status for strict Algorithm-4 state transitions.
+        """
+        self.status = status
+        logger.info(f"[TaskState] Status -> {status}")
 
     # ------------------------------------------------------------------
     # State Queries

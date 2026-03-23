@@ -27,6 +27,11 @@ from config.constants import (
     AGGREGATION_TIMEOUT,
     BACKEND_POLL_INTERVAL,
     FEEDBACK_TIMEOUT,
+    TASK_STATE_COLLECTING,
+    TASK_STATE_AGGREGATING,
+    TASK_STATE_VERIFYING,
+    TASK_STATE_PUBLISHED,
+    TASK_STATE_ABORTED,
 )
 
 from state.task_state import TaskState
@@ -41,7 +46,7 @@ from aggregation.aggregator import secure_aggregate
 
 from model.apply_update import apply_model_update
 from model.evaluate import evaluate_model
-from model.artifact import publish_model_artifact
+from model.artifact import publish_model_artifact, compute_candidate_model_hash
 from model.vector_model import VectorModel
 from model.loader import load_base_model_from_link
 from model.runtime_evaluator import build_runtime_evaluator
@@ -52,6 +57,7 @@ from consensus.majority import has_majority
 
 from utils.logging import get_logger
 from utils.env_sync import sync_task_keys_to_env
+from utils.signing import sign_hash_hex_with_scalar
 
 logger = get_logger("aggregator.main")
 
@@ -111,8 +117,10 @@ class HealChainAggregator:
         # =========================
         # M4: Secure Aggregation
         # =========================
+        self.state.set_status(TASK_STATE_COLLECTING)
         submissions = self._wait_for_submissions()
 
+        self.state.set_status(TASK_STATE_AGGREGATING)
         aggregate = self._secure_aggregate(submissions)
 
         updated_model, acc = self._update_and_evaluate(aggregate)
@@ -121,10 +129,19 @@ class HealChainAggregator:
         # Algorithm 4: Accuracy Check (Lines 35-40)
         # =========================
         if acc < self.state.required_accuracy:
+            if self.state.is_complete():
+                self.state.set_status("FAILED_ACCURACY")
+                raise RuntimeError(
+                    f"Accuracy target not reached and max rounds exhausted: "
+                    f"acc={acc:.4f}, required={self.state.required_accuracy:.4f}, "
+                    f"round={self.state.round}, max_rounds={self.state.max_rounds}"
+                )
+
             logger.warning(
                 f"[Aggregator] Accuracy {acc:.4f} < {self.state.required_accuracy:.4f}. "
                 f"Starting next round (current round: {self.state.round})."
             )
+            self.state.set_status("BACK_TO_TRAINING")
 
             # Strict iterative Algorithm-4 retrain flow:
             # carry W_new into next round as the new base model link.
@@ -145,6 +162,7 @@ class HealChainAggregator:
                 return
             else:
                 logger.error("[Aggregator] Failed to trigger round reset in backend.")
+                self.state.set_status(TASK_STATE_ABORTED)
                 raise RuntimeError("Round reset failed")
 
         # =========================
@@ -157,6 +175,7 @@ class HealChainAggregator:
         # =========================
         if not self._run_miner_verification(candidate):
             logger.error("[Aggregator] Candidate rejected by miners")
+            self.state.set_status("REJECTED_BY_MINERS")
             self.running = False
             return
 
@@ -164,6 +183,7 @@ class HealChainAggregator:
         # M6: Publish Payload
         # =========================
         self._publish_candidate(candidate)
+        self.state.set_status(TASK_STATE_PUBLISHED)
 
         logger.info(f"[Aggregator] Task {self.task_id} completed (awaiting reveal)")
         self.running = False
@@ -329,7 +349,7 @@ class HealChainAggregator:
         logger.info(
             f"[Aggregator] Keys and task metadata loaded | "
             f"round={self.state.round}, target_acc={self.state.required_accuracy}, "
-            f"min_participants={self.min_participants}"
+            f"min_participants={self.min_participants}, max_rounds={self.state.max_rounds}"
         )
 
     # ------------------------------------------------------------------
@@ -456,10 +476,22 @@ class HealChainAggregator:
     def _form_candidate(self, model, acc, submissions):
         logger.info("[Aggregator] Building candidate block")
 
-        model_link, model_hash = publish_model_artifact(
+        model_link, artifact_hash = publish_model_artifact(
             model,
             task_id=self.task_id,
             round_no=self.state.round,
+        )
+
+        model_meta = {
+            "task_id": self.task_id,
+            "round": int(self.state.round),
+            "num_parameters": len(model.get_weights()) if hasattr(model, "get_weights") else 0,
+            "model_type": model.__class__.__name__,
+        }
+        model_hash = compute_candidate_model_hash(
+            model_link=model_link,
+            artifact_hash=artifact_hash,
+            metadata=model_meta,
         )
 
         candidate = build_candidate_block(
@@ -471,6 +503,18 @@ class HealChainAggregator:
             submissions=submissions,
             aggregator_pk=self.keys.pkA,
         )
+
+        # Algorithm 4 (line 42): B.signatureA <- Sign(skA, HASH(B))
+        signature_a = sign_hash_hex_with_scalar(
+            private_scalar=self.keys.skA,
+            hash_hex=candidate["hash"],
+        )
+        candidate["artifact_hash"] = artifact_hash
+        candidate["model_metadata"] = model_meta
+        candidate["signature_a"] = signature_a
+        candidate["signatureA"] = signature_a
+        self.state.set_candidate_block(candidate)
+        self.state.set_status("AWAITING_VERIFICATION")
 
         if not self.backend_tx.broadcast_candidate(candidate):
             raise RuntimeError(
@@ -486,6 +530,7 @@ class HealChainAggregator:
 
     def _run_miner_verification(self, candidate) -> bool:
         logger.info("[Aggregator] Collecting miner verification feedback")
+        self.state.set_status(TASK_STATE_VERIFYING)
 
         feedback = collect_feedback(
             backend_rx=self.backend_rx,
@@ -514,7 +559,10 @@ class HealChainAggregator:
             "timestamp": int(time.time()),
         }
 
-        self.backend_tx.publish_payload(payload)
+        if not self.backend_tx.publish_payload(payload):
+            raise RuntimeError(
+                "Publish failed. Backend rejected /aggregator/publish or on-chain publish failed."
+            )
         self.progress.mark("published")
 
 

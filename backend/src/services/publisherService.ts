@@ -9,12 +9,22 @@ export async function publishOnChain(
   taskID: string,
   modelHash: string,
   accuracy: bigint,
-  miners: string[]
+  miners: string[],
+  scoreCommits: string[] = []
 ) {
   const task = await prisma.task.findUnique({ where: { taskID } });
   const block = await prisma.block.findUnique({ where: { taskID } });
 
-  if (!task || !block || task.status !== TaskStatus.REVEAL_OPEN) {
+  if (!task || !block) {
+    throw new Error("Task not ready for publishing");
+  }
+
+  const publishableStatuses = new Set<TaskStatus>([
+    TaskStatus.AGGREGATING,
+    TaskStatus.VERIFIED,
+    TaskStatus.REVEAL_OPEN,
+  ]);
+  if (!publishableStatuses.has(task.status as TaskStatus)) {
     throw new Error("Task not ready for publishing");
   }
 
@@ -24,13 +34,14 @@ export async function publishOnChain(
     modelHash,
     accuracy,
     miners,
-    [] // scoreCommits already known on-chain / not duplicated
+    scoreCommits
   );
 
   await prisma.task.update({
     where: { taskID },
     data: {
-      status: TaskStatus.REVEAL_CLOSED,
+      // M6 complete -> M7 reveal window opens.
+      status: TaskStatus.REVEAL_OPEN,
       publishTx: tx.hash
     }
   });

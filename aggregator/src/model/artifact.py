@@ -24,7 +24,7 @@ import os
 import json
 import hashlib
 import re
-from typing import Any, Tuple
+from typing import Any, Dict, Tuple
 import requests
 
 from utils.logging import get_logger
@@ -151,6 +151,34 @@ def publish_model_artifact(
     )
 
     return model_link, model_hash
+
+
+def compute_candidate_model_hash(
+    *,
+    model_link: str,
+    artifact_hash: str,
+    metadata: Dict[str, Any],
+) -> str:
+    """
+    Algorithm-4 aligned model hash for candidate blocks:
+      mh <- HASH(modelLink || metadata(W_new))
+
+    Notes:
+    - `artifact_hash` is included in metadata so the candidate hash is bound to
+      the exact serialized model artifact bytes.
+    - `metadata` is canonically JSON-serialized for deterministic hashing.
+    """
+    meta_obj = dict(metadata or {})
+    meta_obj["artifact_hash"] = str(artifact_hash)
+
+    meta_bytes = json.dumps(
+        meta_obj,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+
+    joined = str(model_link).encode("utf-8") + b"|" + meta_bytes
+    return hashlib.sha256(joined).hexdigest()
 
 
 # -------------------------------------------------------------------

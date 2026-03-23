@@ -75,7 +75,11 @@ class BackendSender:
             "miners": candidate_block.get("participants", []),
             "scoreCommits": candidate_block.get("score_commits", []),
             "aggregatorPK": candidate_block.get("aggregator_pk"),
-            "hash": candidate_block.get("hash")
+            "hash": candidate_block.get("hash"),
+            "signatureA": candidate_block.get("signatureA") or candidate_block.get("signature_a"),
+            "artifactHash": candidate_block.get("artifact_hash"),
+            "modelMetadata": candidate_block.get("model_metadata"),
+            "timestamp": candidate_block.get("timestamp"),
         }
 
         try:
@@ -125,6 +129,7 @@ class BackendSender:
             "modelHash": payload.get("model_hash"),
             "accuracy": int(payload.get("accuracy", 0) * 1000000),
             "miners": payload.get("participants", []),
+            "scoreCommits": payload.get("score_commits", []),
             "verification": payload.get("verification")
         }
 

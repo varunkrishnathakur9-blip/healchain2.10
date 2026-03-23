@@ -1,6 +1,18 @@
 import { prisma } from "../config/database.config.js";
 import { TaskStatus, BlockStatus } from "@prisma/client";
 
+type CandidateMetadata = {
+  modelLink?: string;
+  candidateHash?: string;
+  participants?: string[];
+  scoreCommits?: string[];
+  aggregatorPK?: string;
+  signatureA?: string;
+  artifactHash?: string;
+  modelMetadata?: unknown;
+  candidateTimestamp?: bigint;
+};
+
 /**
  * M4: Accept aggregated model metadata
  * Aggregation is fully off-chain (aggregator)
@@ -9,7 +21,7 @@ export async function submitCandidate(
   taskID: string,
   modelHash: string,
   accuracy: bigint,
-  modelLink?: string
+  metadata: CandidateMetadata = {}
 ) {
   const task = await prisma.task.findUnique({ where: { taskID } });
 
@@ -30,15 +42,25 @@ export async function submitCandidate(
       data: {
         taskID,
         modelHash,
+        modelLink: metadata.modelLink?.trim() || null,
         accuracy,
+        candidateHash: metadata.candidateHash?.trim() || null,
+        participants: Array.isArray(metadata.participants) ? metadata.participants : [],
+        scoreCommits: Array.isArray(metadata.scoreCommits) ? metadata.scoreCommits : [],
+        aggregatorPK: metadata.aggregatorPK?.trim() || null,
+        signatureA: metadata.signatureA?.trim() || null,
+        artifactHash: metadata.artifactHash?.trim() || null,
+        modelMetadata: (metadata.modelMetadata ?? null) as any,
+        candidateTimestamp: metadata.candidateTimestamp ?? null,
         status: BlockStatus.FINALIZED
       }
     });
 
-    const taskUpdate: any = { status: TaskStatus.REVEAL_OPEN };
-    if (typeof modelLink === "string" && modelLink.trim().length > 0) {
+    // Candidate submission starts M5 verification, not M7 reveal.
+    const taskUpdate: any = { status: TaskStatus.AGGREGATING };
+    if (typeof metadata.modelLink === "string" && metadata.modelLink.trim().length > 0) {
       // Persist latest global model link so next round starts from W_round.
-      taskUpdate.initialModelLink = modelLink.trim();
+      taskUpdate.initialModelLink = metadata.modelLink.trim();
     }
 
     await tx.task.update({

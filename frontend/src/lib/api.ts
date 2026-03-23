@@ -135,6 +135,7 @@ export interface Task {
   publishTx?: string; // Escrow transaction hash
   minMiners?: number; // Minimum miners required for PoS aggregator selection
   maxMiners?: number; // Maximum miners allowed for PoS aggregator selection
+  scoreCommitsByMiner?: Record<string, string>;
   _count?: {
     miners?: number;
     gradients?: number;
