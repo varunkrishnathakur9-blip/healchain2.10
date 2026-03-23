@@ -6,7 +6,6 @@
 import { Router } from "express";
 import { submitVerification, getConsensusResult, getVerifications } from "../services/verificationService.js";
 import { requireFields } from "../middleware/validation.js";
-import { requireWalletAuth } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -16,11 +15,10 @@ const router = Router();
  */
 router.post(
   "/submit",
-  requireFields(["taskID", "minerAddress", "verdict", "message", "signature"]),
-  requireWalletAuth,
+  requireFields(["taskID", "minerAddress", "miner_pk", "candidateHash", "verdict", "reason", "signature"]),
   async (req, res, next) => {
     try {
-      const { taskID, minerAddress, verdict, signature } = req.body;
+      const { taskID, minerAddress, miner_pk, candidateHash, verdict, reason, message, signature } = req.body;
 
       if (verdict !== "VALID" && verdict !== "INVALID") {
         return res.status(400).json({ error: "Verdict must be VALID or INVALID" });
@@ -29,7 +27,11 @@ router.post(
       const verification = await submitVerification(
         taskID,
         minerAddress,
+        miner_pk,
+        candidateHash,
         verdict as "VALID" | "INVALID",
+        reason,
+        message,
         signature
       );
 

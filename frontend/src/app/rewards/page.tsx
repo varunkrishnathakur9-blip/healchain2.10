@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useReadContract } from 'wagmi';
 import { useTaskList } from '@/hooks/useTask';
-import { useContract } from '@/hooks/useContract';
 import { REWARD_DISTRIBUTION_ABI, BLOCK_PUBLISHER_ABI } from '@/lib/contracts';
 import { getChainConfig } from '@/lib/web3';
+import { verificationAPI } from '@/lib/api';
 import { formatEther } from 'viem';
 import Card from '@/components/Card';
 import Badge, { TaskStatusBadge } from '@/components/Badge';
@@ -15,13 +15,24 @@ import ScoreRevealForm from '@/components/forms/ScoreRevealForm';
 import Link from 'next/link';
 
 export default function RewardsPage() {
-  const { address, isConnected, chainId } = useAccount();
-  const { tasks, loading, refresh } = useTaskList();
-  const chainConfig = chainId ? getChainConfig(chainId) : null;
+  const { address, isConnected } = useAccount();
+  const { tasks, refresh } = useTaskList();
 
-  const rewardTasks = tasks?.filter(
-    (t) => t.status === 'REVEAL_OPEN' || t.status === 'REVEAL_CLOSED' || t.status === 'VERIFIED'
-  ) || [];
+  const rewardTasks = useMemo(
+    () =>
+      tasks?.filter((t: any) => {
+        const verificationOpen =
+          t?.verificationOpen === true ||
+          (t?.status === 'AGGREGATING' && !!t?.block?.candidateHash);
+        return (
+          verificationOpen ||
+          t.status === 'REVEAL_OPEN' ||
+          t.status === 'REVEAL_CLOSED' ||
+          t.status === 'VERIFIED'
+        );
+      }) || [],
+    [tasks]
+  );
 
   const publisherTasks = rewardTasks.filter(
     (t) => t.publisher?.toLowerCase() === address?.toLowerCase()
@@ -33,6 +44,15 @@ export default function RewardsPage() {
 
   const isPublisher = publisherTasks.length > 0;
   const isMiner = minerTasks.length > 0;
+
+  useEffect(() => {
+    if (!isConnected) return;
+    refresh();
+    const intervalId = setInterval(() => {
+      refresh();
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, [isConnected, refresh]);
 
   if (!isConnected) {
     return (
@@ -83,7 +103,7 @@ export default function RewardsPage() {
         <Card>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">My Tasks - Publisher View</h2>
           {publisherTasks.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-400">No tasks awaiting reveal</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">No tasks in verification/reveal phase</p>
           ) : (
             <div className="space-y-4">
               {publisherTasks.map((task) => (
@@ -167,7 +187,6 @@ function MinerRevealStatus({ taskID, minerAddress, chainConfig, onRevealed }: {
 function PublisherTaskCard({ task }: { task: any }) {
   const { chainId } = useAccount();
   const chainConfig = chainId ? getChainConfig(chainId) : null;
-  const { revealAccuracy, distributeRewards } = useContract();
   const [showRevealForm, setShowRevealForm] = useState(false);
   const [showDistribute, setShowDistribute] = useState(false);
   const [revealedMiners, setRevealedMiners] = useState<Set<string>>(new Set());
@@ -191,6 +210,9 @@ function PublisherTaskCard({ task }: { task: any }) {
   const miners = (task as any).miners || [];
   const totalMiners = miners.length;
   const revealedMinersCount = revealedMiners.size;
+  const verificationOpen =
+    task?.verificationOpen === true ||
+    (task?.status === 'AGGREGATING' && !!task?.block?.candidateHash);
 
   const handleMinerRevealed = (minerAddress: string) => (revealed: boolean) => {
     setRevealedMiners((prev) => {
@@ -221,6 +243,7 @@ function PublisherTaskCard({ task }: { task: any }) {
       <div className="flex items-center gap-2 mb-3">
         <h3 className="font-medium text-gray-900 dark:text-white">Task: {task.taskID}</h3>
         <TaskStatusBadge status={task.status} />
+        {verificationOpen && <Badge variant="warning">Verification Open</Badge>}
       </div>
       <dl className="space-y-2 text-sm mb-4">
         <div>
@@ -244,6 +267,12 @@ function PublisherTaskCard({ task }: { task: any }) {
           </dd>
         </div>
       </dl>
+
+      {verificationOpen && (
+        <div className="mb-4 p-2 rounded bg-amber-50 dark:bg-amber-900/20 text-xs text-amber-700 dark:text-amber-300">
+          M5 is active for this task. Participants can submit verification feedback while status is AGGREGATING.
+        </div>
+      )}
 
       {!m7aDone && m6Complete && (
         <div className="space-y-2">
@@ -311,6 +340,11 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
   const { chainId } = useAccount();
   const chainConfig = chainId ? getChainConfig(chainId) : null;
   const [showRevealForm, setShowRevealForm] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [myVerification, setMyVerification] = useState<any | null>(null);
+  const [consensus, setConsensus] = useState<any | null>(null);
 
   const { data: accuracyRevealed } = useReadContract({
     address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
@@ -338,6 +372,71 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
 
   const m7aDone = accuracyRevealed === true;
   const myScoreRevealed = minerReveal && (minerReveal as any).revealed === true;
+  const verificationOpen =
+    task?.verificationOpen === true ||
+    (task?.status === 'AGGREGATING' && !!task?.block?.candidateHash);
+  const candidateHash = task?.block?.candidateHash || '';
+  const myMinerRecord = ((task as any).miners || []).find((m: any) => m?.address?.toLowerCase() === address.toLowerCase());
+  const myMinerPublicKey = myMinerRecord?.publicKey || '';
+
+  const loadVerificationState = useCallback(async () => {
+    if (!verificationOpen || !candidateHash) {
+      setMyVerification(null);
+      setConsensus(null);
+      return;
+    }
+    try {
+      const [verifications, consensusResult] = await Promise.all([
+        verificationAPI.getByTask(task.taskID),
+        verificationAPI.getConsensus(task.taskID),
+      ]);
+      const mine =
+        (verifications || []).find(
+          (v: any) =>
+            v?.minerAddress?.toLowerCase() === address.toLowerCase() &&
+            v?.candidateHash === candidateHash
+        ) || null;
+      setMyVerification(mine);
+      setConsensus(consensusResult || null);
+    } catch {
+      // Keep UI resilient if backend polling fails transiently.
+    }
+  }, [address, candidateHash, task.taskID, verificationOpen]);
+
+  useEffect(() => {
+    if (!verificationOpen || !candidateHash) return;
+    loadVerificationState();
+    const id = setInterval(loadVerificationState, 5000);
+    return () => clearInterval(id);
+  }, [verificationOpen, candidateHash, loadVerificationState]);
+
+  const handleSubmitVerification = async () => {
+    if (!verificationOpen) {
+      setSubmitError('Verification phase is not open for this task.');
+      return;
+    }
+    if (!candidateHash) {
+      setSubmitError('Missing candidate hash. Wait for candidate sync.');
+      return;
+    }
+    setSubmitLoading(true);
+    setSubmitError(null);
+    setSubmitSuccess(null);
+    try {
+      await verificationAPI.triggerViaFlClient(task.taskID, address);
+      setSubmitSuccess('Verification submitted via FL client successfully.');
+      await loadVerificationState();
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.error ||
+        err?.responseData?.error ||
+        err?.message ||
+        'Failed to submit verification';
+      setSubmitError(String(msg));
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
 
   // Prefer backend-recorded commit keyed by miner address.
   const taskScoreCommitsByMiner = ((task as any).scoreCommitsByMiner || {}) as Record<string, string>;
@@ -369,6 +468,7 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
       <div className="flex items-center gap-2 mb-3">
         <h3 className="font-medium text-gray-900 dark:text-white">Task: {task.taskID}</h3>
         <TaskStatusBadge status={task.status} />
+        {verificationOpen && <Badge variant="warning">Verification Open</Badge>}
       </div>
       <dl className="space-y-2 text-sm mb-4">
         <div>
@@ -390,6 +490,54 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
           </dd>
         </div>
       </dl>
+
+      {verificationOpen && (
+        <div className="mb-4 p-2 rounded bg-amber-50 dark:bg-amber-900/20 text-xs text-amber-700 dark:text-amber-300">
+          M5 verification is active. Keep this page open; task state is polled every 5 seconds from the frontend.
+        </div>
+      )}
+
+      {verificationOpen && (
+        <div className="mb-4 p-3 border border-amber-300/50 dark:border-amber-700/50 rounded bg-amber-50/60 dark:bg-amber-900/20">
+          <div className="text-xs text-gray-700 dark:text-gray-300 mb-2">
+            <div>Candidate Hash: <span className="font-mono break-all">{candidateHash || 'N/A'}</span></div>
+            <div>Consensus: {consensus ? `${consensus.validVotes}/${consensus.totalMiners} VALID (need ${consensus.majorityRequired})` : 'Loading...'}</div>
+          </div>
+
+          {myVerification ? (
+            <div className="text-sm">
+              <div className="font-medium text-green-700 dark:text-green-400">You already submitted M5 feedback.</div>
+              <div className="text-xs text-gray-700 dark:text-gray-300 mt-1">
+                Verdict: <span className="font-mono">{myVerification.verdict}</span>
+                {myVerification.reason ? ` | Reason: ${myVerification.reason}` : ''}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleSubmitVerification}
+                disabled={submitLoading || !candidateHash}
+              >
+                {submitLoading ? 'Submitting...' : 'Submit Verification (M5 via FL Client)'}
+              </Button>
+              {!myMinerPublicKey && (
+                <p className="text-xs text-red-600 dark:text-red-400">
+                  Your miner public key is missing. Re-sync task/registration metadata.
+                </p>
+              )}
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                This calls your local FL client verifier (`/api/verify`) which auto-computes VALID/INVALID,
+                signs with miner FL key, and submits strict Algorithm-5 feedback.
+              </p>
+            </div>
+          )}
+
+          {submitError && <p className="text-xs text-red-600 dark:text-red-400 mt-2">{submitError}</p>}
+          {submitSuccess && <p className="text-xs text-green-600 dark:text-green-400 mt-2">{submitSuccess}</p>}
+        </div>
+      )}
 
       {m7aDone && !myScoreRevealed && hasValidScoreCommit && (
         <div className="space-y-2">

@@ -599,6 +599,7 @@ export async function getTaskById(taskID: string) {
       ? {
           id: task.block.id,
           taskID: task.block.taskID,
+          round: (task.block as any).round ?? null,
           modelHash: task.block.modelHash,
           modelLink: (task.block as any).modelLink ?? null,
           accuracy: task.block.accuracy.toString(),
@@ -641,10 +642,23 @@ export async function getAllTasks(filters: {
   const tasks = await prisma.task.findMany({
     where,
     include: {
+      block: {
+        select: {
+          id: true,
+          round: true,
+          modelHash: true,
+          modelLink: true,
+          candidateHash: true,
+          status: true,
+          accuracy: true,
+          candidateTimestamp: true
+        }
+      },
       miners: {
         select: {
           address: true,
-          id: true
+          id: true,
+          publicKey: true
         },
         orderBy: {
           id: 'asc' // Deterministic order for aggregator selection
@@ -685,6 +699,26 @@ export async function getAllTasks(filters: {
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       miners: task.miners,
+      block: task.block
+        ? {
+            id: task.block.id,
+            round: (task.block as any).round ?? null,
+            modelHash: task.block.modelHash,
+            modelLink: (task.block as any).modelLink ?? null,
+            candidateHash: (task.block as any).candidateHash ?? null,
+            status: task.block.status,
+            accuracy: task.block.accuracy.toString(),
+            candidateTimestamp:
+              (task.block as any).candidateTimestamp !== null &&
+              (task.block as any).candidateTimestamp !== undefined
+                ? String((task.block as any).candidateTimestamp)
+                : null,
+          }
+        : null,
+      verificationOpen:
+        task.status === TaskStatus.AGGREGATING &&
+        !!task.block &&
+        !!(task.block as any).candidateHash,
       scoreCommitsByMiner: task.gradients.reduce((acc, gradient) => {
         if (gradient.scoreCommit) {
           acc[gradient.minerAddress.toLowerCase()] = gradient.scoreCommit;

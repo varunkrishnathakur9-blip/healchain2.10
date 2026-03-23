@@ -110,6 +110,7 @@ model Gradient {
 model Block {
   id        String      @id @default(cuid())
   taskID    String      @unique
+  round     Int?
   modelHash String
   modelLink String?     @db.Text
   accuracy  BigInt
@@ -144,14 +145,17 @@ model Verification {
   id           String   @id @default(cuid())
   taskID       String
   minerAddress String
+  candidateHash String  @default("")
   verdict      String // "VALID" or "INVALID"
+  reason       String   @default("")
+  message      String?  @db.Text
   signature    String?  @db.Text
   createdAt    DateTime @default(now())
 
   task  Task  @relation(fields: [taskID], references: [taskID])
   miner Miner @relation(fields: [taskID, minerAddress], references: [taskID, address])
 
-  @@unique([taskID, minerAddress])
+  @@unique([taskID, minerAddress, candidateHash])
 }
 
 // M7: Reward Distribution Records

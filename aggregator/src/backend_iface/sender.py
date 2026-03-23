@@ -69,6 +69,7 @@ class BackendSender:
         # Normalize fields for backend (camelCase + scaled accuracy for BigInt)
         normalized_payload = {
             "taskID": candidate_block.get("task_id"),
+            "round": candidate_block.get("round"),
             "modelHash": candidate_block.get("model_hash"),
             "modelLink": candidate_block.get("model_link"),
             "accuracy": int(candidate_block.get("accuracy", 0) * 1000000), # Scale to 6 decimal places for BigInt

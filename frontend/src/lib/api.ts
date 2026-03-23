@@ -6,6 +6,8 @@
 import axios, { AxiosInstance } from 'axios';
 import { BACKEND_API_URL } from './web3';
 
+const FL_CLIENT_API_URL = process.env.NEXT_PUBLIC_FL_CLIENT_URL || 'http://localhost:5001';
+
 // Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: BACKEND_API_URL,
@@ -135,7 +137,25 @@ export interface Task {
   publishTx?: string; // Escrow transaction hash
   minMiners?: number; // Minimum miners required for PoS aggregator selection
   maxMiners?: number; // Maximum miners allowed for PoS aggregator selection
+  miners?: Array<{
+    id?: string;
+    address: string;
+    publicKey?: string | null;
+  }>;
+  aggregator?: string | null;
+  aggregatorAddress?: string | null;
   scoreCommitsByMiner?: Record<string, string>;
+  block?: {
+    id: string;
+    round?: number | null;
+    modelHash?: string;
+    modelLink?: string | null;
+    candidateHash?: string | null;
+    status?: string;
+    accuracy?: string;
+    candidateTimestamp?: string | null;
+  } | null;
+  verificationOpen?: boolean;
   _count?: {
     miners?: number;
     gradients?: number;
@@ -146,6 +166,7 @@ export interface Miner {
   id: string;
   taskID: string;
   address: string;
+  publicKey?: string | null;
   registeredAt: string;
   status: string;
 }
@@ -171,6 +192,18 @@ export interface Reward {
   amountETH: number;
   status: string;
   txHash?: string;
+}
+
+export interface VerificationVote {
+  id?: string;
+  taskID: string;
+  minerAddress: string;
+  candidateHash: string;
+  verdict: 'VALID' | 'INVALID';
+  reason: string;
+  message?: string;
+  signature?: string;
+  createdAt?: string;
 }
 
 // Task API
@@ -408,6 +441,33 @@ export const rewardAPI = {
     miners: string[];
   }) => {
     const response = await api.post('/rewards/distribute', data);
+    return response.data;
+  },
+};
+
+// Verification API (M5)
+export const verificationAPI = {
+  submit: async (data: VerificationVote & { miner_pk: string }) => {
+    const response = await api.post('/verification/submit', data);
+    return response.data;
+  },
+
+  getConsensus: async (taskID: string) => {
+    const response = await api.get(`/verification/consensus/${taskID}`);
+    return response.data;
+  },
+
+  getByTask: async (taskID: string) => {
+    const response = await api.get(`/verification/${taskID}`);
+    return response.data;
+  },
+
+  triggerViaFlClient: async (taskID: string, minerAddress: string) => {
+    const response = await axios.post(
+      `${FL_CLIENT_API_URL}/api/verify`,
+      { taskID, minerAddress },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
     return response.data;
   },
 };

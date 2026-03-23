@@ -34,7 +34,7 @@ def has_majority(
     feedbacks: List[Dict],
     *,
     total_participants: int,
-    tolerable_fault_rate: float = 0.33,
+    tolerable_fault_rate: float = 0.5,
 ) -> bool:
     """
     Determine whether majority consensus is achieved.
@@ -54,7 +54,7 @@ def has_majority(
 
     tolerable_fault_rate : float
         Fraction of faulty / Byzantine miners tolerated.
-        Default: 0.33 (Byzantine-safe threshold)
+        Default: 0.5 (strict simple-majority behavior)
 
     Consensus Rule:
     ---------------

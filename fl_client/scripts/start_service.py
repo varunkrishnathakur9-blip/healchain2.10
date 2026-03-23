@@ -30,6 +30,7 @@ from tasks.validator import is_task_acceptable
 from tasks.lifecycle import run_task
 from state.local_store import load_state, save_state
 from crypto.keys import derive_public_key
+from verification.verifier import verify_and_submit_for_task
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for backend requests
@@ -682,9 +683,73 @@ def health_check():
             "/api/health",
             "/api/train",
             "/api/train/status",
-            "/api/submit"
+            "/api/submit",
+            "/api/verify"
         ]
     }), 200
+
+
+@app.route("/api/verify", methods=["POST"])
+def verify_candidate():
+    """
+    Trigger Algorithm-5 candidate verification and feedback submission for a miner.
+
+    Request body:
+    {
+        "taskID": "task_001",
+        "minerAddress": "0x..."
+    }
+    """
+    try:
+        data = request.get_json() or {}
+        task_id = data.get("taskID")
+        miner_address = (data.get("minerAddress") or MINER_ADDRESS or "").lower()
+        if not task_id:
+            return jsonify({"error": "taskID is required"}), 400
+        if not miner_address:
+            return jsonify({"error": "minerAddress is required"}), 400
+
+        current_config = miner_configs.get(miner_address, {})
+        effective_backend_url = current_config.get("backendUrl", BACKEND_URL)
+
+        task = get_task_details(task_id, effective_backend_url)
+        if not task:
+            return jsonify({"error": f"Task {task_id} not found"}), 404
+        if not task.get("block"):
+            return jsonify({"error": f"Task {task_id} has no candidate block"}), 400
+
+        miner_private_key = get_effective_miner_private_key(miner_address)
+        if not miner_private_key:
+            return jsonify({"error": "MINER_PRIVATE_KEY is not configured"}), 400
+
+        miner_pk = derive_public_key(miner_private_key)
+
+        perform_sanity = str(os.getenv("FL_VERIFY_LOCAL_SANITY", "0")).strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+
+        # Route verification module to the effective backend URL.
+        os.environ["BACKEND_URL"] = effective_backend_url
+
+        result = verify_and_submit_for_task(
+            task=task,
+            miner_address=miner_address,
+            miner_pk=miner_pk,
+            miner_private_key=miner_private_key,
+            perform_local_sanity=perform_sanity,
+        )
+
+        return jsonify({
+            "success": True,
+            "taskID": task_id,
+            "minerAddress": miner_address,
+            "verification": result
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

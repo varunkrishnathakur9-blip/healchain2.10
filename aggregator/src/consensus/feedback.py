@@ -25,6 +25,7 @@ from typing import Dict, List
 
 from utils.validation import verify_signature
 from utils.logging import get_logger
+from utils.serialization import canonical_feedback_message
 from config.constants import VERDICT_VALID, VERDICT_INVALID
 
 logger = get_logger("consensus.feedback")
@@ -37,7 +38,9 @@ logger = get_logger("consensus.feedback")
 def collect_feedback(
     *,
     backend_rx,
+    task_id: str,
     candidate_hash: str,
+    expected_participants: List[str],
     timeout: int,
 ) -> List[Dict]:
     """
@@ -79,6 +82,7 @@ def collect_feedback(
     feedbacks: List[Dict] = []
 
     seen_miners = set()
+    expected_participant_set = {_normalize_public_key(pk) for pk in expected_participants if isinstance(pk, str)}
 
     while time.time() - start_time < timeout:
         batch = backend_rx.fetch_feedback()
@@ -88,13 +92,16 @@ def collect_feedback(
 
         for fb in batch:
             try:
-                # Inject candidate_hash since backend doesn't store/return it
-                fb["candidate_hash"] = candidate_hash
-                
-                _validate_feedback_structure(fb, candidate_hash)
+                _validate_feedback_structure(
+                    fb,
+                    expected_task_id=task_id,
+                    expected_candidate_hash=candidate_hash,
+                    expected_participants=expected_participant_set,
+                )
 
                 miner_pk = fb["miner_pk"]
-                if miner_pk in seen_miners:
+                normalized_miner_pk = _normalize_public_key(miner_pk)
+                if normalized_miner_pk in seen_miners:
                     logger.warning(
                         f"[M5] Duplicate feedback from miner {miner_pk[:10]}..."
                     )
@@ -103,7 +110,7 @@ def collect_feedback(
                 _verify_feedback_signature(fb)
 
                 feedbacks.append(fb)
-                seen_miners.add(miner_pk)
+                seen_miners.add(normalized_miner_pk)
 
                 logger.info(
                     f"[M5] Feedback accepted from miner {miner_pk[:10]}..."
@@ -126,36 +133,6 @@ def collect_feedback(
 # -------------------------------------------------------------------
 # Internal Validators
 # -------------------------------------------------------------------
-
-def _validate_feedback_structure(fb: Dict, candidate_hash: str):
-    """
-    Structural and semantic validation of feedback message.
-    """
-
-    required_fields = {
-        "task_id",
-        "candidate_hash",
-        "miner_pk",
-        "verdict",
-        "reason",
-        "signature",
-    }
-
-    missing = required_fields - fb.keys()
-    if missing:
-        raise ValueError(f"Missing feedback fields: {','.join(missing)}")
-
-    if fb["candidate_hash"] != candidate_hash:
-        raise ValueError("Candidate hash mismatch")
-
-    if fb["verdict"] not in (VERDICT_VALID, VERDICT_INVALID):
-        raise ValueError("Invalid verdict value")
-
-    if not isinstance(fb["miner_pk"], str):
-        raise ValueError("Invalid miner_pk")
-
-    if not isinstance(fb["signature"], str):
-        raise ValueError("Invalid signature format")
 
 
 def _verify_feedback_signature(fb: Dict):
@@ -180,14 +157,69 @@ def _canonical_feedback_message(fb: Dict) -> bytes:
     """
     Deterministic encoding of feedback message for signature verification.
     """
-
-    # Match FL Client message format:
-    # f"HealChain Verification\nTask: {task_id}\nVerdict: {verdict}\nMiner: {miner_address}"
-    message = (
-        f"HealChain Verification\n"
-        f"Task: {fb['task_id']}\n"
-        f"Verdict: {fb['verdict']}\n"
-        f"Miner: {fb['miner_pk']}"
+    return canonical_feedback_message(
+        task_id=fb["task_id"],
+        candidate_hash=fb["candidate_hash"],
+        verdict=fb["verdict"],
+        reason=fb["reason"],
+        miner_pk=fb["miner_pk"],
     )
 
-    return message.encode("utf-8")
+
+def _normalize_public_key(pk: str) -> str:
+    parts = pk.split(",")
+    if len(parts) != 2:
+        return pk.strip().lower()
+    norm = []
+    for p in parts:
+        t = p.strip().lower()
+        if t.startswith("0x"):
+            t = t[2:]
+        norm.append(t)
+    return ",".join(norm)
+
+
+def _validate_feedback_structure(
+    fb: Dict,
+    *,
+    expected_task_id: str,
+    expected_candidate_hash: str,
+    expected_participants: set,
+):
+    """
+    Structural + protocol binding checks for feedback.
+    """
+    required_fields = {
+        "task_id",
+        "candidate_hash",
+        "miner_pk",
+        "verdict",
+        "reason",
+        "signature",
+    }
+
+    missing = required_fields - fb.keys()
+    if missing:
+        raise ValueError(f"Missing feedback fields: {','.join(missing)}")
+
+    if str(fb["task_id"]) != str(expected_task_id):
+        raise ValueError("Task ID mismatch")
+
+    if str(fb["candidate_hash"]) != str(expected_candidate_hash):
+        raise ValueError("Candidate hash mismatch")
+
+    if fb["verdict"] not in (VERDICT_VALID, VERDICT_INVALID):
+        raise ValueError("Invalid verdict value")
+
+    if not isinstance(fb["miner_pk"], str):
+        raise ValueError("Invalid miner_pk")
+
+    normalized_pk = _normalize_public_key(fb["miner_pk"])
+    if expected_participants and normalized_pk not in expected_participants:
+        raise ValueError("Feedback miner is not a candidate participant")
+
+    if not isinstance(fb["reason"], str):
+        raise ValueError("Invalid reason format")
+
+    if not isinstance(fb["signature"], str):
+        raise ValueError("Invalid signature format")

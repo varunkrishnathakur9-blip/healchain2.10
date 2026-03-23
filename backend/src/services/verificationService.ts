@@ -7,6 +7,11 @@
 
 import { prisma } from "../config/database.config.js";
 import { TaskStatus } from "@prisma/client";
+import { normalizeMinerPublicKey } from "../utils/publicKey.js";
+import {
+  canonicalFeedbackMessage,
+  verifyFeedbackSignature,
+} from "../crypto/feedbackSignature.js";
 
 /**
  * M5: Submit miner verification vote
@@ -17,9 +22,56 @@ import { TaskStatus } from "@prisma/client";
 export async function submitVerification(
   taskID: string,
   minerAddress: string,
+  minerPublicKey: string,
+  candidateHash: string,
   verdict: "VALID" | "INVALID",
+  reason: string,
+  message?: string,
   signature?: string
 ) {
+  const normalizedAddress = minerAddress.toLowerCase();
+  const normalizedCandidateHash = String(candidateHash || "").trim();
+  if (!normalizedCandidateHash) {
+    throw new Error("candidateHash is required");
+  }
+  const minerPkRaw = String(minerPublicKey || "").trim();
+  if (!minerPkRaw) {
+    throw new Error("miner_pk is required");
+  }
+  const normalizedMinerPk = normalizeMinerPublicKey(minerPkRaw);
+  if (typeof reason !== "string") {
+    throw new Error("reason must be a string");
+  }
+  const reasonText = reason;
+  if (!signature || typeof signature !== "string") {
+    throw new Error("signature is required");
+  }
+
+  const canonicalMsg = canonicalFeedbackMessage(
+    taskID,
+    normalizedCandidateHash,
+    verdict,
+    reasonText,
+    minerPkRaw
+  ).toString("utf-8");
+
+  // Ensure payload message (if provided) is exactly the canonical value.
+  if (typeof message === "string" && message.length > 0 && message !== canonicalMsg) {
+    throw new Error("message does not match canonical feedback payload");
+  }
+
+  const sigValid = verifyFeedbackSignature({
+    taskID,
+    candidateHash: normalizedCandidateHash,
+    verdict,
+    reason: reasonText,
+    minerPk: minerPkRaw,
+    signatureHex: signature,
+  });
+  if (!sigValid) {
+    throw new Error("Invalid miner feedback signature");
+  }
+
   // Check if task exists and is in verification phase
   const task = await prisma.task.findUnique({
     where: { taskID },
@@ -45,22 +97,40 @@ export async function submitVerification(
   }
 
   // Check if miner is registered
-  const miner = task.miners.find(m => m.address.toLowerCase() === minerAddress.toLowerCase());
+  const miner = task.miners.find(m => m.address.toLowerCase() === normalizedAddress);
   if (!miner) {
     throw new Error(`Miner ${minerAddress} not registered for task ${taskID}`);
+  }
+  if (!miner.publicKey) {
+    throw new Error(`Miner ${minerAddress} has no registered public key`);
+  }
+  const registeredMinerPk = normalizeMinerPublicKey(miner.publicKey);
+  if (registeredMinerPk !== normalizedMinerPk) {
+    throw new Error("miner_pk does not match registered miner public key");
   }
 
   // Check if block exists
   if (!task.block) {
     throw new Error(`No candidate block for task ${taskID}`);
   }
+  if ((task.block as any).candidateHash && (task.block as any).candidateHash !== normalizedCandidateHash) {
+    throw new Error("candidateHash does not match current candidate block");
+  }
+
+  const candidateParticipants = ((task.block as any).participants || []).map((v: string) =>
+    normalizeMinerPublicKey(v)
+  );
+  if (candidateParticipants.length > 0 && !candidateParticipants.includes(normalizedMinerPk)) {
+    throw new Error("Miner is not in candidate participant list");
+  }
 
   // Check if already voted
   const existing = await prisma.verification.findUnique({
     where: {
-      taskID_minerAddress: {
+      taskID_minerAddress_candidateHash: {
         taskID,
-        minerAddress: minerAddress.toLowerCase()
+        minerAddress: normalizedAddress,
+        candidateHash: normalizedCandidateHash,
       }
     }
   });
@@ -73,9 +143,12 @@ export async function submitVerification(
   const verification = await prisma.verification.create({
     data: {
       taskID,
-      minerAddress: minerAddress.toLowerCase(),
+      minerAddress: normalizedAddress,
+      candidateHash: normalizedCandidateHash,
       verdict,
-      signature: signature || null
+      reason: reasonText,
+      message: canonicalMsg,
+      signature
     }
   });
 
@@ -99,6 +172,7 @@ export async function getConsensusResult(taskID: string): Promise<{
     where: { taskID },
     include: {
       miners: true,
+      block: true,
       verifications: true
     }
   });
@@ -107,11 +181,19 @@ export async function getConsensusResult(taskID: string): Promise<{
     throw new Error(`Task ${taskID} not found`);
   }
 
-  const totalMiners = task.miners.length;
-  const majorityRequired = Math.ceil(totalMiners * 0.5); // 50% majority
+  const currentCandidateHash = (task.block as any)?.candidateHash || "";
+  const verifications = currentCandidateHash
+    ? task.verifications.filter(v => v.candidateHash === currentCandidateHash)
+    : task.verifications;
 
-  const validVotes = task.verifications.filter(v => v.verdict === "VALID").length;
-  const invalidVotes = task.verifications.filter(v => v.verdict === "INVALID").length;
+  const participantCount = Array.isArray((task.block as any)?.participants)
+    ? ((task.block as any).participants as string[]).length
+    : 0;
+  const totalMiners = participantCount > 0 ? participantCount : task.miners.length;
+  const majorityRequired = Math.ceil(totalMiners * 0.5); // strict majority
+
+  const validVotes = verifications.filter(v => v.verdict === "VALID").length;
+  const invalidVotes = verifications.filter(v => v.verdict === "INVALID").length;
 
   const approved = validVotes >= majorityRequired;
 
@@ -133,7 +215,8 @@ export async function getVerifications(taskID: string) {
     include: {
       miner: {
         select: {
-          address: true
+          address: true,
+          publicKey: true,
         }
       }
     }

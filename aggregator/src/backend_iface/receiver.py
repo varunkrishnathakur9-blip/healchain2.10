@@ -174,13 +174,14 @@ class BackendReceiver:
             # Normalize backend feedback to aggregator format
             normalized_batch = []
             for fb in data:
+                miner_obj = fb.get("miner") if isinstance(fb.get("miner"), dict) else {}
                 normalized = {
                     "task_id": fb.get("taskID"),
-                    "miner_pk": fb.get("minerAddress"),
+                    "miner_pk": fb.get("minerPublicKey") or miner_obj.get("publicKey"),
                     "verdict": fb.get("verdict"),
                     "signature": fb.get("signature"),
-                    "candidate_hash": None, # Backend doesn't store this, will be injected by collector
-                    "reason": "MVP Verification" # Placeholder
+                    "candidate_hash": fb.get("candidateHash"),
+                    "reason": fb.get("reason", "")
                 }
                 normalized_batch.append(normalized)
 

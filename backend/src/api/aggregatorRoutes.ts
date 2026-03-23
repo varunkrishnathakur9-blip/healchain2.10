@@ -65,6 +65,7 @@ router.post(
   "/submit-candidate",
   requireFields([
     "taskID",
+    "round",
     "modelHash",
     "modelLink",
     "accuracy",
@@ -78,6 +79,7 @@ router.post(
     try {
       const {
         taskID,
+        round,
         modelHash,
         modelLink,
         accuracy,
@@ -103,6 +105,7 @@ router.post(
         parsedAccuracy,
         {
           modelLink,
+          round: Number(round),
           participants: _toStringArray(miners),
           scoreCommits: _toStringArray(scoreCommits),
           aggregatorPK: typeof aggregatorPK === "string" ? aggregatorPK : String(aggregatorPK),

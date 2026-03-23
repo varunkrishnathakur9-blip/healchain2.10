@@ -534,7 +534,9 @@ class HealChainAggregator:
 
         feedback = collect_feedback(
             backend_rx=self.backend_rx,
+            task_id=self.task_id,
             candidate_hash=candidate["hash"],
+            expected_participants=candidate["participants"],
             timeout=FEEDBACK_TIMEOUT,
         )
 

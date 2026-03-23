@@ -2,6 +2,7 @@ import { prisma } from "../config/database.config.js";
 import { TaskStatus, BlockStatus } from "@prisma/client";
 
 type CandidateMetadata = {
+  round?: number;
   modelLink?: string;
   candidateHash?: string;
   participants?: string[];
@@ -41,6 +42,9 @@ export async function submitCandidate(
     const created = await tx.block.create({
       data: {
         taskID,
+        round: Number.isFinite(metadata.round as number)
+          ? Number(metadata.round)
+          : (task as any).currentRound ?? null,
         modelHash,
         modelLink: metadata.modelLink?.trim() || null,
         accuracy,
