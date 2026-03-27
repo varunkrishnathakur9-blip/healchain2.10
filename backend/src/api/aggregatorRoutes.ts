@@ -830,13 +830,13 @@ router.post(
 
       const task = await resetRound(taskID, modelLink);
 
-      res.json({
+      res.json(_serializeBigInts({
         success: true,
         message: `Task ${taskID} reset to round ${(task as any).currentRound}`,
         currentRound: (task as any).currentRound,
         status: task.status,
         initialModelLink: (task as any).initialModelLink || null
-      });
+      }));
     } catch (err: any) {
       next(err);
     }

@@ -182,7 +182,7 @@ class BackendSender:
 
                 logger.warning(
                     "[BackendSender] Round reset failed "
-                    f"(status={resp.status_code}, attempt={attempt + 1}/{self._round_reset_retry_count})"
+                    f"(status={resp.status_code}, attempt={attempt + 1}/{self._round_reset_retry_count}): {resp.text[:500]}"
                 )
             except Exception as e:
                 logger.warning(

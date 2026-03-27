@@ -91,27 +91,25 @@ export async function resetRound(taskID: string, modelLink?: string) {
     throw new Error(`Task ${taskID} not found`);
   }
 
-  // Transaction to ensure atomicity
-  return await prisma.$transaction(async (tx) => {
-    // 1. Delete all gradients for this task
-    await tx.gradient.deleteMany({
+  // Build update payload once so we can run a non-interactive atomic transaction.
+  // This avoids Prisma interactive transaction timeout (P2028) on large/slow deleteMany.
+  const taskUpdate: any = {
+    currentRound: { increment: 1 },
+    status: TaskStatus.OPEN
+  };
+  if (typeof modelLink === "string" && modelLink.trim().length > 0) {
+    taskUpdate.initialModelLink = modelLink.trim();
+  }
+
+  const [, updatedTask] = await prisma.$transaction([
+    prisma.gradient.deleteMany({
       where: { taskID }
-    });
-
-    // 2. Increment round, carry-forward model link (if provided), and reset status
-    const taskUpdate: any = {
-      currentRound: { increment: 1 },
-      status: TaskStatus.OPEN
-    };
-    if (typeof modelLink === "string" && modelLink.trim().length > 0) {
-      taskUpdate.initialModelLink = modelLink.trim();
-    }
-
-    const updatedTask = await tx.task.update({
+    }),
+    prisma.task.update({
       where: { taskID },
       data: taskUpdate
-    });
+    })
+  ]);
 
-    return updatedTask;
-  });
+  return updatedTask;
 }
