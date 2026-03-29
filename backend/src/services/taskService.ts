@@ -526,7 +526,10 @@ export async function getTaskById(taskID: string) {
           minerAddress: true,
           scoreCommit: true,
           status: true
-        }
+        },
+        orderBy: {
+          createdAt: "desc"
+        },
       },
       _count: {
         select: {
@@ -592,8 +595,13 @@ export async function getTaskById(taskID: string) {
       status: gradient.status
     })),
     scoreCommitsByMiner: task.gradients.reduce((acc, gradient) => {
-      if (gradient.scoreCommit) {
-        acc[gradient.minerAddress.toLowerCase()] = gradient.scoreCommit;
+      if (!gradient.scoreCommit) {
+        return acc;
+      }
+      const key = gradient.minerAddress.toLowerCase();
+      // gradients are ordered by createdAt desc; keep first (latest) per miner.
+      if (!acc[key]) {
+        acc[key] = gradient.scoreCommit;
       }
       return acc;
     }, {} as Record<string, string>),
@@ -671,7 +679,10 @@ export async function getAllTasks(filters: {
         select: {
           minerAddress: true,
           scoreCommit: true
-        }
+        },
+        orderBy: {
+          createdAt: "desc"
+        },
       },
       _count: {
         select: {
@@ -723,8 +734,12 @@ export async function getAllTasks(filters: {
         !!task.block &&
         !!(task.block as any).candidateHash,
       scoreCommitsByMiner: task.gradients.reduce((acc, gradient) => {
-        if (gradient.scoreCommit) {
-          acc[gradient.minerAddress.toLowerCase()] = gradient.scoreCommit;
+        if (!gradient.scoreCommit) {
+          return acc;
+        }
+        const key = gradient.minerAddress.toLowerCase();
+        if (!acc[key]) {
+          acc[key] = gradient.scoreCommit;
         }
         return acc;
       }, {} as Record<string, string>),

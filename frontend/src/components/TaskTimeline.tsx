@@ -69,19 +69,63 @@ export default function TaskTimeline({
 
   const miners = (task as any).miners || [];
   const minerCount = miners.length;
-  const requiredMiners = task.maxMiners || 5; // Use task-specific maxMiners
-  const minRequired = task.minMiners || 3; // Use task-specific minMiners
-  
-  // M1: Completed if escrow > 0 on-chain, or if task exists in backend (fallback)
-  // If escrow is 0 but task exists, it means escrow transaction wasn't completed
-  const m1Completed = escrowBalance && escrowBalance > 0n;
-  const m1InProgress = !m1Completed && task.status !== 'CANCELLED' && task.status !== 'FAILED';
-  
-  // M2: Complete when we have at least minMiners miners
-  const m2InProgress = (task.status === 'CREATED' || task.status === 'OPEN') && minerCount > 0 && minerCount < minRequired;
-  const m2Complete = minerCount >= minRequired; // M2 complete when we have at least minMiners
-  const m6Published = publishedBlock && (publishedBlock as any).timestamp > 0n;
-  const m7aDone = accuracyRevealed === true;
+  const requiredMiners = task.maxMiners || 5;
+  const minRequired = task.minMiners || 3;
+  const scoreCommitCount = Object.keys((task as any).scoreCommitsByMiner || {}).length;
+  const hasCandidate = !!(task as any).block?.candidateHash;
+  const verificationOpen =
+    (task as any).verificationOpen === true || (task.status === 'AGGREGATING' && hasCandidate);
+
+  // M1
+  const m1Completed = !!escrowBalance && escrowBalance > 0n;
+  const m1InProgress = !m1Completed && task.status !== 'CANCELLED';
+
+  // M2
+  const m2InProgress =
+    (task.status === 'CREATED' || task.status === 'OPEN') &&
+    minerCount > 0 &&
+    minerCount < minRequired;
+  const m2Complete = minerCount >= minRequired;
+
+  // M3/M4/M5 are off-chain phases represented by backend state.
+  const protocolAdvanced =
+    task.status === 'VERIFIED' ||
+    task.status === 'REVEAL_OPEN' ||
+    task.status === 'REVEAL_CLOSED' ||
+    task.status === 'REWARDED';
+
+  // M3
+  const m3Complete =
+    protocolAdvanced || (task.status === 'AGGREGATING' && scoreCommitCount >= minRequired);
+  const m3InProgress =
+    !m3Complete &&
+    (task.status === 'OPEN' || task.status === 'COMMIT_CLOSED' || task.status === 'AGGREGATING') &&
+    m2Complete;
+
+  // M4
+  const m4Complete = protocolAdvanced || (task.status === 'AGGREGATING' && hasCandidate);
+  const m4InProgress = !m4Complete && task.status === 'AGGREGATING';
+
+  // M5
+  const m5Complete = protocolAdvanced;
+  const m5InProgress = !m5Complete && verificationOpen;
+
+  // M6
+  const m6PublishedOnChain = !!publishedBlock && (publishedBlock as any).timestamp > 0n;
+  const m6Published =
+    m6PublishedOnChain ||
+    task.status === 'REVEAL_OPEN' ||
+    task.status === 'REVEAL_CLOSED' ||
+    task.status === 'REWARDED';
+
+  // M7
+  const m7aDone =
+    accuracyRevealed === true ||
+    task.status === 'REVEAL_OPEN' ||
+    task.status === 'REVEAL_CLOSED' ||
+    task.status === 'REWARDED';
+  const m7Complete = task.status === 'REWARDED';
+  const m7InProgress = !m7Complete && (task.status === 'REVEAL_OPEN' || task.status === 'REVEAL_CLOSED');
 
   return (
     <div className="space-y-4">
@@ -90,29 +134,29 @@ export default function TaskTimeline({
           <div className="flex items-center gap-2 mb-2">
             <span className="font-semibold text-gray-900 dark:text-white">[M1] Task Published</span>
             {m1Completed ? (
-              <Badge variant="success">✅ Completed</Badge>
+              <Badge variant="success">Completed</Badge>
             ) : m1InProgress ? (
-              <Badge variant="warning">⚠️ Escrow Pending</Badge>
+              <Badge variant="warning">Escrow Pending</Badge>
             ) : (
-              <Badge variant="neutral">⏳ Pending</Badge>
+              <Badge variant="neutral">Pending</Badge>
             )}
           </div>
           <div className="ml-6 space-y-1 text-sm text-gray-600 dark:text-gray-400">
             {m1Completed ? (
               <>
-                <p>└─ Escrow: {escrowBalance ? formatEther(escrowBalance) : '0'} ETH (Locked)</p>
+                <p>- Escrow: {escrowBalance ? formatEther(escrowBalance) : '0'} ETH (Locked)</p>
                 {contractTask && (
                   <p className="font-mono text-xs">
-                    └─ Commit Hash: {(contractTask as any).accuracyCommit?.slice(0, 20)}...
+                    - Commit Hash: {(contractTask as any).accuracyCommit?.slice(0, 20)}...
                   </p>
                 )}
               </>
             ) : m1InProgress ? (
               <p className="text-yellow-600 dark:text-yellow-400">
-                └─ ⚠️ Task created but escrow not locked on-chain. Publisher must complete escrow transaction.
+                - Task created but escrow not locked on-chain yet.
               </p>
             ) : (
-              <p>└─ Waiting for task creation</p>
+              <p>- Waiting for task creation</p>
             )}
           </div>
         </div>
@@ -121,18 +165,18 @@ export default function TaskTimeline({
           <div className="flex items-center gap-2 mb-2">
             <span className="font-semibold text-gray-900 dark:text-white">[M2] Miner Registration</span>
             {m2Complete ? (
-              <Badge variant="success">✅ Completed</Badge>
+              <Badge variant="success">Completed</Badge>
             ) : m2InProgress ? (
-              <Badge variant="warning">🔄 In Progress</Badge>
+              <Badge variant="warning">In Progress</Badge>
             ) : (
-              <Badge variant="neutral">⏳ Pending</Badge>
+              <Badge variant="neutral">Pending</Badge>
             )}
           </div>
           <div className="ml-6 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-            <p>└─ Registered: {minerCount}/{requiredMiners} miners (minimum {minRequired} required)</p>
+            <p>- Registered: {minerCount}/{requiredMiners} miners (minimum {minRequired} required)</p>
             {m2Complete && (task as any).aggregator && (
               <p className="text-green-600 dark:text-green-400">
-                └─ ✅ Aggregator selected: {(task as any).aggregator.slice(0, 10)}...
+                - Aggregator selected: {(task as any).aggregator.slice(0, 10)}...
               </p>
             )}
             {isMiner && task.status === 'OPEN' && !m2Complete && (
@@ -146,33 +190,69 @@ export default function TaskTimeline({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="font-semibold text-gray-900 dark:text-white">[M3] Training Phase</span>
-            <Badge variant="neutral">⏳ Pending</Badge>
+            {m3Complete ? (
+              <Badge variant="success">Completed</Badge>
+            ) : m3InProgress ? (
+              <Badge variant="warning">In Progress</Badge>
+            ) : (
+              <Badge variant="neutral">Pending</Badge>
+            )}
           </div>
           <div className="ml-6 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-            <p>└─ Status: Waiting for miners</p>
-            <p className="text-xs italic">└─ Note: Training happens off-chain (FL-client)</p>
+            {m3Complete ? (
+              <p>- Status: Completed ({scoreCommitCount} score commits collected)</p>
+            ) : m3InProgress ? (
+              <p>- Status: Training/submission in progress ({scoreCommitCount} commits)</p>
+            ) : (
+              <p>- Status: Waiting for miners</p>
+            )}
+            <p className="text-xs italic">- Note: Training happens off-chain (FL-client)</p>
           </div>
         </div>
 
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="font-semibold text-gray-900 dark:text-white">[M4] Aggregation</span>
-            <Badge variant="neutral">⏳ Pending</Badge>
+            {m4Complete ? (
+              <Badge variant="success">Completed</Badge>
+            ) : m4InProgress ? (
+              <Badge variant="warning">In Progress</Badge>
+            ) : (
+              <Badge variant="neutral">Pending</Badge>
+            )}
           </div>
           <div className="ml-6 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-            <p>└─ Status: Waiting for training completion</p>
-            <p className="text-xs italic">└─ Note: Aggregation happens off-chain (aggregator)</p>
+            {m4Complete ? (
+              <p>- Status: Aggregation complete (candidate prepared)</p>
+            ) : m4InProgress ? (
+              <p>- Status: Aggregation running</p>
+            ) : (
+              <p>- Status: Waiting for training completion</p>
+            )}
+            <p className="text-xs italic">- Note: Aggregation happens off-chain (aggregator)</p>
           </div>
         </div>
 
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="font-semibold text-gray-900 dark:text-white">[M5] Verification</span>
-            <Badge variant="neutral">⏳ Pending</Badge>
+            {m5Complete ? (
+              <Badge variant="success">Completed</Badge>
+            ) : m5InProgress ? (
+              <Badge variant="warning">In Progress</Badge>
+            ) : (
+              <Badge variant="neutral">Pending</Badge>
+            )}
           </div>
           <div className="ml-6 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-            <p>└─ Status: Waiting for aggregation</p>
-            <p className="text-xs italic">└─ Note: Consensus happens off-chain (aggregator)</p>
+            {m5Complete ? (
+              <p>- Status: Verification consensus reached</p>
+            ) : m5InProgress ? (
+              <p>- Status: Candidate under miner verification</p>
+            ) : (
+              <p>- Status: Waiting for aggregation</p>
+            )}
+            <p className="text-xs italic">- Note: Consensus happens off-chain (aggregator)</p>
           </div>
         </div>
 
@@ -180,13 +260,13 @@ export default function TaskTimeline({
           <div className="flex items-center gap-2 mb-2">
             <span className="font-semibold text-gray-900 dark:text-white">[M6] Block Publishing</span>
             {m6Published ? (
-              <Badge variant="success">✅ Published</Badge>
+              <Badge variant="success">Published</Badge>
             ) : (
-              <Badge variant="neutral">⏳ Pending</Badge>
+              <Badge variant="neutral">Pending</Badge>
             )}
           </div>
           <div className="ml-6 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-            <p>└─ Status: {m6Published ? 'Published' : 'Waiting for verification'}</p>
+            <p>- Status: {m6Published ? 'Published' : 'Waiting for verification'}</p>
             {isPublisher && !m6Published && task.status === 'VERIFIED' && (
               <Button variant="primary" size="sm" onClick={onPublishBlock} className="mt-2">
                 Publish Block
@@ -198,25 +278,34 @@ export default function TaskTimeline({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="font-semibold text-gray-900 dark:text-white">[M7] Reveal & Rewards</span>
-            {m7aDone ? (
-              <Badge variant="warning">🔄 In Progress</Badge>
+            {m7Complete ? (
+              <Badge variant="success">Completed</Badge>
+            ) : m7InProgress ? (
+              <Badge variant="warning">In Progress</Badge>
             ) : (
-              <Badge variant="neutral">⏳ Pending</Badge>
+              <Badge variant="neutral">Pending</Badge>
             )}
           </div>
           <div className="ml-6 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-            <p>└─ Status: {m7aDone ? 'Reveal phase active' : 'Waiting for block publishing'}</p>
+            <p>
+              - Status:{' '}
+              {m7Complete
+                ? 'Rewards distributed'
+                : m7InProgress
+                ? 'Reveal/reward phase active'
+                : 'Waiting for block publishing'}
+            </p>
             {isPublisher && m6Published && !m7aDone && (
               <Button variant="primary" size="sm" onClick={onRevealAccuracy} className="mt-2">
                 Reveal Accuracy
               </Button>
             )}
-            {isMiner && m7aDone && (
+            {isMiner && m7aDone && !m7Complete && (
               <Button variant="primary" size="sm" onClick={onRevealScore} className="mt-2">
                 Reveal Score
               </Button>
             )}
-            {isPublisher && m7aDone && (
+            {isPublisher && m7aDone && !m7Complete && (
               <Button variant="primary" size="sm" onClick={onDistributeRewards} className="mt-2">
                 Distribute Rewards
               </Button>

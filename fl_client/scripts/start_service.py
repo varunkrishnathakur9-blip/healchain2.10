@@ -11,6 +11,7 @@ import sys
 import os
 import json
 import getpass
+import time
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -74,17 +75,32 @@ def get_task_details(task_id: str, backend_url: str = None):
     This allows .env to only contain static miner-specific config.
     """
     import requests
-    try:
-        # Use provided backend URL or default
-        url = f"{(backend_url or BACKEND_URL)}/tasks/{task_id}"
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return None
-    except Exception as e:
-        print(f"[Service] Error fetching task details: {e}")
-        return None
+    retries = max(1, int(os.getenv("TASK_FETCH_RETRIES", "4")))
+    retry_delay = max(0.0, float(os.getenv("TASK_FETCH_RETRY_DELAY_SEC", "1.0")))
+    timeout_sec = max(1.0, float(os.getenv("TASK_FETCH_TIMEOUT_SEC", "5")))
+    url = f"{(backend_url or BACKEND_URL)}/tasks/{task_id}"
+
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, timeout=timeout_sec)
+            if response.status_code == 200:
+                return response.json()
+            if response.status_code == 404:
+                return None
+            print(
+                f"[Service] Task fetch failed for {task_id}: "
+                f"status={response.status_code} (attempt {attempt + 1}/{retries})"
+            )
+        except Exception as e:
+            print(
+                f"[Service] Error fetching task details for {task_id}: {e} "
+                f"(attempt {attempt + 1}/{retries})"
+            )
+
+        if attempt < retries - 1:
+            time.sleep(retry_delay * (attempt + 1))
+
+    return None
 
 
 def update_env_file(updates: dict):

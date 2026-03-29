@@ -175,13 +175,20 @@ class BackendReceiver:
             normalized_batch = []
             for fb in data:
                 miner_obj = fb.get("miner") if isinstance(fb.get("miner"), dict) else {}
+                message = fb.get("message")
+                miner_pk_from_message = self._extract_miner_pk_from_feedback_message(message)
                 normalized = {
                     "task_id": fb.get("taskID"),
-                    "miner_pk": fb.get("minerPublicKey") or miner_obj.get("publicKey"),
+                    "miner_pk": (
+                        fb.get("minerPublicKey")
+                        or miner_obj.get("publicKey")
+                        or miner_pk_from_message
+                    ),
                     "verdict": fb.get("verdict"),
                     "signature": fb.get("signature"),
                     "candidate_hash": fb.get("candidateHash"),
-                    "reason": fb.get("reason", "")
+                    "reason": fb.get("reason", ""),
+                    "message": message,
                 }
                 normalized_batch.append(normalized)
 
@@ -328,3 +335,18 @@ class BackendReceiver:
 
         logger.info(f"[BackendReceiver] Using backend URL: {url}")
         return url.rstrip("/")
+
+    @staticmethod
+    def _extract_miner_pk_from_feedback_message(message: object) -> Optional[str]:
+        """
+        Canonical feedback message format:
+            task_id|candidate_hash|verdict|reason|miner_pk
+
+        Reason may include '|', so split only from the right once.
+        """
+        if not isinstance(message, str) or "|" not in message:
+            return None
+        try:
+            return message.rsplit("|", 1)[1]
+        except Exception:
+            return None

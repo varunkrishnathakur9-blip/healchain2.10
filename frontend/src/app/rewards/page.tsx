@@ -448,9 +448,12 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
     ? (publishedBlock as any).scoreCommits 
     : [];
   const myRawScoreCommit = myRawScoreCommitFromTask || (scoreCommits.length === 1 ? scoreCommits[0] : '');
-  const hasValidScoreCommit = /^0x[a-fA-F0-9]{64}$/.test(myRawScoreCommit || '');
+  const normalizedScoreCommit = (myRawScoreCommit || '').startsWith('0x')
+    ? (myRawScoreCommit || '')
+    : (myRawScoreCommit ? `0x${myRawScoreCommit}` : '');
+  const hasValidScoreCommit = /^0x[a-fA-F0-9]{64}$/.test(normalizedScoreCommit);
   const myScoreCommit = hasValidScoreCommit
-    ? `${myRawScoreCommit.slice(0, 10)}...${myRawScoreCommit.slice(-6)}`
+    ? `${normalizedScoreCommit.slice(0, 10)}...${normalizedScoreCommit.slice(-6)}`
     : 'Unavailable';
   
   // Get revealed score from contract if available

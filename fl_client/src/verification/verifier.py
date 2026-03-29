@@ -10,6 +10,7 @@ import json
 import math
 import hashlib
 import binascii
+import time
 from typing import Dict, Optional, Tuple
 
 import requests
@@ -117,6 +118,71 @@ def _canonical_feedback_message(
     return "|".join(parts).encode("utf-8")
 
 
+def _normalize_commit_hex(value: object) -> str:
+    commit = str(value or "").strip().lower()
+    if commit.startswith("0x"):
+        commit = commit[2:]
+    return commit
+
+
+def _extract_score_commit_for_miner(task: Dict, miner_address: str) -> str:
+    if not isinstance(task, dict):
+        return ""
+    by_miner = task.get("scoreCommitsByMiner")
+    if isinstance(by_miner, dict):
+        v = by_miner.get(str(miner_address).lower(), "")
+        if v:
+            return str(v)
+
+    gradients = task.get("gradients")
+    if isinstance(gradients, list):
+        for g in gradients:
+            if not isinstance(g, dict):
+                continue
+            if str(g.get("minerAddress", "")).lower() != str(miner_address).lower():
+                continue
+            score_commit = g.get("scoreCommit")
+            if score_commit:
+                return str(score_commit)
+    return ""
+
+
+def _fetch_task_details(task_id: str, timeout_sec: float) -> Optional[Dict]:
+    try:
+        resp = requests.get(
+            f"{_backend_url()}/tasks/{task_id}",
+            timeout=timeout_sec,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+    return None
+
+
+def _resolve_score_commit_with_retries(
+    *,
+    task_id: str,
+    miner_address: str,
+    initial_task: Dict,
+) -> str:
+    retries = max(1, int(os.getenv("FL_VERIFY_SCORECOMMIT_FETCH_RETRIES", "5")))
+    delay_sec = max(0.0, float(os.getenv("FL_VERIFY_SCORECOMMIT_FETCH_DELAY_SEC", "1.0")))
+    timeout_sec = max(1.0, float(os.getenv("FL_VERIFY_SCORECOMMIT_FETCH_TIMEOUT_SEC", "8")))
+
+    for attempt in range(retries):
+        task_snapshot = initial_task if attempt == 0 else _fetch_task_details(task_id, timeout_sec)
+        if isinstance(task_snapshot, dict):
+            commit = _extract_score_commit_for_miner(task_snapshot, miner_address)
+            if commit:
+                return commit
+        if attempt < retries - 1:
+            time.sleep(delay_sec * (attempt + 1))
+
+    return ""
+
+
 def _optional_model_sanity_check(
     *,
     model_link: str,
@@ -213,7 +279,11 @@ def verify_candidate_block(
         ):
             return False, "bad aggregator sig"
 
-        if str(score_commit) not in [str(v) for v in score_commits]:
+        miner_score_commit = _normalize_commit_hex(score_commit)
+        block_score_commits = {
+            _normalize_commit_hex(v) for v in score_commits if _normalize_commit_hex(v)
+        }
+        if not miner_score_commit or miner_score_commit not in block_score_commits:
             return False, "missing scoreCommit"
 
         normalized_self_pk = _normalize_pk(miner_pk)
@@ -311,6 +381,16 @@ def verify_and_submit_for_task(
     score_commit = ""
     if task_id in state:
         score_commit = str(state[task_id].get("commit", ""))
+
+    if not score_commit:
+        score_commit = _extract_score_commit_for_miner(task, miner_address)
+
+    if not score_commit:
+        score_commit = _resolve_score_commit_with_retries(
+            task_id=task_id,
+            miner_address=miner_address,
+            initial_task=task,
+        )
 
     is_valid, reason = verify_candidate_block(
         task_id=task_id,

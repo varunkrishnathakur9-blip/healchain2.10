@@ -143,14 +143,28 @@ def _verify_feedback_signature(fb: Dict):
         HASH(task_id || candidate_hash || verdict || reason || miner_pk)
     """
 
-    message = _canonical_feedback_message(fb)
+    # Preferred: verify against the exact signed message persisted by backend.
+    # This avoids false negatives when miner_pk text formatting differs
+    # (e.g., 0x prefix/case), while preserving the same EC key material.
+    signed_message = fb.get("message")
+    if isinstance(signed_message, str) and signed_message:
+        if verify_signature(
+            public_key=fb["miner_pk"],
+            message=signed_message.encode("utf-8"),
+            signature=fb["signature"],
+        ):
+            return
 
-    if not verify_signature(
+    # Fallback: reconstruct canonical message from normalized fields.
+    message = _canonical_feedback_message(fb)
+    if verify_signature(
         public_key=fb["miner_pk"],
         message=message,
         signature=fb["signature"],
     ):
-        raise ValueError("Invalid feedback signature")
+        return
+
+    raise ValueError("Invalid feedback signature")
 
 
 def _canonical_feedback_message(fb: Dict) -> bytes:

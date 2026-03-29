@@ -14,6 +14,14 @@ import {
 } from "../crypto/feedbackSignature.js";
 import { verifyCandidateBlockSignature } from "../crypto/candidateSignature.js";
 
+const normalizeScoreCommit = (value: unknown): string =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^0x/, "");
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * M5: Submit miner verification vote
  * 
@@ -173,24 +181,53 @@ export async function submitVerification(
   // Strict Algorithm-5 Step 2 (backend-side): this miner's scoreCommit
   // must be present in B.scoreCommits.
   // ------------------------------------------------------------------
-  const minerGradient = await prisma.gradient.findFirst({
-    where: {
-      taskID,
-      minerAddress: normalizedAddress,
-    },
-    orderBy: { createdAt: "desc" },
-    select: { scoreCommit: true },
-  });
+  const commitLookupRetries = Math.max(
+    1,
+    Number(process.env.VERIFICATION_SCORE_COMMIT_LOOKUP_RETRIES ?? "4")
+  );
+  const commitLookupDelayMs = Math.max(
+    0,
+    Number(process.env.VERIFICATION_SCORE_COMMIT_LOOKUP_DELAY_MS ?? "350")
+  );
+
+  let minerGradient: { scoreCommit: string } | null = null;
+  for (let attempt = 0; attempt < commitLookupRetries; attempt++) {
+    try {
+      minerGradient = await prisma.gradient.findFirst({
+        where: {
+          taskID,
+          minerAddress: normalizedAddress,
+        },
+        orderBy: { createdAt: "desc" },
+        select: { scoreCommit: true },
+      });
+    } catch (err) {
+      if (attempt >= commitLookupRetries - 1) {
+        throw err;
+      }
+    }
+
+    if (minerGradient?.scoreCommit) {
+      break;
+    }
+
+    if (attempt < commitLookupRetries - 1) {
+      await sleep(commitLookupDelayMs * (attempt + 1));
+    }
+  }
 
   if (!minerGradient?.scoreCommit) {
     throw new Error("missing scoreCommit for miner");
   }
 
-  const blockScoreCommits = Array.isArray(block.scoreCommits)
-    ? block.scoreCommits.map((v: unknown) => String(v))
-    : [];
+  const blockScoreCommitSet = new Set(
+    (Array.isArray(block.scoreCommits) ? block.scoreCommits : [])
+      .map((v: unknown) => normalizeScoreCommit(v))
+      .filter((v: string) => !!v)
+  );
+  const minerScoreCommit = normalizeScoreCommit(minerGradient.scoreCommit);
 
-  if (!blockScoreCommits.includes(String(minerGradient.scoreCommit))) {
+  if (!minerScoreCommit || !blockScoreCommitSet.has(minerScoreCommit)) {
     throw new Error("missing scoreCommit");
   }
 
