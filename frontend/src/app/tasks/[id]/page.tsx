@@ -34,6 +34,8 @@ export default function TaskDetailPage() {
   const [isRegisteredMiner, setIsRegisteredMiner] = useState<boolean | null>(null);
   const [isClearingGradients, setIsClearingGradients] = useState(false);
   const [clearGradientsMessage, setClearGradientsMessage] = useState<string | null>(null);
+  const [isPublishingBlock, setIsPublishingBlock] = useState(false);
+  const [publishBlockMessage, setPublishBlockMessage] = useState<string | null>(null);
 
   const chainConfig = chainId ? getChainConfig(chainId) : null;
 
@@ -206,8 +208,70 @@ export default function TaskDetailPage() {
   };
 
   const handlePublishBlock = async () => {
-    // M6: Block publishing - would need aggregator data
-    // This should be implemented based on aggregator status
+    if (!task || !address) return;
+
+    setIsPublishingBlock(true);
+    setPublishBlockMessage(null);
+
+    try {
+      if (task.status !== 'VERIFIED') {
+        throw new Error(`Task must be VERIFIED for M6 publish. Current status: ${task.status}`);
+      }
+
+      if (!task.block?.modelHash) {
+        throw new Error('Candidate block model hash is missing');
+      }
+
+      if (!task.block?.accuracy) {
+        throw new Error('Candidate block accuracy is missing');
+      }
+
+      const participantsFromBlock = Array.isArray((task.block as any).participants)
+        ? ((task.block as any).participants as string[])
+        : [];
+      const minersFromTask = (task.miners || []).map((m) => m.address).filter(Boolean);
+      const participants = participantsFromBlock.length > 0 ? participantsFromBlock : minersFromTask;
+
+      if (participants.length === 0) {
+        throw new Error('No participant addresses found for publish');
+      }
+
+      const commitsFromBlock = Array.isArray((task.block as any).scoreCommits)
+        ? ((task.block as any).scoreCommits as string[])
+        : [];
+      const commitMap = task.scoreCommitsByMiner || {};
+      const commitsFromMap = participants.map((p) => commitMap[p.toLowerCase()] || '');
+      const scoreCommits = commitsFromBlock.length > 0 ? commitsFromBlock : commitsFromMap;
+
+      if (scoreCommits.length !== participants.length || scoreCommits.some((c) => !c)) {
+        throw new Error(
+          `Invalid score commits for publish (participants=${participants.length}, commits=${scoreCommits.length})`
+        );
+      }
+
+      const message = createAuthMessage(address);
+      const signature = await signMessage(message);
+
+      const result = await aggregatorAPI.publish({
+        taskID: task.taskID,
+        modelHash: task.block.modelHash,
+        accuracy: task.block.accuracy,
+        miners: participants,
+        scoreCommits,
+        address,
+        message,
+        signature,
+      });
+
+      setPublishBlockMessage(
+        `Block published successfully. Tx: ${result?.txHash ? String(result.txHash) : 'submitted'}`
+      );
+      await refresh?.();
+    } catch (err: any) {
+      setPublishBlockMessage(err?.message || 'Failed to publish block');
+    } finally {
+      setIsPublishingBlock(false);
+    }
   };
 
   const handleRevealAccuracy = async () => {
@@ -453,9 +517,22 @@ export default function TaskDetailPage() {
                 </div>
               )}
               {task.status === 'VERIFIED' && (
-                <Button variant="primary" onClick={handlePublishBlock}>
-                  Publish Block (M6, when M5 consensus passed)
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    variant="primary"
+                    onClick={handlePublishBlock}
+                    disabled={isPublishingBlock}
+                  >
+                    {isPublishingBlock
+                      ? 'Publishing Block...'
+                      : 'Publish Block (M6, when M5 consensus passed)'}
+                  </Button>
+                  {publishBlockMessage && (
+                    <div className="p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-700 dark:text-gray-300">
+                      {publishBlockMessage}
+                    </div>
+                  )}
+                </div>
               )}
               {(task.status === 'OPEN' || task.status === 'AGGREGATING') && (
                 <Button

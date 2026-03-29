@@ -359,6 +359,10 @@ export const aggregatorAPI = {
     modelHash: string;
     accuracy: string;
     miners: string[];
+    scoreCommits?: string[];
+    address: string;
+    message: string;
+    signature: string;
   }) => {
     const response = await api.post('/aggregator/publish', data);
     return response.data;

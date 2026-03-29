@@ -266,7 +266,14 @@ export default function TaskTimeline({
             )}
           </div>
           <div className="ml-6 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-            <p>- Status: {m6Published ? 'Published' : 'Waiting for verification'}</p>
+            <p>
+              - Status:{' '}
+              {m6Published
+                ? 'Published'
+                : task.status === 'VERIFIED'
+                ? 'Ready for publisher to publish'
+                : 'Waiting for verification'}
+            </p>
             {isPublisher && !m6Published && task.status === 'VERIFIED' && (
               <Button variant="primary" size="sm" onClick={onPublishBlock} className="mt-2">
                 Publish Block
@@ -316,4 +323,3 @@ export default function TaskTimeline({
     </div>
   );
 }
-
