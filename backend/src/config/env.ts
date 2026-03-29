@@ -7,6 +7,7 @@ dotenv.config({
     process.env.NODE_ENV === "production"
       ? ".env.production"
       : ".env.development",
+  override: true,
 });
 
 function requireEnv(name: string): string {

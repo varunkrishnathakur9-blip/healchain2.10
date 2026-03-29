@@ -112,13 +112,34 @@ export async function publishOnChain(
   }
 
   // M6 on-chain publish through BlockPublisher contract.
-  const tx = await blockPublisher.publishBlock(
-    taskID,
-    normalizedModelHash,
-    accuracy,
-    normalizedParticipants,
-    normalizedScoreCommits
-  );
+  // Prefer strict ABI (participants + scoreCommits), fallback to legacy ABI (scoreCommits only)
+  // so we can continue older tasks bound to pre-strict contracts.
+  let tx: any;
+  try {
+    tx = await (blockPublisher as any)[
+      "publishBlock(string,bytes32,uint256,address[],bytes32[])"
+    ](
+      taskID,
+      normalizedModelHash,
+      accuracy,
+      normalizedParticipants,
+      normalizedScoreCommits
+    );
+  } catch (strictErr: any) {
+    console.warn(
+      `[M6] Strict publishBlock ABI failed, trying legacy ABI: ${
+        strictErr?.shortMessage || strictErr?.message || strictErr
+      }`
+    );
+    tx = await (blockPublisher as any)[
+      "publishBlock(string,bytes32,uint256,bytes32[])"
+    ](
+      taskID,
+      normalizedModelHash,
+      accuracy,
+      normalizedScoreCommits
+    );
+  }
 
   await prisma.task.update({
     where: { taskID },
