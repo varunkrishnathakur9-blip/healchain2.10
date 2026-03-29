@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useReadContract } from 'wagmi';
 import { useTaskList } from '@/hooks/useTask';
-import { REWARD_DISTRIBUTION_ABI, BLOCK_PUBLISHER_ABI } from '@/lib/contracts';
+import { REWARD_DISTRIBUTION_ABI, BLOCK_PUBLISHER_ABI, ESCROW_ABI } from '@/lib/contracts';
 import { getChainConfig } from '@/lib/web3';
 import { verificationAPI } from '@/lib/api';
 import { formatEther } from 'viem';
@@ -12,7 +12,46 @@ import Card from '@/components/Card';
 import Badge, { TaskStatusBadge } from '@/components/Badge';
 import Button from '@/components/Button';
 import ScoreRevealForm from '@/components/forms/ScoreRevealForm';
+import AccuracyRevealForm from '@/components/forms/AccuracyRevealForm';
 import Link from 'next/link';
+
+function formatAccuracyPercent(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+
+  let numeric: number;
+  if (typeof value === 'bigint') {
+    numeric = Number(value);
+  } else if (typeof value === 'number') {
+    numeric = value;
+  } else if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    numeric = Number(trimmed);
+  } else {
+    return null;
+  }
+
+  if (!Number.isFinite(numeric)) return null;
+
+  let pct = numeric;
+  if (numeric > 1000) {
+    // Stored as scaled integer (x 1e6)
+    pct = numeric / 1e6;
+  } else if (numeric >= 0 && numeric <= 1) {
+    // Stored as ratio (0..1)
+    pct = numeric * 100;
+  }
+
+  return `${pct.toFixed(2)}%`;
+}
+
+function normalizeCommitHash(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim().replace(/^0x/i, '');
+  if (!/^[0-9a-fA-F]{64}$/.test(trimmed)) return null;
+  if (/^0{64}$/.test(trimmed)) return null;
+  return `0x${trimmed}`;
+}
 
 export default function RewardsPage() {
   const { address, isConnected } = useAccount();
@@ -190,6 +229,22 @@ function PublisherTaskCard({ task }: { task: any }) {
   const [showRevealForm, setShowRevealForm] = useState(false);
   const [showDistribute, setShowDistribute] = useState(false);
   const [revealedMiners, setRevealedMiners] = useState<Set<string>>(new Set());
+  const escrowAddress = (task.escrowContractAddress || chainConfig?.contracts.escrow) as `0x${string}` | undefined;
+
+  const { data: escrowBalanceOnChain } = useReadContract({
+    address: escrowAddress,
+    abi: ESCROW_ABI,
+    functionName: 'escrowBalance',
+    args: [task.taskID],
+    query: { enabled: !!escrowAddress },
+  });
+  const { data: escrowTask } = useReadContract({
+    address: escrowAddress,
+    abi: ESCROW_ABI,
+    functionName: 'tasks',
+    args: [task.taskID],
+    query: { enabled: !!escrowAddress },
+  });
 
   const { data: publishedBlock } = useReadContract({
     address: chainConfig?.contracts.blockPublisher as `0x${string}`,
@@ -203,6 +258,13 @@ function PublisherTaskCard({ task }: { task: any }) {
     address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
     abi: REWARD_DISTRIBUTION_ABI,
     functionName: 'accuracyRevealed',
+    args: [task.taskID],
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+  });
+  const { data: revealedAccuracyOnChain } = useReadContract({
+    address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
+    abi: REWARD_DISTRIBUTION_ABI,
+    functionName: 'revealedAccuracy',
     args: [task.taskID],
     query: { enabled: !!chainConfig?.contracts.rewardDistribution },
   });
@@ -230,13 +292,31 @@ function PublisherTaskCard({ task }: { task: any }) {
     });
   };
 
-  const m6Complete = publishedBlock && (publishedBlock as any).timestamp > 0n;
-  const m7aDone = accuracyRevealed === true;
+  const m6PublishedOnChain = !!publishedBlock && (publishedBlock as any).timestamp > 0n;
+  const m6Complete =
+    m6PublishedOnChain ||
+    task.status === 'REVEAL_OPEN' ||
+    task.status === 'REVEAL_CLOSED' ||
+    task.status === 'REWARDED';
+  const escrowBalance = (() => {
+    if (typeof escrowBalanceOnChain === 'bigint') return escrowBalanceOnChain;
+    try {
+      return task.escrowBalance ? BigInt(task.escrowBalance) : 0n;
+    } catch {
+      return 0n;
+    }
+  })();
+  const m7aDone = accuracyRevealed === true || task.status === 'REWARDED';
   
-  // Get accuracy from published block (if available) or use placeholder
-  const revealedAccuracy = publishedBlock && (publishedBlock as any).accuracy 
-    ? ((publishedBlock as any).accuracy / 1e6).toFixed(2) + '%'
-    : 'N/A';
+  // Prefer explicit M7a revealed accuracy; fallback to block/task values for compatibility.
+  const revealedAccuracy =
+    formatAccuracyPercent(revealedAccuracyOnChain) ||
+    formatAccuracyPercent((publishedBlock as any)?.accuracy) ||
+    formatAccuracyPercent((task as any)?.block?.accuracy);
+  const commitHashForReveal =
+    normalizeCommitHash(task.commitHash) ||
+    normalizeCommitHash((escrowTask as any)?.accuracyCommit) ||
+    normalizeCommitHash((escrowTask as any)?.[3]);
 
   return (
     <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
@@ -249,14 +329,14 @@ function PublisherTaskCard({ task }: { task: any }) {
         <div>
           <dt className="text-gray-600 dark:text-gray-400">Escrow:</dt>
           <dd className="text-gray-900 dark:text-white font-mono">
-            {task.escrowBalance ? formatEther(BigInt(task.escrowBalance)) : '0'} ETH
+            {formatEther(escrowBalance)} ETH
           </dd>
         </div>
-        {task.commitHash && (
+        {commitHashForReveal && (
           <div>
             <dt className="text-gray-600 dark:text-gray-400">Accuracy Commit:</dt>
             <dd className="text-gray-900 dark:text-white font-mono text-xs break-all">
-              {task.commitHash}
+              {commitHashForReveal}
             </dd>
           </div>
         )}
@@ -276,18 +356,22 @@ function PublisherTaskCard({ task }: { task: any }) {
 
       {!m7aDone && m6Complete && (
         <div className="space-y-2">
-          <Button variant="primary" size="sm" onClick={() => setShowRevealForm(true)}>
-            Reveal Accuracy (M7a)
+          <Button variant="primary" size="sm" onClick={() => setShowRevealForm((prev) => !prev)}>
+            {showRevealForm ? 'Hide Reveal Form (M7a)' : 'Reveal Accuracy (M7a)'}
           </Button>
           {showRevealForm && (
-            <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                Opens form: Accuracy value, Nonce
-              </p>
-              <Link href={`/tasks/${task.taskID}`}>
-                <Button variant="outline" size="sm">Go to Task Detail</Button>
-              </Link>
+            <div className="mt-2">
+              <AccuracyRevealForm
+                taskID={task.taskID}
+                commitHash={commitHashForReveal || ''}
+                onSuccess={() => setShowRevealForm(false)}
+              />
             </div>
+          )}
+          {!commitHashForReveal && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Commit hash is unavailable from backend and escrow. Refresh after chain sync.
+            </p>
           )}
         </div>
       )}
@@ -312,7 +396,7 @@ function PublisherTaskCard({ task }: { task: any }) {
             <div>
               <dt className="text-gray-600 dark:text-gray-400">Accuracy Revealed:</dt>
               <dd className="text-gray-900 dark:text-white">
-                {revealedAccuracy !== 'N/A' ? revealedAccuracy : 'N/A'}
+                {revealedAccuracy || 'N/A'}
               </dd>
             </div>
             <div>
@@ -353,6 +437,13 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
     args: [task.taskID],
     query: { enabled: !!chainConfig?.contracts.rewardDistribution },
   });
+  const { data: revealedAccuracyOnChain } = useReadContract({
+    address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
+    abi: REWARD_DISTRIBUTION_ABI,
+    functionName: 'revealedAccuracy',
+    args: [task.taskID],
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+  });
 
   const { data: minerReveal } = useReadContract({
     address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
@@ -370,7 +461,7 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
     query: { enabled: !!chainConfig?.contracts.blockPublisher },
   });
 
-  const m7aDone = accuracyRevealed === true;
+  const m7aDone = accuracyRevealed === true || task.status === 'REWARDED';
   const myScoreRevealed = minerReveal && (minerReveal as any).revealed === true;
   const verificationOpen =
     task?.verificationOpen === true ||
@@ -461,10 +552,11 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
     ? ((minerReveal as any).score / 1e6).toFixed(2)
     : null;
   
-  // Get accuracy from published block
-  const publisherAccuracy = publishedBlock && (publishedBlock as any).accuracy 
-    ? ((publishedBlock as any).accuracy / 1e6).toFixed(2) + '%'
-    : null;
+  // Prefer explicit M7a revealed accuracy; fallback to block/task values for compatibility.
+  const publisherAccuracy =
+    formatAccuracyPercent(revealedAccuracyOnChain) ||
+    formatAccuracyPercent((publishedBlock as any)?.accuracy) ||
+    formatAccuracyPercent((task as any)?.block?.accuracy);
 
   return (
     <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">

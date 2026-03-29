@@ -214,8 +214,10 @@ export default function TaskDetailPage() {
     setPublishBlockMessage(null);
 
     try {
-      if (task.status !== 'VERIFIED') {
-        throw new Error(`Task must be VERIFIED for M6 publish. Current status: ${task.status}`);
+      if (task.status !== 'VERIFIED' && task.status !== 'REVEAL_OPEN') {
+        throw new Error(
+          `Task must be VERIFIED or REVEAL_OPEN for M6 publish. Current status: ${task.status}`
+        );
       }
 
       if (!task.block?.modelHash) {
@@ -516,7 +518,7 @@ export default function TaskDetailPage() {
                   </Button>
                 </div>
               )}
-              {task.status === 'VERIFIED' && (
+              {(task.status === 'VERIFIED' || task.status === 'REVEAL_OPEN') && (
                 <div className="space-y-2">
                   <Button
                     variant="primary"

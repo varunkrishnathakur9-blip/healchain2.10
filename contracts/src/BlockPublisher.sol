@@ -52,12 +52,36 @@ contract BlockPublisher is Ownable {
         string calldata taskID,
         bytes32 modelHash,
         uint256 accuracy,
+        address aggregator,
         address[] calldata participants,
         bytes32[] calldata scoreCommits
     ) external {
+        _publishBlock(taskID, modelHash, accuracy, aggregator, participants, scoreCommits);
+    }
+
+    // Backward-compatible overload. Prefer the explicit-aggregator variant above.
+    function publishBlock(
+        string calldata taskID,
+        bytes32 modelHash,
+        uint256 accuracy,
+        address[] calldata participants,
+        bytes32[] calldata scoreCommits
+    ) external {
+        _publishBlock(taskID, modelHash, accuracy, msg.sender, participants, scoreCommits);
+    }
+
+    function _publishBlock(
+        string calldata taskID,
+        bytes32 modelHash,
+        uint256 accuracy,
+        address aggregator,
+        address[] calldata participants,
+        bytes32[] calldata scoreCommits
+    ) internal {
 
         require(publishedBlocks[taskID].timestamp == 0, "Block exists");
         require(modelHash != bytes32(0), "Invalid model hash");
+        require(aggregator != address(0), "Invalid aggregator");
         require(participants.length > 0, "No participants");
         require(
             scoreCommits.length == participants.length,
@@ -68,7 +92,7 @@ contract BlockPublisher is Ownable {
             taskID: taskID,
             modelHash: modelHash,
             accuracy: accuracy,
-            aggregator: msg.sender,
+            aggregator: aggregator,
             participants: participants,
             scoreCommits: scoreCommits,
             timestamp: block.timestamp,
@@ -80,7 +104,7 @@ contract BlockPublisher is Ownable {
             taskID,
             modelHash,
             accuracy,
-            msg.sender,
+            aggregator,
             block.timestamp + PUBLISHER_REVEAL_WINDOW
         );
     }

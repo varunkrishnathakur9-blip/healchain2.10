@@ -274,11 +274,13 @@ export default function TaskTimeline({
                 ? 'Ready for publisher to publish'
                 : 'Waiting for verification'}
             </p>
-            {isPublisher && !m6Published && task.status === 'VERIFIED' && (
+            {isPublisher &&
+              !m6Published &&
+              (task.status === 'VERIFIED' || task.status === 'REVEAL_OPEN') && (
               <Button variant="primary" size="sm" onClick={onPublishBlock} className="mt-2">
                 Publish Block
               </Button>
-            )}
+              )}
           </div>
         </div>
 

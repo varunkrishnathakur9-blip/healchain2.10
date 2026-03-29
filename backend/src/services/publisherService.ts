@@ -28,6 +28,28 @@ export async function publishOnChain(
     throw new Error("Task not ready for publishing");
   }
 
+  // Helpful guard: if this BlockPublisher already has a block for taskID,
+  // strict contracts will reject republish ("Block exists").
+  try {
+    const meta = await (blockPublisher as any).getBlockMeta(taskID);
+    const existingModelHash = String(meta?.[0] || "");
+    if (existingModelHash && !/^0x0{64}$/i.test(existingModelHash)) {
+      throw new Error(
+        `Block already exists on current BlockPublisher for ${taskID}. ` +
+        `Use a fresh BlockPublisher deployment for re-publish continuity fixes.`
+      );
+    }
+  } catch (metaErr: any) {
+    // If this read fails, continue and let publish path surface a precise error.
+    // (Some legacy deployments may not expose getBlockMeta consistently.)
+    if (
+      typeof metaErr?.message === "string" &&
+      metaErr.message.includes("Block already exists on current BlockPublisher")
+    ) {
+      throw metaErr;
+    }
+  }
+
   const publishableStatuses = new Set<TaskStatus>([
     TaskStatus.AGGREGATING,
     TaskStatus.VERIFIED,
@@ -138,6 +160,10 @@ export async function publishOnChain(
   const normalizedParticipants = participantSource.map((v, i) =>
     toAddress(v, `participants[${i}]`)
   );
+  const normalizedAggregator = toAddress(
+    String((task as any).aggregatorAddress || ""),
+    "aggregatorAddress"
+  );
   if (normalizedParticipants.length == 0) {
     throw new Error("participants must not be empty for M6 publish");
   }
@@ -147,34 +173,69 @@ export async function publishOnChain(
     );
   }
 
-  // M6 on-chain publish through BlockPublisher contract.
-  // Prefer strict ABI (participants + scoreCommits), fallback to legacy ABI (scoreCommits only)
-  // so we can continue older tasks bound to pre-strict contracts.
+  // Strict M6 publish with explicit aggregator address to avoid
+  // msg.sender/backend-relayer identity drift in on-chain rewards.
   let tx: any;
+  let backendSignerAddress = "";
+  try {
+    const runner: any = (blockPublisher as any).runner;
+    if (runner && typeof runner.getAddress === "function") {
+      backendSignerAddress = String(await runner.getAddress()).toLowerCase();
+    }
+  } catch {
+    // Non-fatal; used only for clearer safety diagnostics.
+  }
   try {
     tx = await (blockPublisher as any)[
-      "publishBlock(string,bytes32,uint256,address[],bytes32[])"
+      "publishBlock(string,bytes32,uint256,address,address[],bytes32[])"
     ](
       taskID,
       normalizedModelHash,
       accuracy,
+      normalizedAggregator,
       normalizedParticipants,
       normalizedScoreCommits
     );
-  } catch (strictErr: any) {
-    console.warn(
-      `[M6] Strict publishBlock ABI failed, trying legacy ABI: ${
-        strictErr?.shortMessage || strictErr?.message || strictErr
-      }`
-    );
-    tx = await (blockPublisher as any)[
-      "publishBlock(string,bytes32,uint256,bytes32[])"
-    ](
-      taskID,
-      normalizedModelHash,
-      accuracy,
-      normalizedScoreCommits
-    );
+  } catch (err: any) {
+    const msg = String(err?.shortMessage || err?.message || err || "");
+    const looksLikeAbiMismatch =
+      msg.includes("missing revert data") || msg.includes("CALL_EXCEPTION");
+    if (!looksLikeAbiMismatch) {
+      throw err;
+    }
+
+    // Legacy contract path (no explicit aggregator argument).
+    // To preserve strict identity semantics, only allow this path when
+    // backend signer is already the selected aggregator address.
+    if (
+      backendSignerAddress &&
+      normalizedAggregator &&
+      backendSignerAddress !== normalizedAggregator.toLowerCase()
+    ) {
+      throw new Error(
+        `Legacy BlockPublisher fallback would set aggregator=msg.sender (${backendSignerAddress}) ` +
+          `but selected task aggregator is ${normalizedAggregator}. ` +
+          "Refusing publish to avoid reward-routing inconsistency. " +
+          "Set BACKEND_PRIVATE_KEY to selected aggregator key, or redeploy contracts with explicit aggregator publish support."
+      );
+    }
+
+    try {
+      tx = await (blockPublisher as any)[
+        "publishBlock(string,bytes32,uint256,address[],bytes32[])"
+      ](
+        taskID,
+        normalizedModelHash,
+        accuracy,
+        normalizedParticipants,
+        normalizedScoreCommits
+      );
+    } catch (legacyErr: any) {
+      // Last fallback for very old contracts.
+      tx = await (blockPublisher as any)[
+        "publishBlock(string,bytes32,uint256,bytes32[])"
+      ](taskID, normalizedModelHash, accuracy, normalizedScoreCommits);
+    }
   }
 
   await prisma.task.update({

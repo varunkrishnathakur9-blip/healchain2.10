@@ -5,6 +5,7 @@ const provider = new JsonRpcProvider(env.RPC_URL);
 const signer = new Wallet(env.BACKEND_PRIVATE_KEY, provider);
 
 const BLOCK_PUBLISHER_ABI = [
+  "function publishBlock(string taskID, bytes32 modelHash, uint256 accuracy, address aggregator, address[] participants, bytes32[] scoreCommits) external",
   "function publishBlock(string taskID, bytes32 modelHash, uint256 accuracy, address[] participants, bytes32[] scoreCommits) external",
   "function publishBlock(string taskID, bytes32 modelHash, uint256 accuracy, bytes32[] scoreCommits) external",
   "function getBlockMeta(string taskID) view returns (bytes32 modelHash, uint256 accuracy, address aggregator, uint256 timestamp, uint256 revealDeadline, bool distributed)",
