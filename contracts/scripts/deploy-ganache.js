@@ -7,6 +7,10 @@ async function main() {
   const provider = new ethers.JsonRpcProvider("http://127.0.0.1:7545");
   const privateKey = process.env.DEPLOYER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
   const wallet = new ethers.Wallet(privateKey, provider);
+
+  const scoreRevealWindowSec = Number(process.env.REWARD_SCORE_REVEAL_WINDOW_SEC || 86400);
+  const disputeGraceSec = Number(process.env.REWARD_DISPUTE_GRACE_SEC || 86400);
+  const aggregatorShareBps = Number(process.env.REWARD_AGGREGATOR_SHARE_BPS || 1000);
   
   console.log("Deployer:", wallet.address);
   const balance = await provider.getBalance(wallet.address);
@@ -57,19 +61,6 @@ async function main() {
   const escrowAddress = await escrow.getAddress();
   console.log("HealChainEscrow deployed to:", escrowAddress);
 
-  // Deploy RewardDistribution
-  const RewardFactory = new ethers.ContractFactory(
-    rewardArtifact.abi,
-    rewardArtifact.bytecode,
-    wallet
-  );
-  
-  console.log("Deploying RewardDistribution...");
-  const reward = await RewardFactory.deploy(escrowAddress);
-  await reward.waitForDeployment();
-  const rewardAddress = await reward.getAddress();
-  console.log("RewardDistribution deployed to:", rewardAddress);
-
   // Deploy BlockPublisher (if artifact exists)
   let blockPublisherAddress = null;
   if (blockPublisherArtifact) {
@@ -87,6 +78,42 @@ async function main() {
   } else {
     console.log("⚠️  Skipping BlockPublisher deployment (contract not compiled)");
   }
+
+  if (!blockPublisherAddress) {
+    throw new Error("BlockPublisher deployment is required for strict Algorithm-7 flow");
+  }
+
+  // Deploy RewardDistribution
+  const RewardFactory = new ethers.ContractFactory(
+    rewardArtifact.abi,
+    rewardArtifact.bytecode,
+    wallet
+  );
+  
+  console.log("Deploying RewardDistribution...");
+  const reward = await RewardFactory.deploy(
+    escrowAddress,
+    blockPublisherAddress,
+    scoreRevealWindowSec,
+    disputeGraceSec,
+    aggregatorShareBps
+  );
+  await reward.waitForDeployment();
+  const rewardAddress = await reward.getAddress();
+  console.log("RewardDistribution deployed to:", rewardAddress);
+
+  // Wire strict M7 permissions
+  console.log("Wiring reward distributor permissions...");
+  await (await escrow.setRewardDistributor(rewardAddress)).wait();
+  console.log("   ✅ Escrow.rewardDistributor set");
+
+  const blockPublisher = new ethers.Contract(
+    blockPublisherAddress,
+    blockPublisherArtifact.abi,
+    wallet
+  );
+  await (await blockPublisher.setRewardDistributor(rewardAddress)).wait();
+  console.log("   ✅ BlockPublisher.rewardDistributor set");
 
   // Deploy StakeRegistry (if artifact exists)
   let stakeRegistryAddress = null;
@@ -187,6 +214,7 @@ RPC_URL=http://127.0.0.1:7545
 ESCROW_ADDRESS=
 ESCROW_CONTRACT_ADDRESS=
 REWARD_CONTRACT_ADDRESS=
+BLOCK_PUBLISHER_ADDRESS=
 STAKE_REGISTRY_ADDRESS=
 
 # Backend Wallet

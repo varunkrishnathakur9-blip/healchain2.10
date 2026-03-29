@@ -10,12 +10,12 @@ const router = Router();
  */
 router.post(
   "/distribute",
-  requireFields(["taskID", "miners"]),
+  requireFields(["taskID"]),
   async (req, res, next) => {
     try {
-      const { taskID, miners } = req.body;
+      const { taskID } = req.body;
 
-      const tx = await distribute(taskID, miners);
+      const tx = await distribute(taskID);
 
       res.json({ status: "DISTRIBUTED", txHash: tx.hash });
     } catch (err) {

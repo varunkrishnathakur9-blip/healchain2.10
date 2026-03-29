@@ -74,7 +74,7 @@ async function runSchedulerCycle() {
     await checkRefundedTasks();
     
   } catch (error: any) {
-    logger.error(`Scheduler cycle error: ${error.message}`, { stack: error.stack });
+    logger.error(`Scheduler cycle error: ${error.message}${error?.stack ? ` | stack: ${error.stack}` : ""}`);
   }
 }
 

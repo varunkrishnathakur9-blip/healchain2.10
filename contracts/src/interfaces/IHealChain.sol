@@ -42,8 +42,11 @@ interface IHealChain {
         bytes32 modelHash;          // IPFS / Merkle hash
         uint256 accuracy;
         address aggregator;
+        address[] participants;     // Ordered participant set used for commit-index checks (M7b)
         bytes32[] scoreCommits;     // Commit(score_i || nonce_i)
         uint256 timestamp;
+        uint256 revealDeadline;     // TP reveal deadline (M7a)
+        bool distributed;           // Reward distribution terminal flag (M7c)
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -69,13 +72,31 @@ interface IHealChain {
         string calldata taskID,
         bytes32 modelHash,
         uint256 accuracy,
+        address[] calldata participants,
         bytes32[] calldata scoreCommits
     ) external;
 
-    function getBlock(string calldata taskID)
+    function getBlockMeta(string calldata taskID)
         external
         view
-        returns (BlockRecord memory);
+        returns (
+            bytes32 modelHash,
+            uint256 accuracy,
+            address aggregator,
+            uint256 timestamp,
+            uint256 revealDeadline,
+            bool distributed
+        );
+
+    function getParticipants(string calldata taskID)
+        external
+        view
+        returns (address[] memory);
+
+    function getScoreCommits(string calldata taskID)
+        external
+        view
+        returns (bytes32[] memory);
 
     /*//////////////////////////////////////////////////////////////
                         COMMIT–REVEAL (M7)
@@ -99,9 +120,8 @@ interface IHealChain {
                         REWARD DISTRIBUTION (M7)
     //////////////////////////////////////////////////////////////*/
 
-    function distributeRewards(
-        string calldata taskID,
-        address[] calldata miners
+    function distribute(
+        string calldata taskID
     ) external;
 
     /*//////////////////////////////////////////////////////////////

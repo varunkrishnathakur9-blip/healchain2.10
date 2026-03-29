@@ -9,6 +9,8 @@ contract HealChainEscrow is ReentrancyGuard, Ownable {
     // ✔ Required OZ v5 Ownable constructor
     constructor(address initialOwner) Ownable(initialOwner) {}
 
+    address public rewardDistributor;
+
     enum TaskStatus {
         CREATED,
         LOCKED,
@@ -38,6 +40,19 @@ contract HealChainEscrow is ReentrancyGuard, Ownable {
 
     event TaskLocked(string indexed taskID);
     event TaskFailed(string indexed taskID);
+    event RewardDistributorUpdated(address indexed rewardDistributor);
+    event RewardReleased(string indexed taskID, address indexed recipient, uint256 amount);
+
+    modifier onlyRewardDistributor() {
+        require(msg.sender == rewardDistributor, "Only reward distributor");
+        _;
+    }
+
+    function setRewardDistributor(address distributor) external onlyOwner {
+        require(distributor != address(0), "Invalid distributor");
+        rewardDistributor = distributor;
+        emit RewardDistributorUpdated(distributor);
+    }
 
     // M1: Publish FL task with escrow
     function publishTask(
@@ -81,5 +96,40 @@ contract HealChainEscrow is ReentrancyGuard, Ownable {
         require(ok, "Refund failed");
 
         emit TaskFailed(taskID);
+    }
+
+    // Read helpers for strict M7 checks
+    function taskPublisher(string calldata taskID) external view returns (address) {
+        return tasks[taskID].publisher;
+    }
+
+    function taskAccuracyCommit(string calldata taskID) external view returns (bytes32) {
+        return tasks[taskID].accuracyCommit;
+    }
+
+    // M7 payout primitive: RewardDistribution pulls escrow into recipients.
+    function releaseReward(
+        string calldata taskID,
+        address recipient,
+        uint256 amount
+    ) external onlyRewardDistributor nonReentrant {
+        require(recipient != address(0), "Invalid recipient");
+        require(amount > 0, "Invalid amount");
+
+        Task storage task = tasks[taskID];
+        require(task.publisher != address(0), "Task missing");
+
+        uint256 balance = escrowBalance[taskID];
+        require(balance >= amount, "Insufficient escrow");
+
+        escrowBalance[taskID] = balance - amount;
+        if (escrowBalance[taskID] == 0) {
+            task.status = TaskStatus.COMPLETED;
+        }
+
+        (bool ok, ) = payable(recipient).call{value: amount}("");
+        require(ok, "Reward transfer failed");
+
+        emit RewardReleased(taskID, recipient, amount);
     }
 }

@@ -87,12 +87,36 @@ export async function publishOnChain(
   const normalizedScoreCommits = (scoreCommits || []).map((v, i) =>
     toBytes32(v, `scoreCommits[${i}]`)
   );
+  const toAddress = (value: string, label: string): `0x${string}` => {
+    const raw = String(value || "").trim();
+    if (!/^0x[0-9a-fA-F]{40}$/.test(raw)) {
+      throw new Error(`${label} must be address hex, got: ${value}`);
+    }
+    return raw.toLowerCase() as `0x${string}`;
+  };
+
+  const participantSource: string[] =
+    Array.isArray(b.participants) && b.participants.length > 0
+      ? b.participants.map((v: unknown) => String(v))
+      : miners.map((v) => String(v));
+  const normalizedParticipants = participantSource.map((v, i) =>
+    toAddress(v, `participants[${i}]`)
+  );
+  if (normalizedParticipants.length == 0) {
+    throw new Error("participants must not be empty for M6 publish");
+  }
+  if (normalizedParticipants.length !== normalizedScoreCommits.length) {
+    throw new Error(
+      `participants/scoreCommits length mismatch (${normalizedParticipants.length}/${normalizedScoreCommits.length})`
+    );
+  }
 
   // M6 on-chain publish through BlockPublisher contract.
   const tx = await blockPublisher.publishBlock(
     taskID,
     normalizedModelHash,
     accuracy,
+    normalizedParticipants,
     normalizedScoreCommits
   );
 

@@ -178,7 +178,7 @@ export async function createTask(
     // Use the transaction's 'to' address as the source of truth
     // The transaction is what actually happened on-chain, so we trust it
     transactionEscrowAddress = tx.to;
-    const configuredEscrowAddress = escrow.target;
+    const configuredEscrowAddress = String(escrow.target);
     
     // Log if there's a mismatch and auto-update the env file
     if (transactionEscrowAddress.toLowerCase() !== configuredEscrowAddress.toLowerCase()) {
@@ -217,6 +217,9 @@ export async function createTask(
         // Use the escrow ABI to decode, but we'll verify against the transaction address
         const iface = escrow.interface;
         const decoded = iface.parseTransaction({ data: tx.data, value: tx.value });
+        if (!decoded) {
+          throw new Error("Could not decode escrow transaction input");
+        }
         console.log(`[Escrow Verification] Transaction decoded: function=${decoded.name}, args=`, {
           taskID: decoded.args[0],
           accuracyCommit: decoded.args[1],
