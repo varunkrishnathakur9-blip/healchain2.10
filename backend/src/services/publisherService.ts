@@ -2,6 +2,7 @@ import { prisma } from "../config/database.config.js";
 import { blockPublisher } from "../contracts/blockPublisher.js";
 import { TaskStatus } from "@prisma/client";
 import { verifyCandidateBlockSignature } from "../crypto/candidateSignature.js";
+import { normalizeMinerPublicKey } from "../utils/publicKey.js";
 
 /**
  * M6: Publish block on-chain after verification
@@ -87,12 +88,47 @@ export async function publishOnChain(
   const normalizedScoreCommits = (scoreCommits || []).map((v, i) =>
     toBytes32(v, `scoreCommits[${i}]`)
   );
+  const isAddressHex = (value: string): boolean =>
+    /^0x[0-9a-fA-F]{40}$/.test(String(value || "").trim());
+
+  // Build pk->address lookup so legacy candidate participants encoded as miner_pk
+  // can still be published in strict M6 contracts expecting address[].
+  const taskMiners = await prisma.miner.findMany({
+    where: { taskID },
+    select: { address: true, publicKey: true },
+  });
+  const pkToAddress = new Map<string, string>();
+  for (const m of taskMiners) {
+    if (!m.publicKey) continue;
+    try {
+      pkToAddress.set(normalizeMinerPublicKey(m.publicKey), m.address.toLowerCase());
+    } catch {
+      // Ignore malformed stored keys; they will fail mapping later if needed.
+    }
+  }
+
   const toAddress = (value: string, label: string): `0x${string}` => {
     const raw = String(value || "").trim();
-    if (!/^0x[0-9a-fA-F]{40}$/.test(raw)) {
-      throw new Error(`${label} must be address hex, got: ${value}`);
+
+    // Normal path: participant is already an EVM address.
+    if (isAddressHex(raw)) {
+      return raw.toLowerCase() as `0x${string}`;
     }
-    return raw.toLowerCase() as `0x${string}`;
+
+    // Legacy path: participant is miner_pk "x,y". Map it to registered miner address.
+    try {
+      const normalizedPk = normalizeMinerPublicKey(raw);
+      const mapped = pkToAddress.get(normalizedPk);
+      if (mapped && isAddressHex(mapped)) {
+        return mapped.toLowerCase() as `0x${string}`;
+      }
+    } catch {
+      // Fall through to throw below.
+    }
+
+    throw new Error(
+      `${label} must be address hex or mappable miner_pk, got: ${value}`
+    );
   };
 
   const participantSource: string[] =
