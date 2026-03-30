@@ -8,7 +8,7 @@ from scoring.norm import gradient_l2_norm
 from crypto.nddfe import encrypt_update
 from commit.commit import commit_score
 from crypto.signature import generate_miner_signature
-from state.local_store import load_state, save_state
+from state.local_store import load_state, save_state, save_reveal_record
 from config.settings import LOCAL_EPOCHS, DGC_THRESHOLD
 from utils.quantize_gradients import quantize_gradients
 from config.gradient_bounds import QUANTIZATION_SCALE, MAX_GRAD_MAGNITUDE
@@ -235,5 +235,15 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
     state[task["taskID"]]["revealed"] = False
     state[task["taskID"]]["quantization_scale"] = scale
     save_state(state)
+
+    reveal_artifact_path = save_reveal_record(
+        task_id=task["taskID"],
+        miner_address=miner_addr,
+        score=score,
+        nonce_hex=nonce,
+        commit_hex=commit,
+    )
+    if reveal_artifact_path:
+        print(f"[M3] Reveal artifact saved: {reveal_artifact_path}")
 
     return payload
