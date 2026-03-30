@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 import { useReadContract } from 'wagmi';
 import { useTaskList } from '@/hooks/useTask';
+import { useContract } from '@/hooks/useContract';
 import { REWARD_DISTRIBUTION_ABI, BLOCK_PUBLISHER_ABI, ESCROW_ABI } from '@/lib/contracts';
 import { getChainConfig } from '@/lib/web3';
 import { verificationAPI } from '@/lib/api';
@@ -228,7 +229,16 @@ function PublisherTaskCard({ task }: { task: any }) {
   const chainConfig = chainId ? getChainConfig(chainId) : null;
   const [showRevealForm, setShowRevealForm] = useState(false);
   const [showDistribute, setShowDistribute] = useState(false);
+  const [distributeError, setDistributeError] = useState<string | null>(null);
+  const [distributeSubmitted, setDistributeSubmitted] = useState(false);
   const [revealedMiners, setRevealedMiners] = useState<Set<string>>(new Set());
+  const {
+    distributeRewards,
+    hash: distributeTxHash,
+    isPending: distributePending,
+    isConfirming: distributeConfirming,
+    isConfirmed: distributeConfirmed,
+  } = useContract();
   const escrowAddress = (task.escrowContractAddress || chainConfig?.contracts.escrow) as `0x${string}` | undefined;
 
   const { data: escrowBalanceOnChain } = useReadContract({
@@ -318,6 +328,52 @@ function PublisherTaskCard({ task }: { task: any }) {
     normalizeCommitHash((escrowTask as any)?.accuracyCommit) ||
     normalizeCommitHash((escrowTask as any)?.[3]);
 
+  const handleDistributeRewards = async () => {
+    setShowDistribute(true);
+    setDistributeError(null);
+    setDistributeSubmitted(false);
+
+    if (!chainConfig?.contracts.rewardDistribution) {
+      setDistributeError('RewardDistribution contract not configured for this network.');
+      return;
+    }
+
+    if (!m7aDone) {
+      setDistributeError('Publisher accuracy reveal (M7a) is required before M7c.');
+      return;
+    }
+
+    if (!m6Complete) {
+      setDistributeError('Block publishing (M6) must be complete before M7c.');
+      return;
+    }
+
+    // Contract ignores miners in the backward-compatible overload, but pass validated addresses.
+    const minersForTx = (miners || [])
+      .map((m: any) => (m?.address || m || '').toString())
+      .filter((addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr)) as `0x${string}`[];
+
+    try {
+      await distributeRewards(task.taskID, minersForTx);
+      setDistributeSubmitted(true);
+    } catch (err: any) {
+      const rawMsg =
+        err?.shortMessage ||
+        err?.details ||
+        err?.message ||
+        'Failed to trigger reward distribution';
+      const normalized = String(rawMsg).toLowerCase();
+      if (normalized.includes('no scores')) {
+        setDistributeError(
+          'Current on-chain RewardDistribution requires at least one miner score reveal (M7b) before M7c. ' +
+          'Reveal one valid miner score for this task, then retry distribution.'
+        );
+      } else {
+        setDistributeError(String(rawMsg));
+      }
+    }
+  };
+
   return (
     <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
       <div className="flex items-center gap-2 mb-3">
@@ -406,13 +462,40 @@ function PublisherTaskCard({ task }: { task: any }) {
               </dd>
             </div>
           </dl>
-          <Button variant="primary" size="sm" onClick={() => setShowDistribute(true)}>
-            Distribute Rewards (M7c)
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleDistributeRewards}
+            disabled={distributePending || distributeConfirming}
+          >
+            {distributePending || distributeConfirming ? 'Distributing...' : 'Distribute Rewards (M7c)'}
           </Button>
           {showDistribute && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-              Triggers: RewardDistribution.distribute()
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Triggers: RewardDistribution.distribute()
+              </p>
+              {distributeSubmitted && !distributeTxHash && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Distribution transaction requested in wallet.
+                </p>
+              )}
+              {distributeTxHash && (
+                <p className="text-xs text-gray-700 dark:text-gray-300 break-all">
+                  Tx: <span className="font-mono">{distributeTxHash}</span>
+                </p>
+              )}
+              {distributeConfirmed && (
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  Distribution transaction confirmed on-chain.
+                </p>
+              )}
+              {distributeError && (
+                <p className="text-xs text-red-600 dark:text-red-400 break-all">
+                  {distributeError}
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}

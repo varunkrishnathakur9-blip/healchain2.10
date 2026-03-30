@@ -1,8 +1,9 @@
 import "dotenv/config";
 import "@nomicfoundation/hardhat-ethers";
+import { defineConfig } from "hardhat/config";
 
 /** @type {import("hardhat/config").HardhatUserConfig} */
-const config = {
+const config = defineConfig({
   // --------------------------------------------------
   // Default network
   // --------------------------------------------------
@@ -39,6 +40,7 @@ const config = {
   networks: {
     hardhat: {
       type: "edr-simulated",
+      chainType: "l1",
       chainId: 31337,
       // Hardhat network automatically provides accounts
       // Note: To run 'npx hardhat node' on a different port, use: npx hardhat node --port 7545
@@ -47,6 +49,7 @@ const config = {
 
     localhost: {
       type: "http",
+      chainType: "l1",
       url: "http://127.0.0.1:7545",
       chainId: 1337,
       // Add accounts for localhost network
@@ -62,6 +65,7 @@ const config = {
 
     sepolia: {
       type: "http",
+      chainType: "l1",
       url: process.env.SEPOLIA_RPC_URL || "http://127.0.0.1:8545",
       chainId: 11155111,
       accounts: process.env.DEPLOYER_PRIVATE_KEY
@@ -69,6 +73,6 @@ const config = {
         : [],
     },
   },
-};
+});
 
 export default config;
