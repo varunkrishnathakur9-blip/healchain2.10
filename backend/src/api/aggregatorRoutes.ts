@@ -129,39 +129,41 @@ router.post(
  */
 router.post(
   "/publish",
-  requireFields(["taskID", "modelHash", "accuracy", "miners", "address", "message", "signature"]),
+  requireFields(["taskID", "address", "message", "signature"]),
   requireWalletAuth,
   async (req, res, next) => {
     try {
-      const { taskID, modelHash, accuracy, miners, scoreCommits } = req.body;
+      const { taskID } = req.body;
       const authenticatedAddress = ((req as any).walletAddress || "").toLowerCase();
       const { prisma } = await import("../config/database.config.js");
 
       const task = await prisma.task.findUnique({
         where: { taskID },
-        select: { publisher: true }
+        select: { publisher: true, aggregatorAddress: true }
       });
 
       if (!task) {
         return res.status(404).json({ error: "Task not found" });
       }
 
-      if ((task.publisher || "").toLowerCase() !== authenticatedAddress) {
+      if (!task.aggregatorAddress) {
+        return res.status(400).json({
+          error: "Task has no selected aggregator yet",
+          taskID
+        });
+      }
+
+      if ((task.aggregatorAddress || "").toLowerCase() !== authenticatedAddress) {
         return res.status(403).json({
-          error: "Unauthorized: only task publisher can publish block",
+          error: "Unauthorized: only selected aggregator can publish block (strict M6)",
           taskID,
+          aggregator: task.aggregatorAddress,
           publisher: task.publisher,
           caller: authenticatedAddress
         });
       }
 
-      const txHash = await publishOnChain(
-        taskID,
-        modelHash,
-        BigInt(accuracy),
-        miners,
-        Array.isArray(scoreCommits) ? scoreCommits : []
-      );
+      const txHash = await publishOnChain(taskID);
 
       res.json({ txHash });
     } catch (err) {

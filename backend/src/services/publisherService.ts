@@ -9,10 +9,10 @@ import { normalizeMinerPublicKey } from "../utils/publicKey.js";
  */
 export async function publishOnChain(
   taskID: string,
-  modelHash: string,
-  accuracy: bigint,
-  miners: string[],
-  scoreCommits: string[] = []
+  _modelHash?: string,
+  _accuracy?: bigint,
+  _miners: string[] = [],
+  _scoreCommits: string[] = []
 ) {
   if (!blockPublisher) {
     throw new Error(
@@ -58,16 +58,42 @@ export async function publishOnChain(
   if (!publishableStatuses.has(task.status as TaskStatus)) {
     throw new Error("Task not ready for publishing");
   }
+  if (!task.aggregatorAddress) {
+    throw new Error("Task has no selected aggregator. Cannot execute strict M6 publish.");
+  }
+
   const b = block as any;
-  if (!b.candidateHash || !b.signatureA || !b.aggregatorPK || b.candidateTimestamp == null) {
-    throw new Error("Candidate block is incomplete for M6 publish");
+  if (
+    !b.candidateHash ||
+    !b.signatureA ||
+    !b.aggregatorPK ||
+    b.candidateTimestamp == null ||
+    !b.modelHash ||
+    !b.modelLink ||
+    typeof b.round !== "number" ||
+    b.round <= 0
+  ) {
+    throw new Error(
+      "Candidate block is incomplete for strict M6 publish (round/modelLink/hash/signature/aggregatorPK required)"
+    );
+  }
+  if (!Array.isArray(b.participants) || b.participants.length === 0) {
+    throw new Error("Candidate block participants are missing for strict M6 publish");
+  }
+  if (!Array.isArray(b.scoreCommits) || b.scoreCommits.length === 0) {
+    throw new Error("Candidate block scoreCommits are missing for strict M6 publish");
+  }
+  if (b.participants.length !== b.scoreCommits.length) {
+    throw new Error(
+      `Candidate block participants/scoreCommits mismatch (${b.participants.length}/${b.scoreCommits.length})`
+    );
   }
 
   const signatureOk = verifyCandidateBlockSignature({
     taskID,
-    round: typeof b.round === "number" ? b.round : Number((task as any).currentRound ?? 1),
-    modelHash: String(b.modelHash || modelHash),
-    modelLink: String(b.modelLink || ""),
+    round: b.round,
+    modelHash: String(b.modelHash),
+    modelLink: String(b.modelLink),
     accuracy: Number(b.accuracy) / 1_000_000,
     participants: Array.isArray(b.participants) ? b.participants.map((v: unknown) => String(v)) : [],
     scoreCommits: Array.isArray(b.scoreCommits) ? b.scoreCommits.map((v: unknown) => String(v)) : [],
@@ -89,7 +115,7 @@ export async function publishOnChain(
     select: { verdict: true },
   });
   const participantCount = Array.isArray(b.participants) ? b.participants.length : 0;
-  const totalMiners = participantCount > 0 ? participantCount : miners.length;
+  const totalMiners = participantCount;
   const majorityRequired = Math.ceil(totalMiners * 0.5);
   const validVotes = verifications.filter((v) => v.verdict === "VALID").length;
   if (validVotes < majorityRequired) {
@@ -106,9 +132,11 @@ export async function publishOnChain(
     return `0x${raw}`;
   };
 
-  const normalizedModelHash = toBytes32(modelHash, "modelHash");
-  const normalizedScoreCommits = (scoreCommits || []).map((v, i) =>
-    toBytes32(v, `scoreCommits[${i}]`)
+  // Canonical M6 source of truth is the signed candidate metadata in DB.
+  const normalizedModelHash = toBytes32(String(b.modelHash), "modelHash");
+  const normalizedAccuracy = BigInt(b.accuracy);
+  const normalizedScoreCommits: `0x${string}`[] = b.scoreCommits.map((v: unknown, i: number) =>
+    toBytes32(String(v), `scoreCommits[${i}]`)
   );
   const isAddressHex = (value: string): boolean =>
     /^0x[0-9a-fA-F]{40}$/.test(String(value || "").trim());
@@ -127,6 +155,24 @@ export async function publishOnChain(
     } catch {
       // Ignore malformed stored keys; they will fail mapping later if needed.
     }
+  }
+
+  const selectedAggregatorMiner = taskMiners.find(
+    (m) => m.address.toLowerCase() === String(task.aggregatorAddress).toLowerCase()
+  );
+  if (!selectedAggregatorMiner?.publicKey) {
+    throw new Error(
+      "Selected aggregator public key is missing from miner registry; strict M6 identity binding failed"
+    );
+  }
+  const normalizedCandidateAggregatorPK = normalizeMinerPublicKey(String(b.aggregatorPK));
+  const normalizedSelectedAggregatorPK = normalizeMinerPublicKey(
+    String(selectedAggregatorMiner.publicKey)
+  );
+  if (normalizedCandidateAggregatorPK !== normalizedSelectedAggregatorPK) {
+    throw new Error(
+      "Candidate aggregatorPK does not match selected task aggregator public key"
+    );
   }
 
   const toAddress = (value: string, label: string): `0x${string}` => {
@@ -153,10 +199,7 @@ export async function publishOnChain(
     );
   };
 
-  const participantSource: string[] =
-    Array.isArray(b.participants) && b.participants.length > 0
-      ? b.participants.map((v: unknown) => String(v))
-      : miners.map((v) => String(v));
+  const participantSource: string[] = b.participants.map((v: unknown) => String(v));
   const normalizedParticipants = participantSource.map((v, i) =>
     toAddress(v, `participants[${i}]`)
   );
@@ -176,22 +219,13 @@ export async function publishOnChain(
   // Strict M6 publish with explicit aggregator address to avoid
   // msg.sender/backend-relayer identity drift in on-chain rewards.
   let tx: any;
-  let backendSignerAddress = "";
-  try {
-    const runner: any = (blockPublisher as any).runner;
-    if (runner && typeof runner.getAddress === "function") {
-      backendSignerAddress = String(await runner.getAddress()).toLowerCase();
-    }
-  } catch {
-    // Non-fatal; used only for clearer safety diagnostics.
-  }
   try {
     tx = await (blockPublisher as any)[
       "publishBlock(string,bytes32,uint256,address,address[],bytes32[])"
     ](
       taskID,
       normalizedModelHash,
-      accuracy,
+      normalizedAccuracy,
       normalizedAggregator,
       normalizedParticipants,
       normalizedScoreCommits
@@ -200,41 +234,85 @@ export async function publishOnChain(
     const msg = String(err?.shortMessage || err?.message || err || "");
     const looksLikeAbiMismatch =
       msg.includes("missing revert data") || msg.includes("CALL_EXCEPTION");
-    if (!looksLikeAbiMismatch) {
-      throw err;
-    }
-
-    // Legacy contract path (no explicit aggregator argument).
-    // To preserve strict identity semantics, only allow this path when
-    // backend signer is already the selected aggregator address.
-    if (
-      backendSignerAddress &&
-      normalizedAggregator &&
-      backendSignerAddress !== normalizedAggregator.toLowerCase()
-    ) {
+    if (looksLikeAbiMismatch) {
       throw new Error(
-        `Legacy BlockPublisher fallback would set aggregator=msg.sender (${backendSignerAddress}) ` +
-          `but selected task aggregator is ${normalizedAggregator}. ` +
-          "Refusing publish to avoid reward-routing inconsistency. " +
-          "Set BACKEND_PRIVATE_KEY to selected aggregator key, or redeploy contracts with explicit aggregator publish support."
+        "Strict M6 publish requires BlockPublisher with explicit aggregator overload and metadata getters. " +
+        "Current contract appears legacy/incompatible. Redeploy M6/M7 contracts and update BACKEND/FRONTEND addresses."
       );
     }
+    throw err;
+  }
 
-    try {
-      tx = await (blockPublisher as any)[
-        "publishBlock(string,bytes32,uint256,address[],bytes32[])"
-      ](
-        taskID,
-        normalizedModelHash,
-        accuracy,
-        normalizedParticipants,
-        normalizedScoreCommits
+  // Wait for mining so strict post-publish validation can run deterministically.
+  const receipt = await tx.wait();
+  if (!receipt || receipt.status !== 1n) {
+    throw new Error("M6 publish transaction failed on-chain");
+  }
+
+  // Strict Algorithm-6 metadata verification on-chain.
+  let meta: any;
+  let onChainParticipants: string[] = [];
+  let onChainScoreCommits: string[] = [];
+  try {
+    meta = await (blockPublisher as any).getBlockMeta(taskID);
+    onChainParticipants = (await (blockPublisher as any).getParticipants(taskID)).map((v: unknown) =>
+      String(v).toLowerCase()
+    );
+    onChainScoreCommits = (await (blockPublisher as any).getScoreCommits(taskID)).map((v: unknown) =>
+      String(v).toLowerCase()
+    );
+  } catch {
+    throw new Error(
+      "Strict M6 metadata validation failed: BlockPublisher getters unavailable/incompatible. " +
+      "Redeploy M6/M7 contracts with current BlockPublisher.sol."
+    );
+  }
+
+  const onChainAggregator = String(meta?.[2] || "").toLowerCase();
+  const onChainModelHash = String(meta?.[0] || "").toLowerCase();
+  const onChainAccuracy = BigInt(meta?.[1] ?? 0);
+  const expectedParticipants = normalizedParticipants.map((v) => v.toLowerCase());
+  const expectedScoreCommits = normalizedScoreCommits.map((v: `0x${string}`) =>
+    String(v).toLowerCase()
+  );
+
+  if (onChainAggregator !== normalizedAggregator.toLowerCase()) {
+    throw new Error(
+      `Strict M6 metadata mismatch: on-chain aggregator ${onChainAggregator} != expected ${normalizedAggregator.toLowerCase()}`
+    );
+  }
+  if (onChainModelHash !== normalizedModelHash.toLowerCase()) {
+    throw new Error(
+      `Strict M6 metadata mismatch: on-chain modelHash ${onChainModelHash} != expected ${normalizedModelHash.toLowerCase()}`
+    );
+  }
+  if (onChainAccuracy !== normalizedAccuracy) {
+    throw new Error(
+      `Strict M6 metadata mismatch: on-chain accuracy ${onChainAccuracy.toString()} != expected ${normalizedAccuracy.toString()}`
+    );
+  }
+  if (onChainParticipants.length !== expectedParticipants.length) {
+    throw new Error(
+      `Strict M6 metadata mismatch: participants length ${onChainParticipants.length} != expected ${expectedParticipants.length}`
+    );
+  }
+  for (let i = 0; i < expectedParticipants.length; i++) {
+    if (onChainParticipants[i] !== expectedParticipants[i]) {
+      throw new Error(
+        `Strict M6 metadata mismatch at participants[${i}]: ${onChainParticipants[i]} != expected ${expectedParticipants[i]}`
       );
-    } catch (legacyErr: any) {
-      // Last fallback for very old contracts.
-      tx = await (blockPublisher as any)[
-        "publishBlock(string,bytes32,uint256,bytes32[])"
-      ](taskID, normalizedModelHash, accuracy, normalizedScoreCommits);
+    }
+  }
+  if (onChainScoreCommits.length !== expectedScoreCommits.length) {
+    throw new Error(
+      `Strict M6 metadata mismatch: scoreCommits length ${onChainScoreCommits.length} != expected ${expectedScoreCommits.length}`
+    );
+  }
+  for (let i = 0; i < expectedScoreCommits.length; i++) {
+    if (onChainScoreCommits[i] !== expectedScoreCommits[i]) {
+      throw new Error(
+        `Strict M6 metadata mismatch at scoreCommits[${i}]: ${onChainScoreCommits[i]} != expected ${expectedScoreCommits[i]}`
+      );
     }
   }
 
