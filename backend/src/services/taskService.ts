@@ -420,8 +420,28 @@ export async function createTask(
     throw new Error("maxMiners cannot exceed 1000");
   }
 
+  // Persist required accuracy for M4 gating.
+  // Frontend submits `accuracy` as fixed-point scaled by 1e6.
+  // Accept both user styles:
+  // - ratio style: 0.80 -> targetAccuracy=0.80
+  // - percent style: 80 -> targetAccuracy=0.80
+  const accuracyInput = Number(accuracy) / 1_000_000;
+  if (!Number.isFinite(accuracyInput) || accuracyInput <= 0) {
+    throw new Error("accuracy must be a positive number");
+  }
+  if (accuracyInput > 100) {
+    throw new Error("accuracy must be <= 100");
+  }
+  const targetAccuracy = accuracyInput > 1 ? accuracyInput / 100 : accuracyInput;
+  if (!Number.isFinite(targetAccuracy) || targetAccuracy <= 0 || targetAccuracy > 1) {
+    throw new Error("targetAccuracy must be within (0, 1]");
+  }
+  const accuracyRequiredScaled = Math.round(targetAccuracy * 1_000_000);
+
   // Create task with status OPEN (escrow is verified as locked)
-  console.log(`[createTask] Creating task in database: taskID=${taskID}, publisher=${publisher}, minMiners=${finalMinMiners}, maxMiners=${finalMaxMiners}`);
+  console.log(
+    `[createTask] Creating task in database: taskID=${taskID}, publisher=${publisher}, targetAccuracy=${targetAccuracy}, minMiners=${finalMinMiners}, maxMiners=${finalMaxMiners}`
+  );
   try {
     const createdTask = await prisma.task.create({
       data: {
@@ -436,6 +456,7 @@ export async function createTask(
         validationDataLink: validationDataLink || null, // Optional validation data link
         minMiners: finalMinMiners,  // Store min miners
         maxMiners: finalMaxMiners,  // Store max miners
+        targetAccuracy, // Required accuracy for M4 convergence check
         status: TaskStatus.OPEN,  // Task is OPEN because escrow is verified as locked
         publishTx: escrowTxHash,  // Store escrow transaction hash
         escrowContractAddress: transactionEscrowAddress || null  // Store contract address for frontend to read from correct contract
@@ -457,6 +478,8 @@ export async function createTask(
     publisherPublicKey: normalizedPublisherPublicKey,
     commitHash,
     deadline: deadline.toString(),
+    targetAccuracy,
+    accuracyRequired: accuracyRequiredScaled,
     status: "OPEN",
     validationDataLink: validationDataLink || null
   };
@@ -593,6 +616,8 @@ export async function getTaskById(taskID: string) {
     deadline: task.deadline.toString(), // Convert BigInt to string
     currentRound: task.currentRound,
     status: task.status,
+    targetAccuracy: task.targetAccuracy,
+    accuracyRequired: Math.round(task.targetAccuracy * 1_000_000),
     dataset: task.dataset,
     initialModelLink: task.initialModelLink,
     validationDataLink: (task as any).validationDataLink || null,
@@ -749,6 +774,8 @@ export async function getAllTasks(filters: {
       publisherPublicKey: task.publisherPublicKey,
       deadline: task.deadline.toString(),
       status: task.status,
+      targetAccuracy: task.targetAccuracy,
+      accuracyRequired: Math.round(task.targetAccuracy * 1_000_000),
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,
       miners: task.miners,

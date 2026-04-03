@@ -166,6 +166,13 @@ export default function TaskDetailPage() {
     task?.status !== 'COMPLETED' &&
     task?.status !== 'CANCELLED';
 
+  const requiredAccuracyPercent =
+    typeof task?.targetAccuracy === 'number' && Number.isFinite(task.targetAccuracy)
+      ? task.targetAccuracy * 100
+      : typeof task?.accuracyRequired === 'number'
+        ? task.accuracyRequired / 1e6
+        : null;
+
   // Check for critical state mismatch: Database says Publisher X, Blockchain says Publisher Y (or 0x0)
   const onChainPublisher = contractTask ? String(contractTask[1]) : undefined;
   // Check if onChainPublisher is the zero address (implies task doesn't exist on this contract)
@@ -369,11 +376,11 @@ export default function TaskDetailPage() {
               <dd className="mt-1 text-sm text-gray-900 dark:text-white">{task.rewardAmount} ETH</dd>
             </div>
           )}
-          {task.accuracyRequired && (
+          {requiredAccuracyPercent !== null && (
             <div>
               <dt className="text-sm font-medium text-gray-600 dark:text-gray-400">Required Accuracy</dt>
               <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                {(task.accuracyRequired / 1e6).toFixed(2)}%
+                {requiredAccuracyPercent.toFixed(2)}%
               </dd>
             </div>
           )}

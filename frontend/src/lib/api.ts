@@ -132,6 +132,7 @@ export interface Task {
   commitHash?: string;
   rewardAmount?: number;
   accuracyRequired?: number;
+  targetAccuracy?: number;
   escrowBalance?: string;
   escrowContractAddress?: string; // Contract address where escrow is locked (for reading from correct contract)
   publishTx?: string; // Escrow transaction hash
