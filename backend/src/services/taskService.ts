@@ -2,6 +2,8 @@ import { prisma } from "../config/database.config.js";
 import { keccak256, solidityPacked } from "ethers";
 import { TaskStatus } from "@prisma/client";
 import { normalizeMinerPublicKey } from "../utils/publicKey.js";
+import { rewardDistribution } from "../contracts/rewardDistribution.js";
+import { syncRewardRowsFromChain } from "./rewardService.js";
 
 /**
  * Helper function to automatically update ESCROW_ADDRESS in .env.development
@@ -531,6 +533,20 @@ export async function getTaskById(taskID: string) {
           createdAt: "desc"
         },
       },
+      rewards: {
+        select: {
+          id: true,
+          minerAddress: true,
+          score: true,
+          amountETH: true,
+          txHash: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
       _count: {
         select: {
           miners: true,
@@ -593,6 +609,15 @@ export async function getTaskById(taskID: string) {
       minerAddress: gradient.minerAddress,
       scoreCommit: gradient.scoreCommit,
       status: gradient.status
+    })),
+    rewards: task.rewards.map((reward) => ({
+      id: reward.id,
+      minerAddress: reward.minerAddress,
+      score: reward.score.toString(),
+      amountETH: reward.amountETH,
+      txHash: reward.txHash,
+      status: reward.status,
+      createdAt: reward.createdAt,
     })),
     scoreCommitsByMiner: task.gradients.reduce((acc, gradient) => {
       if (!gradient.scoreCommit) {
@@ -684,6 +709,20 @@ export async function getAllTasks(filters: {
           createdAt: "desc"
         },
       },
+      rewards: {
+        select: {
+          id: true,
+          minerAddress: true,
+          score: true,
+          amountETH: true,
+          txHash: true,
+          status: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
       _count: {
         select: {
           miners: true,
@@ -743,6 +782,15 @@ export async function getAllTasks(filters: {
         }
         return acc;
       }, {} as Record<string, string>),
+      rewards: task.rewards.map((reward) => ({
+        id: reward.id,
+        minerAddress: reward.minerAddress,
+        score: reward.score.toString(),
+        amountETH: reward.amountETH,
+        txHash: reward.txHash,
+        status: reward.status,
+        createdAt: reward.createdAt,
+      })),
       aggregator,
       _count: task._count
     };
@@ -924,10 +972,12 @@ export async function checkConsensusAndUpdate() {
  * Check reward status for VERIFIED tasks and update to REWARDED if all rewards distributed
  */
 export async function checkRewardStatus() {
-  // Get all VERIFIED tasks with rewards
+  // Check tasks that can legitimately be in M7 flow before REWARDED.
   const verifiedTasks = await prisma.task.findMany({
     where: {
-      status: TaskStatus.VERIFIED
+      status: {
+        in: [TaskStatus.REVEAL_OPEN, TaskStatus.REVEAL_CLOSED, TaskStatus.VERIFIED, TaskStatus.REWARDED],
+      },
     },
     include: {
       miners: true,
@@ -943,6 +993,47 @@ export async function checkRewardStatus() {
       continue;
     }
 
+    // 1) Prefer authoritative on-chain completion signal.
+    let distributedOnChain = false;
+    if (rewardDistribution) {
+      try {
+        distributedOnChain = (await rewardDistribution.rewardsDistributed(task.taskID)) === true;
+      } catch (error: any) {
+        console.warn(
+          `[TaskScheduler] Could not read rewardsDistributed(${task.taskID}) from chain: ${error?.message || error}`
+        );
+      }
+    }
+
+    if (distributedOnChain) {
+      const needsRewardBackfill =
+        task.rewards.length < totalMiners ||
+        task.rewards.some((r) => r.status !== "DISTRIBUTED");
+
+      try {
+        if (needsRewardBackfill) {
+          await syncRewardRowsFromChain(task.taskID);
+        }
+      } catch (error: any) {
+        console.warn(
+          `[TaskScheduler] Could not sync Reward rows for ${task.taskID}: ${error?.message || error}`
+        );
+      }
+
+      if (task.status !== TaskStatus.REWARDED) {
+        await prisma.task.update({
+          where: { taskID: task.taskID },
+          data: { status: TaskStatus.REWARDED },
+        });
+        updatedCount++;
+        console.log(
+          `[TaskScheduler] Updated task ${task.taskID}: ${task.status} → REWARDED (on-chain rewardsDistributed=true)`
+        );
+      }
+      continue;
+    }
+
+    // 2) Legacy fallback: infer completion from DB reward rows.
     // Check if all miners have rewards with status DISTRIBUTED
     const distributedRewards = task.rewards.filter(r => r.status === "DISTRIBUTED").length;
     

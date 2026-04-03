@@ -68,7 +68,8 @@ export default function RewardsPage() {
           verificationOpen ||
           t.status === 'REVEAL_OPEN' ||
           t.status === 'REVEAL_CLOSED' ||
-          t.status === 'VERIFIED'
+          t.status === 'VERIFIED' ||
+          t.status === 'REWARDED'
         );
       }) || [],
     [tasks]
@@ -84,6 +85,46 @@ export default function RewardsPage() {
 
   const isPublisher = publisherTasks.length > 0;
   const isMiner = minerTasks.length > 0;
+
+  const { totalDistributedEth, pendingDistributionEth, myTotalRewardsEth } = useMemo(() => {
+    return rewardTasks.reduce(
+      (acc, t: any) => {
+        const taskRewards = Array.isArray(t?.rewards) ? t.rewards : [];
+        const distributedRows = taskRewards.filter(
+          (r: any) => String(r?.status || '').toUpperCase() === 'DISTRIBUTED'
+        );
+        const distributedForTask = distributedRows.reduce(
+          (sum: number, r: any) => sum + (parseFloat(String(r?.amountETH ?? '0')) || 0),
+          0
+        );
+
+        acc.totalDistributedEth += distributedForTask;
+
+        const hasAnyDistributed = distributedRows.length > 0;
+        if (!hasAnyDistributed && (
+          t?.status === 'VERIFIED' ||
+          t?.status === 'REVEAL_OPEN' ||
+          t?.status === 'REVEAL_CLOSED'
+        )) {
+          const escrow = parseFloat(t?.escrowBalance || '0') || 0;
+          acc.pendingDistributionEth += escrow;
+        }
+
+        if (address) {
+          const myRows = distributedRows.filter(
+            (r: any) => String(r?.minerAddress || '').toLowerCase() === address.toLowerCase()
+          );
+          acc.myTotalRewardsEth += myRows.reduce(
+            (sum: number, r: any) => sum + (parseFloat(String(r?.amountETH ?? '0')) || 0),
+            0
+          );
+        }
+
+        return acc;
+      },
+      { totalDistributedEth: 0, pendingDistributionEth: 0, myTotalRewardsEth: 0 }
+    );
+  }, [rewardTasks, address]);
 
   useEffect(() => {
     if (!isConnected) return;
@@ -174,18 +215,22 @@ export default function RewardsPage() {
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-gray-600 dark:text-gray-400">Total Distributed:</dt>
-            <dd className="text-gray-900 dark:text-white font-medium">0 ETH</dd>
+            <dd className="text-gray-900 dark:text-white font-medium">
+              {totalDistributedEth.toFixed(4)} ETH
+            </dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-gray-600 dark:text-gray-400">Pending Distribution:</dt>
             <dd className="text-gray-900 dark:text-white font-medium">
-              {rewardTasks.reduce((sum, t) => sum + (parseFloat(t.escrowBalance || '0') || 0), 0).toFixed(4)} ETH
+              {pendingDistributionEth.toFixed(4)} ETH
             </dd>
           </div>
           {address && (
             <div className="flex justify-between">
               <dt className="text-gray-600 dark:text-gray-400">My Total Rewards:</dt>
-              <dd className="text-gray-900 dark:text-white font-medium">0 ETH</dd>
+              <dd className="text-gray-900 dark:text-white font-medium">
+                {myTotalRewardsEth.toFixed(4)} ETH
+              </dd>
             </div>
           )}
         </dl>
@@ -230,6 +275,7 @@ function PublisherTaskCard({ task }: { task: any }) {
   const [showRevealForm, setShowRevealForm] = useState(false);
   const [showDistribute, setShowDistribute] = useState(false);
   const [distributeError, setDistributeError] = useState<string | null>(null);
+  const [distributeInfo, setDistributeInfo] = useState<string | null>(null);
   const [distributeSubmitted, setDistributeSubmitted] = useState(false);
   const [revealedMiners, setRevealedMiners] = useState<Set<string>>(new Set());
   const {
@@ -278,6 +324,13 @@ function PublisherTaskCard({ task }: { task: any }) {
     args: [task.taskID],
     query: { enabled: !!chainConfig?.contracts.rewardDistribution },
   });
+  const { data: rewardsDistributedOnChain } = useReadContract({
+    address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
+    abi: REWARD_DISTRIBUTION_ABI,
+    functionName: 'rewardsDistributed',
+    args: [task.taskID],
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+  });
 
   const miners = (task as any).miners || [];
   const totalMiners = miners.length;
@@ -308,6 +361,7 @@ function PublisherTaskCard({ task }: { task: any }) {
     task.status === 'REVEAL_OPEN' ||
     task.status === 'REVEAL_CLOSED' ||
     task.status === 'REWARDED';
+  const m7DistributedOnChain = rewardsDistributedOnChain === true;
   const escrowBalance = (() => {
     if (typeof escrowBalanceOnChain === 'bigint') return escrowBalanceOnChain;
     try {
@@ -316,7 +370,18 @@ function PublisherTaskCard({ task }: { task: any }) {
       return 0n;
     }
   })();
-  const m7aDone = accuracyRevealed === true || task.status === 'REWARDED';
+  const m7aDone = accuracyRevealed === true || m7DistributedOnChain || task.status === 'REWARDED';
+  const rewardRows = Array.isArray((task as any)?.rewards) ? (task as any).rewards : [];
+  const distributedRewardRows = rewardRows.filter(
+    (r: any) => String(r?.status || '').toUpperCase() === 'DISTRIBUTED'
+  );
+  const distributedAmountEth = distributedRewardRows.reduce(
+    (sum: number, r: any) => sum + (parseFloat(String(r?.amountETH ?? '0')) || 0),
+    0
+  );
+  const distributedMinerCount = new Set(
+    distributedRewardRows.map((r: any) => String(r?.minerAddress || '').toLowerCase())
+  ).size;
   
   // Prefer explicit M7a revealed accuracy; fallback to block/task values for compatibility.
   const revealedAccuracy =
@@ -331,6 +396,7 @@ function PublisherTaskCard({ task }: { task: any }) {
   const handleDistributeRewards = async () => {
     setShowDistribute(true);
     setDistributeError(null);
+    setDistributeInfo(null);
     setDistributeSubmitted(false);
 
     if (!chainConfig?.contracts.rewardDistribution) {
@@ -345,6 +411,10 @@ function PublisherTaskCard({ task }: { task: any }) {
 
     if (!m6Complete) {
       setDistributeError('Block publishing (M6) must be complete before M7c.');
+      return;
+    }
+    if (m7DistributedOnChain) {
+      setDistributeInfo('Rewards are already distributed on-chain for this task.');
       return;
     }
 
@@ -368,6 +438,9 @@ function PublisherTaskCard({ task }: { task: any }) {
           'Current on-chain RewardDistribution requires at least one miner score reveal (M7b) before M7c. ' +
           'Reveal one valid miner score for this task, then retry distribution.'
         );
+      } else if (normalized.includes('rewards already distributed')) {
+        setDistributeError(null);
+        setDistributeInfo('Rewards are already distributed on-chain for this task.');
       } else {
         setDistributeError(String(rawMsg));
       }
@@ -380,6 +453,7 @@ function PublisherTaskCard({ task }: { task: any }) {
         <h3 className="font-medium text-gray-900 dark:text-white">Task: {task.taskID}</h3>
         <TaskStatusBadge status={task.status} />
         {verificationOpen && <Badge variant="warning">Verification Open</Badge>}
+        {m7DistributedOnChain && <Badge variant="success">Rewards Distributed</Badge>}
       </div>
       <dl className="space-y-2 text-sm mb-4">
         <div>
@@ -461,14 +535,25 @@ function PublisherTaskCard({ task }: { task: any }) {
                 {totalMiners > 0 ? `${revealedMinersCount}/${totalMiners}` : '0/0'}
               </dd>
             </div>
+            <div>
+              <dt className="text-gray-600 dark:text-gray-400">Rewards Recorded (DB):</dt>
+              <dd className="text-gray-900 dark:text-white">
+                {distributedMinerCount}/{totalMiners}
+                {distributedRewardRows.length > 0 ? `, ${distributedAmountEth.toFixed(4)} ETH` : ''}
+              </dd>
+            </div>
           </dl>
           <Button
             variant="primary"
             size="sm"
             onClick={handleDistributeRewards}
-            disabled={distributePending || distributeConfirming}
+            disabled={m7DistributedOnChain || distributePending || distributeConfirming}
           >
-            {distributePending || distributeConfirming ? 'Distributing...' : 'Distribute Rewards (M7c)'}
+            {m7DistributedOnChain
+              ? 'Rewards Already Distributed'
+              : distributePending || distributeConfirming
+                ? 'Distributing...'
+                : 'Distribute Rewards (M7c)'}
           </Button>
           {showDistribute && (
             <div className="mt-2 space-y-1">
@@ -488,6 +573,11 @@ function PublisherTaskCard({ task }: { task: any }) {
               {distributeConfirmed && (
                 <p className="text-xs text-green-600 dark:text-green-400">
                   Distribution transaction confirmed on-chain.
+                </p>
+              )}
+              {distributeInfo && (
+                <p className="text-xs text-green-600 dark:text-green-400 break-all">
+                  {distributeInfo}
                 </p>
               )}
               {distributeError && (
@@ -527,6 +617,13 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
     args: [task.taskID],
     query: { enabled: !!chainConfig?.contracts.rewardDistribution },
   });
+  const { data: rewardsDistributedOnChain } = useReadContract({
+    address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
+    abi: REWARD_DISTRIBUTION_ABI,
+    functionName: 'rewardsDistributed',
+    args: [task.taskID],
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+  });
 
   const { data: minerReveal } = useReadContract({
     address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
@@ -544,8 +641,16 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
     query: { enabled: !!chainConfig?.contracts.blockPublisher },
   });
 
-  const m7aDone = accuracyRevealed === true || task.status === 'REWARDED';
+  const m7DistributedOnChain = rewardsDistributedOnChain === true;
+  const m7aDone = accuracyRevealed === true || m7DistributedOnChain || task.status === 'REWARDED';
   const myScoreRevealed = minerReveal && (minerReveal as any).revealed === true;
+  const rewardRows = Array.isArray((task as any)?.rewards) ? (task as any).rewards : [];
+  const myRewardRow = rewardRows.find(
+    (r: any) => String(r?.minerAddress || '').toLowerCase() === address.toLowerCase()
+  );
+  const myRewardDistributed =
+    !!myRewardRow && String(myRewardRow?.status || '').toUpperCase() === 'DISTRIBUTED';
+  const myRewardAmountEth = parseFloat(String(myRewardRow?.amountETH ?? '0')) || 0;
   const verificationOpen =
     task?.verificationOpen === true ||
     (task?.status === 'AGGREGATING' && !!task?.block?.candidateHash);
@@ -647,6 +752,7 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
         <h3 className="font-medium text-gray-900 dark:text-white">Task: {task.taskID}</h3>
         <TaskStatusBadge status={task.status} />
         {verificationOpen && <Badge variant="warning">Verification Open</Badge>}
+        {m7DistributedOnChain && <Badge variant="success">Rewards Distributed</Badge>}
       </div>
       <dl className="space-y-2 text-sm mb-4">
         <div>
@@ -717,7 +823,7 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
         </div>
       )}
 
-      {m7aDone && !myScoreRevealed && hasValidScoreCommit && (
+      {m7aDone && !m7DistributedOnChain && !myScoreRevealed && hasValidScoreCommit && (
         <div className="space-y-2">
           <Button variant="primary" size="sm" onClick={() => setShowRevealForm(true)}>
             Reveal Score (M7b)
@@ -736,16 +842,26 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
         </div>
       )}
 
-      {m7aDone && !myScoreRevealed && !hasValidScoreCommit && (
+      {m7aDone && !m7DistributedOnChain && !myScoreRevealed && !hasValidScoreCommit && (
         <p className="text-xs text-amber-600 dark:text-amber-400">
           Score commit not available yet for this miner. Wait for backend sync before revealing.
         </p>
       )}
 
-      {myScoreRevealed && (
+      {m7DistributedOnChain && (
+        <p className="text-xs text-green-600 dark:text-green-400">
+          Rewards have already been distributed on-chain for this task.
+        </p>
+      )}
+
+      {(myScoreRevealed || myRewardDistributed) && (
         <div className="text-sm">
           <p className="text-gray-600 dark:text-gray-400">My Reward Share:</p>
-          <p className="text-gray-900 dark:text-white font-medium">0.5 ETH (pending distribution)</p>
+          <p className="text-gray-900 dark:text-white font-medium">
+            {myRewardDistributed
+              ? `${myRewardAmountEth.toFixed(4)} ETH (distributed)`
+              : 'Pending distribution'}
+          </p>
         </div>
       )}
     </div>

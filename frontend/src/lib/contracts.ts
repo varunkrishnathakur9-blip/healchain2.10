@@ -127,6 +127,13 @@ export const REWARD_DISTRIBUTION_ABI = [
   },
   {
     inputs: [{ internalType: 'string', name: 'taskID', type: 'string' }],
+    name: 'rewardsDistributed',
+    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'string', name: 'taskID', type: 'string' }],
     name: 'totalScore',
     outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
     stateMutability: 'view',

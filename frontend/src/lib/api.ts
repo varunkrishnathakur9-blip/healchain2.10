@@ -160,6 +160,15 @@ export interface Task {
     miners?: number;
     gradients?: number;
   };
+  rewards?: Array<{
+    id: string;
+    minerAddress: string;
+    score: string;
+    amountETH: string;
+    txHash?: string | null;
+    status: string;
+    createdAt?: string;
+  }>;
 }
 
 export interface Miner {
@@ -185,13 +194,12 @@ export interface Block {
 export interface Reward {
   id: string;
   taskID: string;
-  minerID: string;
-  score: number;
-  totalScore: number;
-  sharePercent: number;
-  amountETH: number;
+  minerAddress: string;
+  score: string;
+  amountETH: string;
   status: string;
-  txHash?: string;
+  txHash?: string | null;
+  createdAt?: string;
 }
 
 export interface VerificationVote {
