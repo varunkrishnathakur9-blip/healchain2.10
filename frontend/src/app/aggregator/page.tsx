@@ -337,7 +337,7 @@ function BlockPublishingStatusCard({ task, chainConfig }: { task: any; chainConf
         </div>
         <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
           <p className="text-sm text-gray-700 dark:text-gray-300">
-            <strong>Note:</strong> Publisher must call M6 to publish on-chain
+            <strong>Note:</strong> Selected aggregator must call M6 to publish on-chain
           </p>
         </div>
       </dl>

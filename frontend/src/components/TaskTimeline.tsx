@@ -30,6 +30,9 @@ export default function TaskTimeline({
   const chainConfig = chainId ? getChainConfig(chainId) : null;
 
   const isPublisher = address && task.publisher?.toLowerCase() === address.toLowerCase();
+  const selectedAggregator =
+    ((task as any).aggregatorAddress || (task as any).aggregator || '').toLowerCase();
+  const isAggregator = address && selectedAggregator && selectedAggregator === address.toLowerCase();
   const isMiner = address && !isPublisher;
 
   // Use task's escrow contract address if available, otherwise fall back to env variable
@@ -271,10 +274,10 @@ export default function TaskTimeline({
               {m6Published
                 ? 'Published'
                 : task.status === 'VERIFIED'
-                ? 'Ready for publisher to publish'
+                ? 'Ready for selected aggregator to publish'
                 : 'Waiting for verification'}
             </p>
-            {isPublisher &&
+            {isAggregator &&
               !m6Published &&
               (task.status === 'VERIFIED' || task.status === 'REVEAL_OPEN') && (
               <Button variant="primary" size="sm" onClick={onPublishBlock} className="mt-2">

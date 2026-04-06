@@ -111,6 +111,11 @@ export default function TaskDetailPage() {
   }, [taskID, escrowAddress, task?.escrowContractAddress, chainConfig?.contracts.escrow, escrowBalance, escrowBalanceError, isLoadingEscrow, contractTask, contractTaskError]);
 
   const isPublisher = address && task?.publisher?.toLowerCase() === address.toLowerCase();
+  const selectedAggregatorAddress = (
+    task?.aggregatorAddress || (task as any)?.aggregator || ''
+  ).toLowerCase();
+  const isSelectedAggregator =
+    !!address && !!selectedAggregatorAddress && selectedAggregatorAddress === address.toLowerCase();
   const isMiner = address && !isPublisher;
   const isObserver = !isConnected;
 
@@ -525,24 +530,6 @@ export default function TaskDetailPage() {
                   </Button>
                 </div>
               )}
-              {(task.status === 'VERIFIED' || task.status === 'REVEAL_OPEN') && (
-                <div className="space-y-2">
-                  <Button
-                    variant="primary"
-                    onClick={handlePublishBlock}
-                    disabled={isPublishingBlock}
-                  >
-                    {isPublishingBlock
-                      ? 'Publishing Block...'
-                      : 'Publish Block (M6, when M5 consensus passed)'}
-                  </Button>
-                  {publishBlockMessage && (
-                    <div className="p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-700 dark:text-gray-300">
-                      {publishBlockMessage}
-                    </div>
-                  )}
-                </div>
-              )}
               {(task.status === 'OPEN' || task.status === 'AGGREGATING') && (
                 <Button
                   variant="outline"
@@ -589,6 +576,24 @@ export default function TaskDetailPage() {
                 />
               ) : (
                 <>
+                  {isSelectedAggregator && (task.status === 'VERIFIED' || task.status === 'REVEAL_OPEN') && (
+                    <div className="space-y-2">
+                      <Button
+                        variant="primary"
+                        onClick={handlePublishBlock}
+                        disabled={isPublishingBlock}
+                      >
+                        {isPublishingBlock
+                          ? 'Publishing Block...'
+                          : 'Publish Block (M6, selected aggregator only)'}
+                      </Button>
+                      {publishBlockMessage && (
+                        <div className="p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-700 dark:text-gray-300">
+                          {publishBlockMessage}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {!isRegisteredMiner && (task.status === 'OPEN' || task.status === 'CREATED') && (
                     <Button variant="primary" onClick={handleRegister}>
                       Register as Miner (M2)
