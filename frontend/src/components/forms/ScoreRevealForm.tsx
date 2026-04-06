@@ -1,6 +1,6 @@
 /**
  * HealChain Frontend - ScoreRevealForm Component
- * Form for M7b: Miner reveals contribution score
+creveal * Form for M7b: Miner reveals contribution score
  */
 
 'use client';
@@ -8,7 +8,7 @@
 import { useState, FormEvent } from 'react';
 import { useWallet } from '@/hooks/useWallet';
 import { useContract } from '@/hooks/useContract';
-import { keccak256, toBytes, encodePacked } from 'viem';
+import { keccak256, encodePacked } from 'viem';
 import { parseError, ERROR_CODES } from '@/lib/errors';
 import Button from '../Button';
 import Card from '../Card';
@@ -18,6 +18,17 @@ interface ScoreRevealFormProps {
   taskID: string;
   scoreCommit: string; // From M3 submission
   onSuccess?: () => void;
+}
+
+function normalizeBytes32Hex(value: string): `0x${string}` | null {
+  let v = (value || '').trim();
+
+  // Handle frequent typo from some keyboard layouts: "Øx..." instead of "0x..."
+  v = v.replace(/^[ØOo][xX]/, '0x');
+
+  const trimmed = v.replace(/^0x/i, '');
+  if (!/^[0-9a-fA-F]{64}$/.test(trimmed)) return null;
+  return `0x${trimmed}` as `0x${string}`;
 }
 
 export default function ScoreRevealForm({ taskID, scoreCommit, onSuccess }: ScoreRevealFormProps) {
@@ -31,13 +42,12 @@ export default function ScoreRevealForm({ taskID, scoreCommit, onSuccess }: Scor
   const [error, setError] = useState<string | null>(null);
 
   // Verify commit matches
-  const verifyCommit = (score: bigint, nonce: string): boolean => {
+  const verifyCommit = (score: bigint, nonceHex: `0x${string}`, commitHex: `0x${string}`): boolean => {
     if (!address) return false;
-    const nonceBytes = toBytes(nonce);
     const expectedCommit = keccak256(
-      encodePacked(['uint256', 'bytes32', 'string', 'address'], [score, nonceBytes, taskID, address as `0x${string}`])
+      encodePacked(['uint256', 'bytes32', 'string', 'address'], [score, nonceHex, taskID, address as `0x${string}`])
     );
-    return expectedCommit.toLowerCase() === scoreCommit.toLowerCase();
+    return expectedCommit.toLowerCase() === commitHex.toLowerCase();
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -50,22 +60,29 @@ export default function ScoreRevealForm({ taskID, scoreCommit, onSuccess }: Scor
     }
 
     try {
-      const score = BigInt(Math.floor(parseFloat(formData.score) * 1e6));
-      const nonceBytes = toBytes(formData.nonce);
-
       // Validate inputs
-      if (!formData.score || parseFloat(formData.score) <= 0) {
+      const rawScore = parseFloat(formData.score);
+      if (!formData.score || !Number.isFinite(rawScore) || rawScore <= 0) {
         setError('Score must be greater than 0');
         return;
       }
 
-      if (!formData.nonce.trim()) {
-        setError('Nonce is required');
+      const nonceHex = normalizeBytes32Hex(formData.nonce);
+      if (!nonceHex) {
+        setError('Nonce must be 32-byte hex (64 hex chars, with or without 0x).');
         return;
       }
 
+      const normalizedScoreCommit = normalizeBytes32Hex(scoreCommit);
+      if (!normalizedScoreCommit) {
+        setError('Stored score commit is missing or invalid (requires bytes32 hex).');
+        return;
+      }
+
+      const score = BigInt(Math.floor(rawScore * 1e6));
+
       // Verify commit
-      if (!verifyCommit(score, formData.nonce)) {
+      if (!verifyCommit(score, nonceHex, normalizedScoreCommit)) {
         setError(parseError(new Error(ERROR_CODES.COMMIT_MISMATCH)).message);
         return;
       }
@@ -75,8 +92,8 @@ export default function ScoreRevealForm({ taskID, scoreCommit, onSuccess }: Scor
       await revealScore(
         taskID,
         score,
-        nonceBytes as `0x${string}`,
-        scoreCommit as `0x${string}`
+        nonceHex,
+        normalizedScoreCommit
       );
 
       if (onSuccess) {
