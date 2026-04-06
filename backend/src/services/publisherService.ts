@@ -28,26 +28,18 @@ export async function publishOnChain(
     throw new Error("Task not ready for publishing");
   }
 
-  // Helpful guard: if this BlockPublisher already has a block for taskID,
-  // strict contracts will reject republish ("Block exists").
+  // Check if this task is already published on-chain.
+  // If yes, treat M6 publish as idempotent after strict metadata validation.
+  let onChainBlockAlreadyExists = false;
   try {
     const meta = await (blockPublisher as any).getBlockMeta(taskID);
     const existingModelHash = String(meta?.[0] || "");
     if (existingModelHash && !/^0x0{64}$/i.test(existingModelHash)) {
-      throw new Error(
-        `Block already exists on current BlockPublisher for ${taskID}. ` +
-        `Use a fresh BlockPublisher deployment for re-publish continuity fixes.`
-      );
+      onChainBlockAlreadyExists = true;
     }
-  } catch (metaErr: any) {
-    // If this read fails, continue and let publish path surface a precise error.
-    // (Some legacy deployments may not expose getBlockMeta consistently.)
-    if (
-      typeof metaErr?.message === "string" &&
-      metaErr.message.includes("Block already exists on current BlockPublisher")
-    ) {
-      throw metaErr;
-    }
+  } catch {
+    // If getter is unavailable/incompatible, continue to publish path where
+    // a clearer compatibility error is raised.
   }
 
   const publishableStatuses = new Set<TaskStatus>([
@@ -216,6 +208,90 @@ export async function publishOnChain(
     );
   }
 
+  const assertOnChainMetadataMatches = async () => {
+    // Strict Algorithm-6 metadata verification on-chain.
+    let meta: any;
+    let onChainParticipants: string[] = [];
+    let onChainScoreCommits: string[] = [];
+    try {
+      meta = await (blockPublisher as any).getBlockMeta(taskID);
+      onChainParticipants = (await (blockPublisher as any).getParticipants(taskID)).map(
+        (v: unknown) => String(v).toLowerCase()
+      );
+      onChainScoreCommits = (await (blockPublisher as any).getScoreCommits(taskID)).map(
+        (v: unknown) => String(v).toLowerCase()
+      );
+    } catch {
+      throw new Error(
+        "Strict M6 metadata validation failed: BlockPublisher getters unavailable/incompatible. " +
+          "Redeploy M6/M7 contracts with current BlockPublisher.sol."
+      );
+    }
+
+    const onChainAggregator = String(meta?.[2] || "").toLowerCase();
+    const onChainModelHash = String(meta?.[0] || "").toLowerCase();
+    const onChainAccuracy = BigInt(meta?.[1] ?? 0);
+    const expectedParticipants = normalizedParticipants.map((v) => v.toLowerCase());
+    const expectedScoreCommits = normalizedScoreCommits.map((v: `0x${string}`) =>
+      String(v).toLowerCase()
+    );
+
+    if (onChainAggregator !== normalizedAggregator.toLowerCase()) {
+      throw new Error(
+        `Strict M6 metadata mismatch: on-chain aggregator ${onChainAggregator} != expected ${normalizedAggregator.toLowerCase()}`
+      );
+    }
+    if (onChainModelHash !== normalizedModelHash.toLowerCase()) {
+      throw new Error(
+        `Strict M6 metadata mismatch: on-chain modelHash ${onChainModelHash} != expected ${normalizedModelHash.toLowerCase()}`
+      );
+    }
+    if (onChainAccuracy !== normalizedAccuracy) {
+      throw new Error(
+        `Strict M6 metadata mismatch: on-chain accuracy ${onChainAccuracy.toString()} != expected ${normalizedAccuracy.toString()}`
+      );
+    }
+    if (onChainParticipants.length !== expectedParticipants.length) {
+      throw new Error(
+        `Strict M6 metadata mismatch: participants length ${onChainParticipants.length} != expected ${expectedParticipants.length}`
+      );
+    }
+    for (let i = 0; i < expectedParticipants.length; i++) {
+      if (onChainParticipants[i] !== expectedParticipants[i]) {
+        throw new Error(
+          `Strict M6 metadata mismatch at participants[${i}]: ${onChainParticipants[i]} != expected ${expectedParticipants[i]}`
+        );
+      }
+    }
+    if (onChainScoreCommits.length !== expectedScoreCommits.length) {
+      throw new Error(
+        `Strict M6 metadata mismatch: scoreCommits length ${onChainScoreCommits.length} != expected ${expectedScoreCommits.length}`
+      );
+    }
+    for (let i = 0; i < expectedScoreCommits.length; i++) {
+      if (onChainScoreCommits[i] !== expectedScoreCommits[i]) {
+        throw new Error(
+          `Strict M6 metadata mismatch at scoreCommits[${i}]: ${onChainScoreCommits[i]} != expected ${expectedScoreCommits[i]}`
+        );
+      }
+    }
+  };
+
+  if (onChainBlockAlreadyExists) {
+    await assertOnChainMetadataMatches();
+
+    await prisma.task.update({
+      where: { taskID },
+      data: {
+        // Idempotent M6 path: block already exists on-chain, so transition to reveal phase.
+        status: TaskStatus.REVEAL_OPEN,
+      },
+    });
+
+    // Keep existing publishTx if present. If absent, return deterministic marker.
+    return String(task.publishTx || "already_on_chain");
+  }
+
   // Strict M6 publish with explicit aggregator address to avoid
   // msg.sender/backend-relayer identity drift in on-chain rewards.
   let tx: any;
@@ -237,7 +313,7 @@ export async function publishOnChain(
     if (looksLikeAbiMismatch) {
       throw new Error(
         "Strict M6 publish requires BlockPublisher with explicit aggregator overload and metadata getters. " +
-        "Current contract appears legacy/incompatible. Redeploy M6/M7 contracts and update BACKEND/FRONTEND addresses."
+          "Current contract appears legacy/incompatible. Redeploy M6/M7 contracts and update BACKEND/FRONTEND addresses."
       );
     }
     throw err;
@@ -249,80 +325,15 @@ export async function publishOnChain(
     throw new Error("M6 publish transaction failed on-chain");
   }
 
-  // Strict Algorithm-6 metadata verification on-chain.
-  let meta: any;
-  let onChainParticipants: string[] = [];
-  let onChainScoreCommits: string[] = [];
-  try {
-    meta = await (blockPublisher as any).getBlockMeta(taskID);
-    onChainParticipants = (await (blockPublisher as any).getParticipants(taskID)).map((v: unknown) =>
-      String(v).toLowerCase()
-    );
-    onChainScoreCommits = (await (blockPublisher as any).getScoreCommits(taskID)).map((v: unknown) =>
-      String(v).toLowerCase()
-    );
-  } catch {
-    throw new Error(
-      "Strict M6 metadata validation failed: BlockPublisher getters unavailable/incompatible. " +
-      "Redeploy M6/M7 contracts with current BlockPublisher.sol."
-    );
-  }
-
-  const onChainAggregator = String(meta?.[2] || "").toLowerCase();
-  const onChainModelHash = String(meta?.[0] || "").toLowerCase();
-  const onChainAccuracy = BigInt(meta?.[1] ?? 0);
-  const expectedParticipants = normalizedParticipants.map((v) => v.toLowerCase());
-  const expectedScoreCommits = normalizedScoreCommits.map((v: `0x${string}`) =>
-    String(v).toLowerCase()
-  );
-
-  if (onChainAggregator !== normalizedAggregator.toLowerCase()) {
-    throw new Error(
-      `Strict M6 metadata mismatch: on-chain aggregator ${onChainAggregator} != expected ${normalizedAggregator.toLowerCase()}`
-    );
-  }
-  if (onChainModelHash !== normalizedModelHash.toLowerCase()) {
-    throw new Error(
-      `Strict M6 metadata mismatch: on-chain modelHash ${onChainModelHash} != expected ${normalizedModelHash.toLowerCase()}`
-    );
-  }
-  if (onChainAccuracy !== normalizedAccuracy) {
-    throw new Error(
-      `Strict M6 metadata mismatch: on-chain accuracy ${onChainAccuracy.toString()} != expected ${normalizedAccuracy.toString()}`
-    );
-  }
-  if (onChainParticipants.length !== expectedParticipants.length) {
-    throw new Error(
-      `Strict M6 metadata mismatch: participants length ${onChainParticipants.length} != expected ${expectedParticipants.length}`
-    );
-  }
-  for (let i = 0; i < expectedParticipants.length; i++) {
-    if (onChainParticipants[i] !== expectedParticipants[i]) {
-      throw new Error(
-        `Strict M6 metadata mismatch at participants[${i}]: ${onChainParticipants[i]} != expected ${expectedParticipants[i]}`
-      );
-    }
-  }
-  if (onChainScoreCommits.length !== expectedScoreCommits.length) {
-    throw new Error(
-      `Strict M6 metadata mismatch: scoreCommits length ${onChainScoreCommits.length} != expected ${expectedScoreCommits.length}`
-    );
-  }
-  for (let i = 0; i < expectedScoreCommits.length; i++) {
-    if (onChainScoreCommits[i] !== expectedScoreCommits[i]) {
-      throw new Error(
-        `Strict M6 metadata mismatch at scoreCommits[${i}]: ${onChainScoreCommits[i]} != expected ${expectedScoreCommits[i]}`
-      );
-    }
-  }
+  await assertOnChainMetadataMatches();
 
   await prisma.task.update({
     where: { taskID },
     data: {
       // M6 complete -> M7 reveal window opens.
       status: TaskStatus.REVEAL_OPEN,
-      publishTx: tx.hash
-    }
+      publishTx: tx.hash,
+    },
   });
 
   return tx.hash;
