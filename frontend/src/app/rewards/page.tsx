@@ -54,6 +54,26 @@ function normalizeCommitHash(value: unknown): string | null {
   return `0x${trimmed}`;
 }
 
+function parseMinerReveal(value: unknown): { score: bigint; revealed: boolean } {
+  if (!value) return { score: 0n, revealed: false };
+
+  const asAny = value as any;
+  const score =
+    typeof asAny?.score === 'bigint'
+      ? asAny.score
+      : Array.isArray(asAny) && typeof asAny[0] === 'bigint'
+        ? asAny[0]
+        : 0n;
+  const revealed =
+    typeof asAny?.revealed === 'boolean'
+      ? asAny.revealed
+      : Array.isArray(asAny) && typeof asAny[1] === 'boolean'
+        ? asAny[1]
+        : false;
+
+  return { score, revealed };
+}
+
 export default function RewardsPage() {
   const { address, isConnected } = useAccount();
   const { tasks, refresh } = useTaskList();
@@ -251,14 +271,17 @@ function MinerRevealStatus({ taskID, minerAddress, chainConfig, onRevealed }: {
     abi: REWARD_DISTRIBUTION_ABI,
     functionName: 'minerReveals',
     args: [taskID, minerAddress],
-    query: { enabled: !!chainConfig?.contracts.rewardDistribution && !!minerAddress },
+    query: {
+      enabled: !!chainConfig?.contracts.rewardDistribution && !!minerAddress,
+      refetchInterval: 5000,
+    },
   });
 
   const lastReportedRef = useRef<boolean | null>(null);
 
   useEffect(() => {
     if (minerReveal) {
-      const revealed = (minerReveal as any).revealed === true;
+      const revealed = parseMinerReveal(minerReveal).revealed === true;
       // Avoid parent-state update loops when effect reruns with equivalent value.
       if (lastReportedRef.current === revealed) return;
       lastReportedRef.current = revealed;
@@ -315,21 +338,21 @@ function PublisherTaskCard({ task }: { task: any }) {
     abi: REWARD_DISTRIBUTION_ABI,
     functionName: 'accuracyRevealed',
     args: [task.taskID],
-    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution, refetchInterval: 5000 },
   });
   const { data: revealedAccuracyOnChain } = useReadContract({
     address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
     abi: REWARD_DISTRIBUTION_ABI,
     functionName: 'revealedAccuracy',
     args: [task.taskID],
-    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution, refetchInterval: 5000 },
   });
   const { data: rewardsDistributedOnChain } = useReadContract({
     address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
     abi: REWARD_DISTRIBUTION_ABI,
     functionName: 'rewardsDistributed',
     args: [task.taskID],
-    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution, refetchInterval: 5000 },
   });
 
   const miners = (task as any).miners || [];
@@ -608,21 +631,21 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
     abi: REWARD_DISTRIBUTION_ABI,
     functionName: 'accuracyRevealed',
     args: [task.taskID],
-    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution, refetchInterval: 5000 },
   });
   const { data: revealedAccuracyOnChain } = useReadContract({
     address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
     abi: REWARD_DISTRIBUTION_ABI,
     functionName: 'revealedAccuracy',
     args: [task.taskID],
-    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution, refetchInterval: 5000 },
   });
   const { data: rewardsDistributedOnChain } = useReadContract({
     address: chainConfig?.contracts.rewardDistribution as `0x${string}`,
     abi: REWARD_DISTRIBUTION_ABI,
     functionName: 'rewardsDistributed',
     args: [task.taskID],
-    query: { enabled: !!chainConfig?.contracts.rewardDistribution },
+    query: { enabled: !!chainConfig?.contracts.rewardDistribution, refetchInterval: 5000 },
   });
 
   const { data: minerReveal } = useReadContract({
@@ -630,7 +653,10 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
     abi: REWARD_DISTRIBUTION_ABI,
     functionName: 'minerReveals',
     args: [task.taskID, address],
-    query: { enabled: !!chainConfig?.contracts.rewardDistribution && !!address },
+    query: {
+      enabled: !!chainConfig?.contracts.rewardDistribution && !!address,
+      refetchInterval: 5000,
+    },
   });
 
   const { data: publishedBlock } = useReadContract({
@@ -643,7 +669,8 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
 
   const m7DistributedOnChain = rewardsDistributedOnChain === true;
   const m7aDone = accuracyRevealed === true || m7DistributedOnChain || task.status === 'REWARDED';
-  const myScoreRevealed = minerReveal && (minerReveal as any).revealed === true;
+  const myRevealState = parseMinerReveal(minerReveal);
+  const myScoreRevealed = myRevealState.revealed === true;
   const rewardRows = Array.isArray((task as any)?.rewards) ? (task as any).rewards : [];
   const myRewardRow = rewardRows.find(
     (r: any) => String(r?.minerAddress || '').toLowerCase() === address.toLowerCase()
@@ -736,9 +763,10 @@ function MinerTaskCard({ task, address }: { task: any; address: string }) {
     : 'Unavailable';
   
   // Get revealed score from contract if available
-  const myRevealedScore = minerReveal && (minerReveal as any).score 
-    ? ((minerReveal as any).score / 1e6).toFixed(2)
-    : null;
+  const myRevealedScore =
+    myScoreRevealed && myRevealState.score > 0n
+      ? (Number(myRevealState.score) / 1e6).toFixed(2)
+      : null;
   
   // Prefer explicit M7a revealed accuracy; fallback to block/task values for compatibility.
   const publisherAccuracy =
