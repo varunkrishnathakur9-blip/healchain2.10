@@ -17,6 +17,7 @@ const truffleBuildDir = path.join(
 );
 const backendEnvPath = path.join(repoRoot, "backend", ".env.development");
 const contractsSrcDir = path.join(contractsRoot, "src");
+const buildInfoDir = path.join(contractsRoot, "artifacts", "build-info");
 
 function parseDotEnv(filePath) {
   const map = new Map();
@@ -58,6 +59,69 @@ function normalizeAddress(raw) {
   return v;
 }
 
+function readBuildInfo() {
+  if (!fs.existsSync(buildInfoDir)) {
+    return {
+      compilerVersion: "0.8.28",
+      compilerLongVersion: "0.8.28",
+      bySourceAndContract: new Map(),
+      astBySource: new Map(),
+    };
+  }
+
+  const files = fs
+    .readdirSync(buildInfoDir, { withFileTypes: true })
+    .filter((ent) => ent.isFile() && ent.name.endsWith(".json"))
+    .map((ent) => path.join(buildInfoDir, ent.name));
+
+  let compilerVersion = "0.8.28";
+  let compilerLongVersion = "0.8.28";
+  const bySourceAndContract = new Map();
+  const astBySource = new Map();
+
+  for (const file of files) {
+    const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (typeof parsed.solcVersion === "string" && parsed.solcVersion) {
+      compilerVersion = parsed.solcVersion;
+    }
+    if (typeof parsed.solcLongVersion === "string" && parsed.solcLongVersion) {
+      compilerLongVersion = parsed.solcLongVersion;
+    }
+
+    const output = parsed.output || {};
+    const outputContracts = output.contracts || {};
+    const outputSources = output.sources || {};
+
+    for (const [sourceName, sourceData] of Object.entries(outputSources)) {
+      if (sourceData && typeof sourceData === "object" && sourceData.ast) {
+        astBySource.set(sourceName, sourceData.ast);
+      }
+    }
+
+    for (const [sourceName, contractsObj] of Object.entries(outputContracts)) {
+      if (!contractsObj || typeof contractsObj !== "object") continue;
+      for (const [contractName, contractOut] of Object.entries(contractsObj)) {
+        bySourceAndContract.set(`${sourceName}::${contractName}`, contractOut);
+      }
+    }
+  }
+
+  return {
+    compilerVersion,
+    compilerLongVersion,
+    bySourceAndContract,
+    astBySource,
+  };
+}
+
+function toBuildInfoSourceName(sourceName) {
+  const s = String(sourceName || "").replaceAll("\\", "/");
+  if (s.startsWith("project/") || s.startsWith("npm/")) return s;
+  if (s.startsWith("src/")) return `project/${s}`;
+  if (s) return `project/src/${s}`;
+  return "";
+}
+
 function maybeAddressForContract(contractName, envMap) {
   switch (contractName) {
     case "HealChainEscrow":
@@ -96,30 +160,71 @@ function tryReadSource(sourceName) {
   return { source: "", sourcePath: "" };
 }
 
-function asTruffleArtifact(hhArtifact, addressOrNull, deploymentTxHashOrNull) {
+function asTruffleArtifact(
+  hhArtifact,
+  addressOrNull,
+  deploymentTxHashOrNull,
+  buildInfo
+) {
   const contractName = String(hhArtifact.contractName || "");
   const sourceName = String(hhArtifact.sourceName || "");
+  const buildInfoSourceName = toBuildInfoSourceName(sourceName);
+  const buildInfoContract = buildInfo.bySourceAndContract.get(
+    `${buildInfoSourceName}::${contractName}`
+  );
+  const buildInfoAst = buildInfo.astBySource.get(buildInfoSourceName);
   const { source, sourcePath } = tryReadSource(sourceName);
+
+  const buildInfoBytecode = String(
+    buildInfoContract?.evm?.bytecode?.object || ""
+  ).trim();
+  const buildInfoDeployedBytecode = String(
+    buildInfoContract?.evm?.deployedBytecode?.object || ""
+  ).trim();
+  const buildInfoSourceMap = String(
+    buildInfoContract?.evm?.bytecode?.sourceMap || ""
+  );
+  const buildInfoDeployedSourceMap = String(
+    buildInfoContract?.evm?.deployedBytecode?.sourceMap || ""
+  );
+
+  const bytecode =
+    buildInfoBytecode !== ""
+      ? `0x${buildInfoBytecode}`
+      : String(hhArtifact.bytecode || "0x");
+  const deployedBytecode =
+    buildInfoDeployedBytecode !== ""
+      ? `0x${buildInfoDeployedBytecode}`
+      : String(hhArtifact.deployedBytecode || "0x");
+
   const out = {
     contractName,
-    abi: Array.isArray(hhArtifact.abi) ? hhArtifact.abi : [],
-    metadata: String(hhArtifact.metadata || ""),
-    bytecode: String(hhArtifact.bytecode || "0x"),
-    deployedBytecode: String(hhArtifact.deployedBytecode || "0x"),
-    sourceMap: String(hhArtifact.sourceMap || ""),
-    deployedSourceMap: String(hhArtifact.deployedSourceMap || ""),
+    abi: Array.isArray(hhArtifact.abi)
+      ? hhArtifact.abi
+      : Array.isArray(buildInfoContract?.abi)
+      ? buildInfoContract.abi
+      : [],
+    metadata: String(buildInfoContract?.metadata || hhArtifact.metadata || ""),
+    bytecode,
+    deployedBytecode,
+    sourceMap: buildInfoSourceMap || String(hhArtifact.sourceMap || ""),
+    deployedSourceMap:
+      buildInfoDeployedSourceMap || String(hhArtifact.deployedSourceMap || ""),
     source,
     sourcePath,
-    ast: hhArtifact.ast || {},
-    legacyAST: hhArtifact.legacyAST || {},
-    compiler:
-      hhArtifact.compiler || {
-        name: "solc",
-        version: "0.8.19",
-      },
-    devdoc: hhArtifact.devdoc || {},
-    userdoc: hhArtifact.userdoc || {},
-    immutableReferences: hhArtifact.immutableReferences || {},
+    ast: buildInfoAst || hhArtifact.ast || { nodes: [] },
+    legacyAST: hhArtifact.legacyAST || buildInfoAst || { nodes: [] },
+    compiler: {
+      name: "solc",
+      version: buildInfo.compilerVersion,
+      fullVersion: buildInfo.compilerLongVersion,
+    },
+    devdoc: buildInfoContract?.devdoc || hhArtifact.devdoc || {},
+    userdoc: buildInfoContract?.userdoc || hhArtifact.userdoc || {},
+    immutableReferences:
+      buildInfoContract?.evm?.deployedBytecode?.immutableReferences ||
+      hhArtifact.immutableReferences ||
+      {},
     networks: {},
     schemaVersion: "3.4.16",
     updatedAt: new Date().toISOString(),
@@ -162,6 +267,7 @@ async function main() {
   }
 
   const envMap = parseDotEnv(backendEnvPath);
+  const buildInfo = readBuildInfo();
   const rpcUrl = String(envMap.get("RPC_URL") || "http://127.0.0.1:7545").trim();
   const provider = new JsonRpcProvider(rpcUrl);
   const latestBlock = Number(await provider.getBlockNumber());
@@ -191,7 +297,12 @@ async function main() {
       address !== null ? await findDeploymentTxByAddress(provider, address, latestBlock) : null;
     if (deployTxHash) withTx += 1;
 
-    const truffleArtifact = asTruffleArtifact(parsed, address, deployTxHash);
+    const truffleArtifact = asTruffleArtifact(
+      parsed,
+      address,
+      deployTxHash,
+      buildInfo
+    );
     if (address) withAddress += 1;
 
     const outPath = path.join(truffleBuildDir, `${contractName}.json`);
