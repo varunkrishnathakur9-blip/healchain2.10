@@ -12,8 +12,10 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, Optional, Tuple
+from urllib.parse import urlparse
 
 import requests
 
@@ -38,6 +40,62 @@ def _normalize_ipfs_link(link: str) -> str:
     if gateway.endswith("/ipfs"):
         return f"{gateway}/{cid_path}"
     return f"{gateway}/ipfs/{cid_path}"
+
+
+def _gateway_for_ipfs_path(cid_path: str) -> str:
+    gateway = os.getenv("IPFS_GATEWAY_URL", "http://127.0.0.1:8080/ipfs").rstrip("/")
+    if gateway.endswith("/ipfs"):
+        return f"{gateway}/{cid_path}"
+    return f"{gateway}/ipfs/{cid_path}"
+
+
+def _candidate_validation_urls(source: str) -> list[str]:
+    """
+    Build robust candidate URLs for validation-data download.
+    Handles:
+    - ipfs://<cid>/<path> -> local gateway
+    - https://<cid>.ipfs.dweb.link/... -> same URL + local gateway CID fallback
+    - normal http(s) URL -> as-is
+    """
+    src = source.strip()
+    normalized = _normalize_ipfs_link(src)
+    candidates: list[str] = [normalized]
+
+    if normalized.startswith(("http://", "https://")):
+        parsed = urlparse(normalized)
+        host = parsed.netloc.lower()
+        if host.endswith(".ipfs.dweb.link"):
+            cid = host.split(".ipfs.dweb.link", 1)[0]
+            if cid:
+                fallback = _gateway_for_ipfs_path(cid)
+                if fallback not in candidates:
+                    candidates.append(fallback)
+
+    return candidates
+
+
+def _http_get_with_retries(url: str) -> bytes:
+    timeout_sec = max(1.0, float(os.getenv("VALIDATION_DOWNLOAD_TIMEOUT_SEC", "60")))
+    retries = max(1, int(os.getenv("VALIDATION_DOWNLOAD_RETRIES", "3")))
+    backoff_base = max(0.0, float(os.getenv("VALIDATION_DOWNLOAD_BACKOFF_SEC", "1.0")))
+
+    last_err: Optional[Exception] = None
+    for attempt in range(retries):
+        try:
+            resp = requests.get(url, timeout=timeout_sec)
+            resp.raise_for_status()
+            return resp.content
+        except Exception as e:
+            last_err = e
+            logger.warning(
+                "[Evaluator] Validation download failed "
+                f"(url={url}, attempt={attempt + 1}/{retries}): {e}"
+            )
+            if attempt < retries - 1:
+                time.sleep(backoff_base * (attempt + 1))
+
+    assert last_err is not None
+    raise last_err
 
 
 def _resolve_validation_source(task_details: Optional[Dict[str, Any]]) -> Optional[str]:
@@ -71,11 +129,24 @@ def _download_validation_data(task_id: str, source: str) -> Path:
     out_path = VALIDATION_CACHE_DIR / f"{task_id}_validation{ext}"
 
     if normalized.startswith(("http://", "https://")):
-        resp = requests.get(normalized, timeout=60)
-        resp.raise_for_status()
-        out_path.write_bytes(resp.content)
-        logger.info(f"[Evaluator] Validation dataset downloaded to {out_path}")
-        return out_path
+        candidates = _candidate_validation_urls(source)
+        last_err: Optional[Exception] = None
+        for idx, url in enumerate(candidates):
+            try:
+                if idx > 0:
+                    logger.warning(
+                        f"[Evaluator] Retrying validation dataset via fallback URL: {url}"
+                    )
+                data = _http_get_with_retries(url)
+                out_path.write_bytes(data)
+                logger.info(f"[Evaluator] Validation dataset downloaded to {out_path}")
+                return out_path
+            except Exception as e:
+                last_err = e
+                continue
+
+        assert last_err is not None
+        raise last_err
 
     local_path = Path(normalized)
     if not local_path.exists():
@@ -248,4 +319,3 @@ def build_runtime_evaluator(
     threshold = float(os.getenv("AGGREGATOR_VALIDATION_THRESHOLD", "0.0"))
     evaluator = SparseBinaryVectorEvaluator(path, threshold=threshold)
     return evaluator, f"sparse_binary:{path}"
-
