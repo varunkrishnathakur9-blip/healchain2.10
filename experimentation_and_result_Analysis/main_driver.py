@@ -358,9 +358,9 @@ The system is **production-ready** for deployment in privacy-sensitive domains (
 
 """
         
-        # Save report
+        # Save report with UTF-8 encoding to support Unicode characters
         report_file = self.reports_dir / f'{experiment_name.replace(" ", "_")}_report.md'
-        with open(report_file, 'w') as f:
+        with open(report_file, 'w', encoding='utf-8') as f:
             f.write(report_content)
         
         self.log(f"✓ Report saved: {report_file}")
@@ -370,7 +370,7 @@ The system is **production-ready** for deployment in privacy-sensitive domains (
         """Generate execution summary with all log messages."""
         summary_file = self.output_dir / f'execution_summary_{self.timestamp.replace(":", "-")}.txt'
         
-        with open(summary_file, 'w') as f:
+        with open(summary_file, 'w', encoding='utf-8') as f:
             f.write("=" * 80 + "\n")
             f.write("HealChain Experimentation & Results Analysis - Execution Summary\n")
             f.write("=" * 80 + "\n\n")

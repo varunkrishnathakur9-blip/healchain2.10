@@ -207,7 +207,7 @@ class ConfusionMatrixGenerator:
         report = self.generate_report()
         report_file = output_dir / f'{self.task_id}_confusion_matrix_report_{self.timestamp.replace(":", "-")}.json'
         
-        with open(report_file, 'w') as f:
+        with open(report_file, 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2)
         
         print(f"✓ Report saved: {report_file}")

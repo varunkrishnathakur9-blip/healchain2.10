@@ -248,7 +248,7 @@ class BatchConfusionMatrixAnalysis:
         analysis = self.generate_comparative_analysis()
         report_file = self.output_dir / f'batch_analysis_{self.timestamp.replace(":", "-")}.json'
         
-        with open(report_file, 'w') as f:
+        with open(report_file, 'w', encoding='utf-8') as f:
             json.dump(analysis, f, indent=2)
         
         print(f"✓ Comparative report saved: {report_file}")
