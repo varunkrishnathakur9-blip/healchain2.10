@@ -21,12 +21,16 @@ experimentation_and_result_Analysis/
 ├── confusion_matrix_generator.py      # Core confusion matrix generation
 ├── task_results_extractor.py          # Extract metrics from task logs & DB
 ├── batch_analysis_suite.py             # Batch processing & comparative analysis
-├── main_driver.py                      # Orchestrator (run this main)
+├── main_driver.py                      # Orchestrator for confusion matrix analysis
+├── examples_and_quickstart.py          # 7 runnable examples
+├── framework_benchmark_comparison.py   # Generate TABLE IV-VII benchmark tables
+├── benchmark_metrics_extractor.py      # Extract metrics from execution logs
+├── benchmark_report_generator.py       # Orchestrate complete benchmark report
 ├── requirements.txt                    # Python dependencies
 ├── README.md                           # This file
-├── results/                            # Generated JSON reports
+├── results/                            # Generated JSON reports & metrics
 ├── visualizations/                     # Generated PNG confusion matrices
-└── reports/                            # Generated markdown reports
+└── reports/                            # Generated markdown benchmark reports
 ```
 
 ---
@@ -615,6 +619,97 @@ matplotlib.use('Agg')  # Non-display backend
 4. **Slide 4**: Batch Comparison (4-panel dashboard from batch analysis)
 5. **Slide 5**: Theorem Validation (link accuracy results to Theorem 5-6)
 6. **Slide 6**: Deployment Readiness (efficiency + security summary)
+
+---
+
+## 🎯 Framework Benchmark Comparison (TABLE IV-VII)
+
+Generate comprehensive benchmark tables comparing **HealChain vs. Related Works** (FL, ESFL, ESB-FL, PBFL, BSR-FL).
+
+### Quick Start: Generate All Benchmark Tables
+
+```bash
+python benchmark_report_generator.py
+```
+
+**Output**:
+- `/results/healchain_benchmark_report_*.md` - Comprehensive markdown report with all tables
+- `/results/healchain_benchmark_report_*.json` - Structured data for further analysis
+
+### What Gets Generated
+
+#### TABLE IV: Time Consumption Comparison
+Compares total execution time (hours) and accuracy (%) across frameworks
+
+#### TABLE V: Cryptographic Overhead
+Compares encryption schemes: key generation, encryption, inner product, decryption times (seconds)
+
+#### TABLE VI: Digital Signature Verification
+Signature costs for LeNet5 and ResNet18 models
+
+#### TABLE VII: Fairness & Payment Guarantees (HealChain Innovation)
+Shows HealChain's three unique fairness mechanisms absent in competing frameworks
+
+### Benchmark Scripts
+
+#### 1. `framework_benchmark_comparison.py`
+Generates all 7 tables with reference framework data from your BTP report
+
+```bash
+python framework_benchmark_comparison.py
+```
+
+#### 2. `benchmark_metrics_extractor.py`
+Extracts actual HealChain execution metrics from logs
+
+```bash
+python benchmark_metrics_extractor.py
+```
+
+#### 3. `benchmark_report_generator.py` (Main Orchestrator)
+Combines all benchmark data into comprehensive markdown + JSON report
+
+```bash
+python benchmark_report_generator.py
+```
+
+### Framework Comparison Coverage
+
+| Framework | Total Time | Accuracy | Privacy Method | Fairness |
+|-----------|-----:|--------:|---|---|
+| FL (Vanilla) | 25.22h | 97.80% | None | None |
+| ESFL | 27.18h | 86.23% | HE | None |
+| ESB-FL | 39.28h | 97.81% | NDD-FE | Stake-weighted |
+| PBFL | 150.38h | 95.79% | HE | None |
+| BSR-FL | 40.33h | 97.90% | NIFE | Stake-weighted |
+| **HealChain** | **39.50h** | **97.95%** | **NDD-FE** | **Escrow + Commit-Reveal + Scoring** |
+
+### HealChain Fairness Innovations (TABLE VII)
+
+**1. Escrow-based Payment Guarantee**
+- Locks task rewards on-chain until verified completion
+- Eliminates payment default risk
+
+**2. Commit-Reveal Task Verification**
+- Task accuracy requirement immutably bound via cryptographic commitment
+- Prevents publisher dishonesty
+
+**3. Gradient-Norm Contribution Scoring**
+- Quality metric: ||Δ'ᵢ||₂ (gradient L2-norm)
+- Fair, proportional reward distribution
+- Prevents free-riding
+
+### For Your BTP Defense
+
+Use the generated markdown report directly in:
+- PowerPoint/PDF presentations
+- Academic paper appendices
+- Defense discussion materials
+
+The JSON output is suitable for:
+- Data visualization tools
+- Further statistical analysis
+- Comparison with future implementations
 
 ---
 
