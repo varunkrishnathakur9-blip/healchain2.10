@@ -47,11 +47,20 @@ def main() -> None:
         task_ids=["task_037", "task_038"],
     )
 
+    # Also keep stable copies under experimentation_results/reports for easy reference.
+    stable_report_dir = base / "experimentation_results" / "reports"
+    stable_report_dir.mkdir(parents=True, exist_ok=True)
+    stable_md = stable_report_dir / "HealChain_Task_Execution_report.md"
+    stable_json = stable_report_dir / "HealChain_Task_Execution_report.json"
+    shutil.copyfile(md_file, stable_md)
+    shutil.copyfile(json_file, stable_json)
+
     print("\n[+] Real-data benchmark reports generated:")
     print(f"    - Markdown: {md_file}")
     print(f"    - JSON: {json_file}")
+    print("    - Stable Markdown copy: {}".format(stable_md))
+    print("    - Stable JSON copy: {}".format(stable_json))
 
 
 if __name__ == "__main__":
     main()
-

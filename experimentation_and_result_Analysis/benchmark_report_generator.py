@@ -110,7 +110,7 @@ class BenchmarkReportGenerator:
             report_lines.append(f"| {scheme:<45} | {kg:>17} | {enc:>14} | {ip:>17} | {str(dec):>14} |")
         
         report_lines.append("")
-        report_lines.append("**Note**: *HealChain uses same NDD-FE cryptography as ESB-FL; Gradient-Norm scoring adds ≈0.02s")
+        report_lines.append("**Note**: *HealChain uses same NDD-FE cryptography as ESB-FL; Gradient-Norm scoring adds ~0.02s")
         report_lines.append("")
         report_lines.append("### Key Findings (TABLE V):")
         report_lines.append("")
@@ -160,11 +160,11 @@ class BenchmarkReportGenerator:
         report_lines.append("|-----------|:---:|:---:|:---:|:---:|:---:|")
         
         fairness_mechanisms = [
-            ('Payment Guarantee', 'None', 'Partial', 'Partial', 'None', '✅ Yes'),
-            ('Task Honesty Verification', 'None', 'None', 'None', 'None', '✅ Yes'),
-            ('Quality Contribution Scoring', 'Equal', 'Stake-weighted', 'Stake-weighted', 'None', '✅ Gradient-Norm'),
-            ('Free-Rider Mitigation', 'None', 'Stake req', 'Stake req', 'None', '✅ Yes'),
-            ('Byzantine Tolerance', 'None', 'f < n/2', 'f < n/2', 'None', '✅ f < n/2')
+            ('Payment Guarantee', 'None', 'Partial', 'Partial', 'None', 'Yes'),
+            ('Task Honesty Verification', 'None', 'None', 'None', 'None', 'Yes'),
+            ('Quality Contribution Scoring', 'Equal', 'Stake-weighted', 'Stake-weighted', 'None', 'Gradient-Norm'),
+            ('Free-Rider Mitigation', 'None', 'Stake req', 'Stake req', 'None', 'Yes'),
+            ('Byzantine Tolerance', 'None', 'f < n/2', 'f < n/2', 'None', 'f < n/2')
         ]
         
         for mech, fl, bsr, esb, pbfl, hc in fairness_mechanisms:
@@ -190,7 +190,7 @@ class BenchmarkReportGenerator:
         report_lines.append("#### 3. Gradient-Norm Contribution Scoring (Module 3, 7)")
         report_lines.append("")
         report_lines.append("- **Problem Solved**: Free-riding and unfair reward distribution")
-        report_lines.append("- **Metric**: ||Δ'ᵢ||₂ (gradient L2-norm of miner i's update)")
+        report_lines.append("- **Metric**: ||Delta_i'||_2 (gradient L2-norm of miner i's update)")
         report_lines.append("- **Rationale**: Larger gradient changes = larger quality contribution")
         report_lines.append("- **Fairness**: Proportional reward distribution reflects actual contribution quality")
         report_lines.append("- **Benefit**: Incentivizes continuous improvement and prevents low-effort participation")
@@ -210,7 +210,7 @@ class BenchmarkReportGenerator:
         report_lines.append("ESB-FL         |   39.28h   | 0.22h faster (marginal)")
         report_lines.append("BSR-FL         |   40.33h   | 0.83h slower (+2.1%)")
         report_lines.append("FL (vanilla)   |   25.22h   | No privacy/fairness")
-        report_lines.append("PBFL           |  150.38h   | 3.8× slower")
+        report_lines.append("PBFL           |  150.38h   | 3.8x slower")
         report_lines.append("```")
         report_lines.append("")
         
