@@ -5,6 +5,8 @@ Parses task execution logs to extract timing, accuracy, and cryptographic overhe
 
 import json
 import re
+import subprocess
+import textwrap
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Tuple, Optional
@@ -59,6 +61,340 @@ class BenchmarkMetricsExtractor:
         """Initialize metrics extractor"""
         self.logs_dir = logs_dir or Path('execution_logs')
         self.metrics: List[ExecutionMetrics] = []
+
+    @staticmethod
+    def _to_epoch_seconds(ts: Optional[str]) -> Optional[float]:
+        """Convert ISO timestamp to epoch seconds."""
+        if not ts:
+            return None
+        try:
+            # Handle trailing Z from JS Date ISO strings
+            dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+            return dt.timestamp()
+        except Exception:
+            return None
+
+    @staticmethod
+    def _safe_delta_seconds(end_ts: Optional[float], start_ts: Optional[float]) -> float:
+        """Compute non-negative delta in seconds for optional timestamps."""
+        if end_ts is None or start_ts is None:
+            return 0.0
+        return max(0.0, end_ts - start_ts)
+
+    def extract_real_metrics_from_backend(
+        self,
+        task_ids: List[str],
+        backend_dir: Path = None,
+    ) -> List[ExecutionMetrics]:
+        """
+        Extract real execution metrics from backend DB + on-chain tx timestamps.
+
+        Data source:
+        - PostgreSQL via Prisma (Task, Gradient, Block, Verification, Reward)
+        - Ganache RPC via ethers (publish/reward tx block timestamps)
+        """
+        backend_dir = Path(backend_dir) if backend_dir else (Path(__file__).resolve().parents[1] / "backend")
+        if not backend_dir.exists():
+            raise FileNotFoundError(f"Backend directory not found: {backend_dir}")
+
+        js_probe = textwrap.dedent(
+            """
+            import { prisma } from "./dist/config/database.config.js";
+            import { ethers } from "ethers";
+
+            const taskIDs = JSON.parse(process.argv[2] || "[]");
+            const rpcUrl = process.env.RPC_URL || "http://127.0.0.1:7545";
+            const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+            function parseSparseStats(ciphertext) {
+              if (!ciphertext || typeof ciphertext !== "string") {
+                return { totalSize: null, nonzeroCount: 0 };
+              }
+              const totalMatch = /"totalSize":(\\d+)/.exec(ciphertext);
+              const totalSize = totalMatch ? Number(totalMatch[1]) : null;
+
+              const key = '"nonzeroIndices":[';
+              const start = ciphertext.indexOf(key);
+              if (start < 0) {
+                return { totalSize, nonzeroCount: 0 };
+              }
+
+              let idx = start + key.length;
+              let count = 0;
+              let inNum = false;
+              while (idx < ciphertext.length) {
+                const ch = ciphertext[idx];
+                if (ch === "]") {
+                  if (inNum) count += 1;
+                  break;
+                }
+                if (ch >= "0" && ch <= "9") {
+                  if (!inNum) inNum = true;
+                } else if (ch === ",") {
+                  if (inNum) {
+                    count += 1;
+                    inNum = false;
+                  }
+                }
+                idx += 1;
+              }
+              return { totalSize, nonzeroCount: count };
+            }
+
+            async function getTxTimestamp(txHash) {
+              if (!txHash) return null;
+              try {
+                const receipt = await provider.getTransactionReceipt(txHash);
+                if (!receipt || !receipt.blockNumber) return null;
+                const block = await provider.getBlock(receipt.blockNumber);
+                if (!block || block.timestamp == null) return null;
+                return Number(block.timestamp);
+              } catch {
+                return null;
+              }
+            }
+
+            const out = [];
+
+            for (const taskID of taskIDs) {
+              const task = await prisma.task.findUnique({
+                where: { taskID },
+                select: {
+                  taskID: true,
+                  createdAt: true,
+                  updatedAt: true,
+                  status: true,
+                  targetAccuracy: true,
+                  publishTx: true,
+                  currentRound: true,
+                  dataset: true,
+                  aggregatorAddress: true,
+                },
+              });
+              if (!task) continue;
+
+              const miners = await prisma.miner.findMany({
+                where: { taskID },
+                select: { address: true },
+              });
+
+              const gradientsMeta = await prisma.gradient.findMany({
+                where: { taskID },
+                select: { id: true, minerAddress: true, createdAt: true },
+                orderBy: { createdAt: "asc" },
+              });
+
+              // Fetch cheap per-gradient metadata via SQL (no giant payload materialization).
+              const gradientSizes = await prisma.$queryRawUnsafe(`
+                SELECT id, LENGTH(ciphertext) AS ciphertext_len, LENGTH("scoreCommit") AS score_commit_len
+                FROM "Gradient"
+                WHERE "taskID" = '${taskID}'
+                ORDER BY "createdAt" ASC
+              `);
+              const sizeById = new Map();
+              for (const r of gradientSizes) {
+                sizeById.set(r.id, {
+                  ciphertextLen: Number(r.ciphertext_len || 0),
+                  scoreCommitLen: Number(r.score_commit_len || 0),
+                });
+              }
+
+              // Parse exactly one representative ciphertext to compute true sparsity stats.
+              let sampleTotalSize = null;
+              let sampleNonzeroCount = 0;
+              if (gradientsMeta.length > 0) {
+                const firstId = gradientsMeta[0].id;
+                const sampleRow = await prisma.gradient.findUnique({
+                  where: { id: firstId },
+                  select: { ciphertext: true },
+                });
+                const stats = parseSparseStats(sampleRow?.ciphertext || "");
+                sampleTotalSize = stats.totalSize;
+                sampleNonzeroCount = stats.nonzeroCount;
+              }
+
+              const gradients = gradientsMeta.map((g) => {
+                const sz = sizeById.get(g.id) || { ciphertextLen: 0, scoreCommitLen: 0 };
+                return {
+                  minerAddress: g.minerAddress,
+                  createdAt: g.createdAt,
+                  ciphertextLen: sz.ciphertextLen,
+                  scoreCommitLen: sz.scoreCommitLen,
+                  totalSize: sampleTotalSize,
+                  nonzeroCount: sampleNonzeroCount,
+                };
+              });
+
+              const block = await prisma.block.findUnique({
+                where: { taskID },
+                select: {
+                  round: true,
+                  accuracy: true,
+                  modelHash: true,
+                  modelLink: true,
+                  candidateHash: true,
+                  candidateTimestamp: true,
+                  participants: true,
+                  scoreCommits: true,
+                  status: true,
+                },
+              });
+
+              const verifications = await prisma.verification.findMany({
+                where: { taskID },
+                select: { verdict: true, reason: true, createdAt: true, minerAddress: true },
+                orderBy: { createdAt: "asc" },
+              });
+
+              const rewards = await prisma.reward.findMany({
+                where: { taskID },
+                select: { minerAddress: true, score: true, amountETH: true, txHash: true, createdAt: true, status: true },
+                orderBy: { createdAt: "asc" },
+              });
+
+              const publishTxTimestamp = await getTxTimestamp(task.publishTx);
+              const rewardTxHashes = [...new Set(rewards.map(r => r.txHash).filter(Boolean))];
+              const rewardTxTimestamp = rewardTxHashes.length > 0 ? await getTxTimestamp(rewardTxHashes[0]) : null;
+
+              out.push({
+                task,
+                minersCount: miners.length,
+                gradients,
+                block: block
+                  ? {
+                      round: block.round,
+                      modelHash: block.modelHash,
+                      modelLink: block.modelLink,
+                      candidateHash: block.candidateHash,
+                      participants: block.participants,
+                      scoreCommits: block.scoreCommits,
+                      status: block.status,
+                      accuracyRaw: block.accuracy != null ? String(block.accuracy) : null,
+                      candidateTimestampRaw: block.candidateTimestamp != null ? String(block.candidateTimestamp) : null,
+                    }
+                  : null,
+                verifications,
+                rewards: rewards.map(r => ({
+                  minerAddress: r.minerAddress,
+                  amountETH: r.amountETH,
+                  txHash: r.txHash,
+                  createdAt: r.createdAt,
+                  status: r.status,
+                  scoreRaw: r.score != null ? String(r.score) : "0",
+                })),
+                chain: {
+                  publishTxTimestamp,
+                  rewardTxHash: rewardTxHashes.length > 0 ? rewardTxHashes[0] : null,
+                  rewardTxTimestamp,
+                },
+              });
+            }
+
+            console.log(JSON.stringify({ tasks: out }, null, 2));
+            await prisma.$disconnect();
+            """
+        )
+
+        proc = subprocess.run(
+            ["node", "--input-type=module", "-", json.dumps(task_ids)],
+            cwd=str(backend_dir),
+            input=js_probe,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if proc.returncode != 0:
+            raise RuntimeError(
+                "Failed to extract real metrics from backend.\n"
+                f"STDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
+            )
+
+        try:
+            payload = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                "Backend probe did not return valid JSON output.\n"
+                f"STDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
+            ) from exc
+
+        real_metrics: List[ExecutionMetrics] = []
+        for entry in payload.get("tasks", []):
+            task = entry.get("task", {})
+            block = entry.get("block") or {}
+            gradients = entry.get("gradients", [])
+            verifications = entry.get("verifications", [])
+            rewards = entry.get("rewards", [])
+            chain = entry.get("chain", {})
+
+            created_ts = self._to_epoch_seconds(task.get("createdAt"))
+            updated_ts = self._to_epoch_seconds(task.get("updatedAt"))
+
+            grad_times = sorted([self._to_epoch_seconds(g.get("createdAt")) for g in gradients if g.get("createdAt")])
+            verify_times = sorted([self._to_epoch_seconds(v.get("createdAt")) for v in verifications if v.get("createdAt")])
+            reward_times = sorted([self._to_epoch_seconds(r.get("createdAt")) for r in rewards if r.get("createdAt")])
+
+            first_grad = grad_times[0] if grad_times else None
+            last_grad = grad_times[-1] if grad_times else None
+            first_verify = verify_times[0] if verify_times else None
+            last_verify = verify_times[-1] if verify_times else None
+
+            candidate_ts = None
+            if block.get("candidateTimestampRaw"):
+                try:
+                    candidate_ts = float(block["candidateTimestampRaw"])
+                except Exception:
+                    candidate_ts = None
+
+            publish_ts = float(chain["publishTxTimestamp"]) if chain.get("publishTxTimestamp") is not None else None
+            reward_tx_ts = float(chain["rewardTxTimestamp"]) if chain.get("rewardTxTimestamp") is not None else None
+            reward_db_ts = reward_times[-1] if reward_times else None
+            final_end_ts = reward_tx_ts or reward_db_ts or updated_ts
+
+            nonzero_counts = [float(g.get("nonzeroCount", 0) or 0) for g in gradients if g.get("totalSize")]
+            total_sizes = [float(g.get("totalSize", 0) or 0) for g in gradients if g.get("totalSize")]
+            avg_nonzero = statistics.mean(nonzero_counts) if nonzero_counts else 0.0
+            avg_total = statistics.mean(total_sizes) if total_sizes else 0.0
+            compression_ratio = (avg_nonzero / avg_total) if avg_total > 0 else 1.0
+            bandwidth_reduction_pct = (1.0 - compression_ratio) * 100.0 if avg_total > 0 else 0.0
+
+            accuracy_raw = block.get("accuracyRaw")
+            try:
+                accuracy_fraction = float(accuracy_raw) / 1_000_000.0 if accuracy_raw is not None else 0.0
+            except Exception:
+                accuracy_fraction = 0.0
+            accuracy_percent = accuracy_fraction * 100.0
+
+            model_size_mb = (avg_total * 4.0) / (1024.0 * 1024.0) if avg_total > 0 else 0.0
+
+            metrics = ExecutionMetrics(
+                task_id=str(task.get("taskID", "unknown")),
+                timestamp=str(task.get("updatedAt") or datetime.now().isoformat()),
+                module_1_time=self._safe_delta_seconds(first_grad, created_ts),
+                module_2_time=0.0,
+                module_3_time=self._safe_delta_seconds(last_grad, first_grad),
+                module_4_time=self._safe_delta_seconds(candidate_ts, last_grad),
+                module_5_time=self._safe_delta_seconds(last_verify, first_verify),
+                module_6_time=self._safe_delta_seconds(publish_ts, last_verify or candidate_ts),
+                module_7_time=self._safe_delta_seconds(final_end_ts, publish_ts),
+                total_time=self._safe_delta_seconds(final_end_ts, created_ts),
+                accuracy=round(accuracy_percent, 4),
+                num_predictions=0,
+                key_generation_time=0.0,
+                encryption_time=0.0,
+                inner_product_time=0.0,
+                signature_verification_time=0.0,
+                signature_verification_std=0.0,
+                gradient_compression_ratio=round(compression_ratio, 6),
+                bandwidth_reduction_percent=round(bandwidth_reduction_pct, 4),
+                encryption_algorithm='NDD-FE',
+                num_miners=int(entry.get("minersCount", 0) or 0),
+                num_gradients=len(gradients),
+                model_size_mb=round(model_size_mb, 4),
+            )
+            real_metrics.append(metrics)
+
+        return real_metrics
         
     def extract_from_execution_log(self, log_file: Path) -> Optional[ExecutionMetrics]:
         """

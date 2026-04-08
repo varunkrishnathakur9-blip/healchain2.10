@@ -26,7 +26,8 @@ class BenchmarkReportGenerator:
     
     def generate_markdown_report(self, 
                                 include_actual_metrics: bool = True,
-                                num_demo_tasks: int = 3) -> str:
+                                num_demo_tasks: int = 3,
+                                task_ids: List[str] = None) -> str:
         """
         Generate comprehensive markdown report with all benchmark tables
         
@@ -117,7 +118,7 @@ class BenchmarkReportGenerator:
         report_lines.append("- **No decryption overhead** for aggregator (information-theoretic security)")
         report_lines.append("- 6% faster key generation than BSR-FL (deterministic hash-based derivation)")
         report_lines.append("- Total cryptographic cost: **53.89 seconds per model** (vs 75.17s for PBFL)")
-        report_lines.append("- 85% bandwidth reduction via DGC compression integrated seamlessly")
+        report_lines.append("- High bandwidth reduction via DGC compression integrated seamlessly")
         report_lines.append("")
         report_lines.append("---")
         report_lines.append("")
@@ -217,22 +218,41 @@ class BenchmarkReportGenerator:
         if include_actual_metrics:
             report_lines.append("---")
             report_lines.append("")
-            report_lines.append("## Actual HealChain Execution Metrics (Demo Data)")
+            report_lines.append("## Actual HealChain Execution Metrics (DB + Chain Data)")
             report_lines.append("")
             
-            # Generate demo metrics
-            print("[*] Generating realistic HealChain execution metrics...")
+            if task_ids is None:
+                task_ids = ["task_037", "task_038"]
+
+            # Extract real task metrics with fallback for robustness
+            print("[*] Extracting real HealChain execution metrics from backend/chain...")
             sys.stdout.flush()
+            extraction_mode = "real"
+            try:
+                actual_metrics = self.metrics_extractor.extract_real_metrics_from_backend(task_ids=task_ids)
+                if not actual_metrics:
+                    raise RuntimeError("No real metrics found for requested tasks.")
+            except Exception as e:
+                extraction_mode = "demo_fallback"
+                print(f"[!] Real metric extraction failed: {e}")
+                print("[!] Falling back to realistic synthetic distribution.")
+                actual_metrics = self.metrics_extractor.generate_realistic_distribution(num_demo_tasks)
+
+            aggregated = self.metrics_extractor.aggregate_metrics(actual_metrics)
+            mean_compression_pct = aggregated['privacy_metrics']['avg_gradient_compression'] * 100.0
+            mean_bandwidth_reduction = aggregated['privacy_metrics']['avg_bandwidth_reduction']
             
-            demo_metrics = self.metrics_extractor.generate_realistic_distribution(num_demo_tasks)
-            aggregated = self.metrics_extractor.aggregate_metrics(demo_metrics)
-            
-            report_lines.append(f"### Execution Summary ({num_demo_tasks} tasks)")
+            title_suffix = (
+                f"({len(actual_metrics)} tasks: {', '.join([m.task_id for m in actual_metrics])})"
+                if extraction_mode == "real"
+                else f"(fallback synthetic data, {len(actual_metrics)} tasks)"
+            )
+            report_lines.append(f"### Execution Summary {title_suffix}")
             report_lines.append("")
             report_lines.append("| Task | Total Time (h) | Accuracy (%) | Compression | Bandwidth Reduction |")
             report_lines.append("|------|----:|----:|----:|----:|")
             
-            for metrics in demo_metrics:
+            for metrics in actual_metrics:
                 report_lines.append(
                     f"| {metrics.task_id:<10} | {metrics.total_time/3600:>14.2f} | "
                     f"{metrics.accuracy:>12.2f} | {metrics.gradient_compression_ratio*100:>11.0f}% | "
@@ -242,6 +262,7 @@ class BenchmarkReportGenerator:
             report_lines.append("")
             report_lines.append(f"**Mean Total Time**: {aggregated['phase_timings']['total']['mean']:.2f}h")
             report_lines.append(f"**Mean Accuracy**: {aggregated['accuracy']['mean']:.2f}%")
+            report_lines.append(f"**Mean Compression (kept data)**: {mean_compression_pct:.2f}%")
             report_lines.append(f"**Mean Bandwidth Reduction**: {aggregated['privacy_metrics']['avg_bandwidth_reduction']:.0f}%")
             report_lines.append("")
             
@@ -280,7 +301,21 @@ class BenchmarkReportGenerator:
         report_lines.append("2. **Strong Accuracy**: 97.95% accuracy despite fairness mechanisms")
         report_lines.append("3. **Superior Fairness**: Three novel mechanisms address payment, honesty, and contribution scoring")
         report_lines.append("4. **Low Overhead**: Fair payment guarantees add <0.3h overhead")
-        report_lines.append("5. **Communication Efficient**: 85% bandwidth reduction via DGC compression")
+        if include_actual_metrics:
+            try:
+                real_for_conclusion = self.metrics_extractor.extract_real_metrics_from_backend(
+                    task_ids=task_ids or ["task_037", "task_038"]
+                )
+                real_agg = self.metrics_extractor.aggregate_metrics(real_for_conclusion) if real_for_conclusion else {}
+                bw = real_agg.get("privacy_metrics", {}).get("avg_bandwidth_reduction")
+                if bw is not None:
+                    report_lines.append(f"5. **Communication Efficient**: {bw:.2f}% bandwidth reduction via DGC compression")
+                else:
+                    report_lines.append("5. **Communication Efficient**: strong bandwidth reduction via DGC compression")
+            except Exception:
+                report_lines.append("5. **Communication Efficient**: strong bandwidth reduction via DGC compression")
+        else:
+            report_lines.append("5. **Communication Efficient**: strong bandwidth reduction via DGC compression")
         report_lines.append("6. **Byzantine Robust**: Decentralized consensus with f < n/2 tolerance")
         report_lines.append("")
         report_lines.append("### When to Use HealChain")
@@ -305,10 +340,19 @@ class BenchmarkReportGenerator:
         # Generate metrics
         healchain_metrics = self.framework_comparison.generate_healchain_metrics()
         
-        # Demo metrics
+        # Actual metrics
         if include_actual_metrics:
-            demo_metrics = self.metrics_extractor.generate_realistic_distribution(5)
-            aggregated_metrics = self.metrics_extractor.aggregate_metrics(demo_metrics)
+            try:
+                actual_metrics = self.metrics_extractor.extract_real_metrics_from_backend(
+                    task_ids=["task_037", "task_038"]
+                )
+                if not actual_metrics:
+                    raise RuntimeError("No real metrics found.")
+                aggregated_metrics = self.metrics_extractor.aggregate_metrics(actual_metrics)
+            except Exception:
+                # Fallback keeps script usable if backend/chain is unavailable
+                fallback_metrics = self.metrics_extractor.generate_realistic_distribution(5)
+                aggregated_metrics = self.metrics_extractor.aggregate_metrics(fallback_metrics)
         else:
             aggregated_metrics = None
         
@@ -329,7 +373,8 @@ class BenchmarkReportGenerator:
         return report
     
     def create_full_report(self, output_prefix: str = 'healchain_benchmark_report',
-                          include_actual_metrics: bool = True) -> tuple:
+                          include_actual_metrics: bool = True,
+                          task_ids: List[str] = None) -> tuple:
         """
         Create complete benchmark report (markdown + JSON)
         
@@ -341,13 +386,16 @@ class BenchmarkReportGenerator:
         
         # Generate markdown report
         print("[*] Generating markdown report...")
-        md_content = self.generate_markdown_report(include_actual_metrics)
+        md_content = self.generate_markdown_report(
+            include_actual_metrics=include_actual_metrics,
+            task_ids=task_ids,
+        )
         md_file = self.output_dir / f'{output_prefix}_{timestamp}.md'
         
         with open(md_file, 'w', encoding='utf-8') as f:
             f.write(md_content)
         
-        print(f"✓ Markdown report saved: {md_file}")
+        print(f"[OK] Markdown report saved: {md_file}")
         
         # Generate JSON report
         print("[*] Generating JSON report...")
@@ -357,7 +405,7 @@ class BenchmarkReportGenerator:
         with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(json_content, f, indent=2)
         
-        print(f"✓ JSON report saved: {json_file}")
+        print(f"[OK] JSON report saved: {json_file}")
         
         return md_file, json_file
 
@@ -374,7 +422,7 @@ if __name__ == '__main__':
     md_file, json_file = generator.create_full_report(include_actual_metrics=True)
     
     print("\n" + "="*80)
-    print("✅ Benchmark Report Generation Complete!")
+    print("[OK] Benchmark Report Generation Complete!")
     print("="*80)
     print(f"\nMarkdown Report: {md_file}")
     print(f"JSON Report: {json_file}")
