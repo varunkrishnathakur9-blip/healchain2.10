@@ -139,7 +139,6 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
             "Refusing to use mock ciphertext."
         )
 
-    import time
     import torch
     start_time = time.perf_counter()
     
