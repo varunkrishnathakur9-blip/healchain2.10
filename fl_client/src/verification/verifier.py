@@ -20,6 +20,7 @@ from Crypto.Hash import SHA256
 
 from crypto.signature import sign_message
 from state.local_store import load_state
+from utils.performance_metrics import record_metric_event
 
 
 def _backend_url() -> str:
@@ -327,7 +328,9 @@ def submit_verification_vote(
         miner_pk=miner_pk,
     )
     message = message_bytes.decode("utf-8")
+    signature_started = time.perf_counter()
     signature = sign_message(private_key=miner_private_key, message=message_bytes)
+    signature_elapsed = time.perf_counter() - signature_started
 
     payload = {
         "taskID": task_id,
@@ -340,12 +343,48 @@ def submit_verification_vote(
         "signature": signature,
     }
 
-    response = requests.post(
-        f"{_backend_url()}/verification/submit",
-        json=payload,
-        headers={"Content-Type": "application/json"},
-        timeout=20,
-    )
+    submit_started = time.perf_counter()
+    request_size_bytes = len(json.dumps(payload, default=str).encode("utf-8"))
+    try:
+        response = requests.post(
+            f"{_backend_url()}/verification/submit",
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=20,
+        )
+        submit_elapsed = time.perf_counter() - submit_started
+        record_metric_event(
+            component="fl_client",
+            task_id=task_id,
+            event_type="verification_vote",
+            payload={
+                "miner_address": miner_address,
+                "candidate_hash": candidate_hash,
+                "verdict": verdict,
+                "signature_sec": signature_elapsed,
+                "communication_sec": submit_elapsed,
+                "request_size_bytes": request_size_bytes,
+                "status_code": response.status_code,
+                "success": response.status_code < 400,
+            },
+        )
+    except Exception as submit_error:
+        record_metric_event(
+            component="fl_client",
+            task_id=task_id,
+            event_type="verification_vote",
+            payload={
+                "miner_address": miner_address,
+                "candidate_hash": candidate_hash,
+                "verdict": verdict,
+                "signature_sec": signature_elapsed,
+                "communication_sec": time.perf_counter() - submit_started,
+                "request_size_bytes": request_size_bytes,
+                "success": False,
+                "error": str(submit_error),
+            },
+        )
+        raise
 
     response.raise_for_status()
     return response.json()
@@ -392,6 +431,7 @@ def verify_and_submit_for_task(
             initial_task=task,
         )
 
+    verify_started = time.perf_counter()
     is_valid, reason = verify_candidate_block(
         task_id=task_id,
         miner_address=miner_address,
@@ -401,11 +441,24 @@ def verify_and_submit_for_task(
         task_round=int(task.get("currentRound", 1)),
         perform_local_sanity=perform_local_sanity,
     )
+    local_verify_sec = time.perf_counter() - verify_started
     verdict = "VALID" if is_valid else "INVALID"
     if is_valid:
         reason = ""
 
-    return submit_verification_vote(
+    record_metric_event(
+        component="fl_client",
+        task_id=task_id,
+        event_type="candidate_local_verification",
+        payload={
+            "miner_address": miner_address,
+            "verdict": verdict,
+            "reason": reason,
+            "duration_sec": local_verify_sec,
+            "perform_local_sanity": perform_local_sanity,
+        },
+    )
+    result = submit_verification_vote(
         task_id=task_id,
         miner_address=miner_address,
         miner_pk=miner_pk,
@@ -414,3 +467,4 @@ def verify_and_submit_for_task(
         reason=reason,
         miner_private_key=miner_private_key,
     )
+    return result

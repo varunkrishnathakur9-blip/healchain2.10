@@ -13,7 +13,9 @@ from config.settings import LOCAL_EPOCHS, DGC_THRESHOLD
 from utils.quantize_gradients import quantize_gradients
 from config.gradient_bounds import QUANTIZATION_SCALE, MAX_GRAD_MAGNITUDE
 from crypto.keys import derive_public_key
+from utils.performance_metrics import record_metric_event
 import json
+import time
 
 
 SPARSE_PROTOCOL_VERSION = "nddfe_sparse_v1"
@@ -35,10 +37,13 @@ def _resolve_task_counter(task: dict) -> int:
 
 def run_task(task, miner_addr, progress_callback=None, miner_private_key_override=None):
     task_id = task["taskID"]
+    pipeline_start = time.perf_counter()
+    timings = {}
     print(f"\n[M3] Starting real FL training for {task_id}")
 
     # Step 1: Load Initial Model
     print(f"[M3] Loading initial model...")
+    stage_start = time.perf_counter()
     try:
         model = load_model_from_task(task)
         print(f"[M3] ✅ Initial model loaded")
@@ -59,21 +64,27 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
         print(f"[M3] Falling back to local SimpleCNN")
         from training.model import SimpleCNN
         model = SimpleCNN()
+    timings["model_load_sec"] = time.perf_counter() - stage_start
 
     # Step 2: Load Dataset
     print(f"[M3] Loading local dataset...")
+    stage_start = time.perf_counter()
     dataset_type = task.get("dataset", "chestxray")
     loader = load_local_dataset(dataset_type)
+    timings["dataset_load_sec"] = time.perf_counter() - stage_start
     print(f"[M3] ✅ Dataset loaded: {dataset_type}")
 
     # Step 3: Train
     print(f"[M3] Training locally...")
     if progress_callback:
         progress_callback(10, "Training Model...")
+    stage_start = time.perf_counter()
     model = local_train(model, loader, LOCAL_EPOCHS)
+    timings["local_training_sec"] = time.perf_counter() - stage_start
     print(f"[M3] ✅ Training complete")
     if progress_callback:
         progress_callback(30, "Compressing Gradients (DGC)...")
+    stage_start = time.perf_counter()
     grad = compute_gradient(model)
     delta_p = dgc_compress(grad, DGC_THRESHOLD, MAX_GRAD_MAGNITUDE)
     
@@ -88,6 +99,7 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
     # Compute score on quantized gradients for consistency
     score = gradient_l2_norm(delta_p_quantized, scale)
     commit, nonce = commit_score(score, task["taskID"], miner_addr)
+    timings["gradient_compress_score_commit_sec"] = time.perf_counter() - stage_start
 
     # M3: NDD-FE Encryption (Algorithm 3 from BTP Report)
     # Get public keys from environment or task metadata
@@ -129,7 +141,7 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
 
     import time
     import torch
-    start_time = time.time()
+    start_time = time.perf_counter()
     
     # Extract sparse representation (non-zero indices and values)
     print(f"[M3] Extracting sparse gradients...")
@@ -162,8 +174,9 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
         return_base_mask=True,
     )
     
-    end_time = time.time()
+    end_time = time.perf_counter()
     duration = end_time - start_time
+    timings["ndd_fe_encrypt_sec"] = duration
     print(f"[M3] ✅ Encryption complete. Time taken: {duration:.2f} seconds")
     print(f"[M3] Payload size reduced by ~{sparsity:.0f}%")
 
@@ -192,6 +205,7 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
     real_miner_pk = derive_public_key(miner_private_key)
     print(f"[M3] Using derived public key for signature: {real_miner_pk}")
 
+    stage_start = time.perf_counter()
     signature, canonical_msg = generate_miner_signature(
         task_id=task["taskID"],
         ciphertext=ciphertext_canonical,
@@ -199,6 +213,7 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
         miner_pk=real_miner_pk,
         miner_private_key=miner_private_key
     )
+    timings["submission_signature_sec"] = time.perf_counter() - stage_start
     
     # Compute encryptedHash (hash of ciphertext for backend storage)
     import hashlib
@@ -245,5 +260,25 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
     )
     if reveal_artifact_path:
         print(f"[M3] Reveal artifact saved: {reveal_artifact_path}")
+
+    timings["training_pipeline_total_sec"] = time.perf_counter() - pipeline_start
+    record_metric_event(
+        component="fl_client",
+        task_id=task_id,
+        event_type="training_pipeline",
+        payload={
+            "miner_address": miner_addr,
+            "dataset": dataset_type,
+            "local_epochs": LOCAL_EPOCHS,
+            "dgc_threshold": DGC_THRESHOLD,
+            "quantization_scale": scale,
+            "total_parameters": total_params,
+            "nonzero_parameters": num_nonzero,
+            "sparsity_percent": sparsity,
+            "score": score,
+            "score_commit": commit,
+            "timings_sec": timings,
+        },
+    )
 
     return payload

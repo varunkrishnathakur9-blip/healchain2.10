@@ -31,6 +31,7 @@ from crypto.ndd_fe import ndd_fe_decrypt, ndd_fe_decrypt_sparse
 from crypto.bsgs import recover_vector, dequantize_vector
 from crypto.ec_utils import G, point_mul
 from tinyec.ec import Point
+from utils.performance_metrics import record_metric_event
 
 logger = get_logger("aggregation.aggregator")
 
@@ -46,6 +47,7 @@ def secure_aggregate(
     skA: int,
     pkTP: Point,
     weights: List[int],
+    task_id: str | None = None,
 ) -> List[float]:
     """
     Perform full secure aggregation pipeline:
@@ -95,6 +97,7 @@ def secure_aggregate(
             submissions=submissions,
             skA=skA,
             weights=weights,
+            task_id=task_id,
         )
     elif submission_format == "dense":
         aggregate_update = _secure_aggregate_dense(
@@ -103,6 +106,7 @@ def secure_aggregate(
             skA=skA,
             pkTP=pkTP,
             weights=weights,
+            task_id=task_id,
         )
     else:
         raise ValueError(f"Unsupported submission format: {submission_format}")
@@ -124,6 +128,7 @@ def _secure_aggregate_dense(
     skA: int,
     pkTP: Point,
     weights: List[int],
+    task_id: str | None = None,
 ) -> List[float]:
     weight_sum = max(1, sum(abs(int(w)) for w in weights))
     # ------------------------------------------------------------
@@ -154,6 +159,18 @@ def _secure_aggregate_dense(
         f"[M4] NDD-FE decryption successful "
         f"(coords={len(aggregated_points)}, elapsed={time.time() - t_ndd:.2f}s)"
     )
+    if task_id:
+        record_metric_event(
+            component="aggregator",
+            task_id=task_id,
+            event_type="ndd_fe_decrypt",
+            payload={
+                "format": "dense",
+                "miner_count": len(submissions),
+                "coordinate_count": len(aggregated_points),
+                "duration_sec": time.time() - t_ndd,
+            },
+        )
 
     # ------------------------------------------------------------
     # Step 3: BSGS recovery (signed, bounded)
@@ -167,6 +184,17 @@ def _secure_aggregate_dense(
         f"[M4] BSGS recovery complete "
         f"(coords={len(quantized_update)}, elapsed={time.time() - t_bsgs:.2f}s)"
     )
+    if task_id:
+        record_metric_event(
+            component="aggregator",
+            task_id=task_id,
+            event_type="bsgs_recovery",
+            payload={
+                "format": "dense",
+                "coordinate_count": len(quantized_update),
+                "duration_sec": time.time() - t_bsgs,
+            },
+        )
 
     # ------------------------------------------------------------
     # Step 4: Encode-verify check (Algorithm 4)
@@ -182,6 +210,17 @@ def _secure_aggregate_dense(
         f"[M4] Dequantization complete "
         f"(coords={len(aggregate_update)}, elapsed={time.time() - t_deq:.2f}s)"
     )
+    if task_id:
+        record_metric_event(
+            component="aggregator",
+            task_id=task_id,
+            event_type="dequantization",
+            payload={
+                "format": "dense",
+                "coordinate_count": len(aggregate_update),
+                "duration_sec": time.time() - t_deq,
+            },
+        )
     return aggregate_update
 
 
@@ -190,6 +229,7 @@ def _secure_aggregate_sparse(
     submissions: List[Dict],
     skA: int,
     weights: List[int],
+    task_id: str | None = None,
 ) -> List[float]:
     weight_sum = max(1, sum(abs(int(w)) for w in weights))
     sparse_submissions = []
@@ -233,6 +273,19 @@ def _secure_aggregate_sparse(
         f"(sparse_coords={len(sparse_points)}, total_size={total_size}, "
         f"elapsed={time.time() - t_ndd:.2f}s)"
     )
+    if task_id:
+        record_metric_event(
+            component="aggregator",
+            task_id=task_id,
+            event_type="ndd_fe_decrypt",
+            payload={
+                "format": "sparse",
+                "miner_count": len(submissions),
+                "sparse_coordinate_count": len(sparse_points),
+                "total_size": total_size,
+                "duration_sec": time.time() - t_ndd,
+            },
+        )
 
     # ------------------------------------------------------------
     # Step 3: BSGS recovery on sparse coordinates
@@ -244,6 +297,17 @@ def _secure_aggregate_sparse(
         f"[M4] Sparse BSGS recovery complete "
         f"(sparse_coords={len(quantized_sparse)}, elapsed={time.time() - t_bsgs:.2f}s)"
     )
+    if task_id:
+        record_metric_event(
+            component="aggregator",
+            task_id=task_id,
+            event_type="bsgs_recovery",
+            payload={
+                "format": "sparse",
+                "sparse_coordinate_count": len(quantized_sparse),
+                "duration_sec": time.time() - t_bsgs,
+            },
+        )
 
     # ------------------------------------------------------------
     # Step 4: Encode-verify check (Algorithm 4) on sparse coordinates
@@ -263,6 +327,17 @@ def _secure_aggregate_sparse(
         f"[M4] Sparse dequantization complete "
         f"(coords={len(aggregate_update)}, elapsed={time.time() - t_deq:.2f}s)"
     )
+    if task_id:
+        record_metric_event(
+            component="aggregator",
+            task_id=task_id,
+            event_type="dequantization",
+            payload={
+                "format": "sparse",
+                "coordinate_count": len(aggregate_update),
+                "duration_sec": time.time() - t_deq,
+            },
+        )
     return aggregate_update
 
 

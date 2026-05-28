@@ -25,6 +25,7 @@ from typing import Dict
 import requests
 
 from utils.logging import get_logger
+from utils.performance_metrics import record_metric_event
 
 logger = get_logger("backend_iface.sender")
 
@@ -84,10 +85,23 @@ class BackendSender:
         }
 
         try:
+            request_size_bytes = len(str(normalized_payload).encode("utf-8"))
+            request_started = time.perf_counter()
             resp = requests.post(
                 endpoint,
                 json=normalized_payload,
                 timeout=self._http_timeout,
+            )
+            record_metric_event(
+                component="aggregator",
+                task_id=self.task_id,
+                event_type="candidate_broadcast_communication",
+                payload={
+                    "status_code": resp.status_code,
+                    "success": resp.status_code == 200,
+                    "request_size_bytes": request_size_bytes,
+                    "duration_sec": time.perf_counter() - request_started,
+                },
             )
 
             if resp.status_code != 200:
@@ -101,6 +115,18 @@ class BackendSender:
             return True
 
         except Exception as e:
+            record_metric_event(
+                component="aggregator",
+                task_id=self.task_id,
+                event_type="candidate_broadcast_communication",
+                payload={
+                    "success": False,
+                    "duration_sec": time.perf_counter() - request_started
+                    if "request_started" in locals()
+                    else None,
+                    "error": str(e),
+                },
+            )
             logger.error(f"[BackendSender] Error broadcasting candidate: {e}")
             return False
 
@@ -135,10 +161,23 @@ class BackendSender:
         }
 
         try:
+            request_size_bytes = len(str(normalized_payload).encode("utf-8"))
+            request_started = time.perf_counter()
             resp = requests.post(
                 endpoint,
                 json=normalized_payload,
                 timeout=self._http_timeout,
+            )
+            record_metric_event(
+                component="aggregator",
+                task_id=self.task_id,
+                event_type="publish_payload_communication",
+                payload={
+                    "status_code": resp.status_code,
+                    "success": resp.status_code == 200,
+                    "request_size_bytes": request_size_bytes,
+                    "duration_sec": time.perf_counter() - request_started,
+                },
             )
 
             if resp.status_code != 200:
@@ -152,6 +191,18 @@ class BackendSender:
             return True
 
         except Exception as e:
+            record_metric_event(
+                component="aggregator",
+                task_id=self.task_id,
+                event_type="publish_payload_communication",
+                payload={
+                    "success": False,
+                    "duration_sec": time.perf_counter() - request_started
+                    if "request_started" in locals()
+                    else None,
+                    "error": str(e),
+                },
+            )
             logger.error(f"[BackendSender] Error publishing payload: {e}")
             return False
 

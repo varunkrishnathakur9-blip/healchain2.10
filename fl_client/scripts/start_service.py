@@ -32,6 +32,7 @@ from tasks.lifecycle import run_task
 from state.local_store import load_state, save_state
 from crypto.keys import derive_public_key
 from verification.verifier import verify_and_submit_for_task
+from utils.performance_metrics import record_metric_event
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for backend requests
@@ -635,12 +636,44 @@ def submit_gradient():
         print(f"[M3] Wallet auth - Message preview: {api_message[:50] if api_message else 'None'}...")
         print(f"[M3] Wallet auth - Signature preview: {api_signature[:20] if api_signature else 'None'}...")
 
-        response = requests.post(
-            f"{backend_url}/aggregator/submit-update",
-            json=submission_data,
-            headers={"Content-Type": "application/json"},
-            timeout=30
-        )
+        submit_started = time.perf_counter()
+        request_size_bytes = len(json.dumps(submission_data, default=str).encode("utf-8"))
+        try:
+            response = requests.post(
+                f"{backend_url}/aggregator/submit-update",
+                json=submission_data,
+                headers={"Content-Type": "application/json"},
+                timeout=30
+            )
+            submit_elapsed = time.perf_counter() - submit_started
+            record_metric_event(
+                component="fl_client",
+                task_id=task_id,
+                event_type="gradient_submission_communication",
+                payload={
+                    "miner_address": miner_address,
+                    "backend_url": backend_url,
+                    "status_code": response.status_code,
+                    "success": response.status_code == 200,
+                    "request_size_bytes": request_size_bytes,
+                    "duration_sec": submit_elapsed,
+                },
+            )
+        except Exception as submit_error:
+            record_metric_event(
+                component="fl_client",
+                task_id=task_id,
+                event_type="gradient_submission_communication",
+                payload={
+                    "miner_address": miner_address,
+                    "backend_url": backend_url,
+                    "success": False,
+                    "request_size_bytes": request_size_bytes,
+                    "duration_sec": time.perf_counter() - submit_started,
+                    "error": str(submit_error),
+                },
+            )
+            raise
         
         print(f"[M3] Backend response status: {response.status_code}")
         if response.status_code != 200:

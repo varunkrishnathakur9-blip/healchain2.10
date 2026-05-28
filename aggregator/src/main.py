@@ -58,6 +58,7 @@ from consensus.majority import has_majority
 from utils.logging import get_logger
 from utils.env_sync import sync_task_keys_to_env
 from utils.signing import sign_hash_hex_with_scalar
+from utils.performance_metrics import record_metric_event
 
 logger = get_logger("aggregator.main")
 
@@ -110,20 +111,67 @@ class HealChainAggregator:
     def run(self):
         logger.info(f"[Aggregator] Starting task {self.task_id}")
         self.running = True
+        run_start = time.perf_counter()
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="run_started",
+            payload={},
+        )
 
         # Load cryptographic material
+        stage_start = time.perf_counter()
         self._initialize_keys()
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="key_initialization",
+            payload={"duration_sec": time.perf_counter() - stage_start},
+        )
 
         # =========================
         # M4: Secure Aggregation
         # =========================
         self.state.set_status(TASK_STATE_COLLECTING)
+        stage_start = time.perf_counter()
         submissions = self._wait_for_submissions()
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="submission_collection",
+            payload={
+                "duration_sec": time.perf_counter() - stage_start,
+                "submission_count": len(submissions),
+                "min_participants": self.min_participants,
+                "max_participants": self.max_participants,
+            },
+        )
 
         self.state.set_status(TASK_STATE_AGGREGATING)
+        stage_start = time.perf_counter()
         aggregate = self._secure_aggregate(submissions)
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="secure_aggregation_total",
+            payload={
+                "duration_sec": time.perf_counter() - stage_start,
+                "aggregate_dimension": len(aggregate) if hasattr(aggregate, "__len__") else None,
+            },
+        )
 
+        stage_start = time.perf_counter()
         updated_model, acc = self._update_and_evaluate(aggregate)
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="model_update_evaluation",
+            payload={
+                "duration_sec": time.perf_counter() - stage_start,
+                "accuracy": acc,
+                "round": self.state.round,
+            },
+        )
 
         # =========================
         # Algorithm 4: Accuracy Check (Lines 35-40)
@@ -158,6 +206,17 @@ class HealChainAggregator:
 
             if self.backend_tx.reset_round(model_link=retrain_model_link):
                 logger.info("[Aggregator] Round reset successful. Aggregator exiting.")
+                record_metric_event(
+                    component="aggregator",
+                    task_id=self.task_id,
+                    event_type="run_completed",
+                    payload={
+                        "duration_sec": time.perf_counter() - run_start,
+                        "outcome": "round_reset",
+                        "accuracy": acc,
+                        "required_accuracy": self.state.required_accuracy,
+                    },
+                )
                 self.running = False
                 return
             else:
@@ -168,24 +227,87 @@ class HealChainAggregator:
         # =========================
         # M4: Candidate Formation
         # =========================
+        stage_start = time.perf_counter()
         candidate = self._form_candidate(updated_model, acc, submissions)
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="candidate_formation_broadcast",
+            payload={
+                "duration_sec": time.perf_counter() - stage_start,
+                "candidate_hash": candidate.get("hash"),
+                "accuracy": acc,
+                "participant_count": len(candidate.get("participants", [])),
+            },
+        )
 
         # =========================
         # M5: Miner Verification
         # =========================
+        stage_start = time.perf_counter()
         if not self._run_miner_verification(candidate):
             logger.error("[Aggregator] Candidate rejected by miners")
             self.state.set_status("REJECTED_BY_MINERS")
+            record_metric_event(
+                component="aggregator",
+                task_id=self.task_id,
+                event_type="verification_wait",
+                payload={
+                    "duration_sec": time.perf_counter() - stage_start,
+                    "approved": False,
+                    "candidate_hash": candidate.get("hash"),
+                },
+            )
+            record_metric_event(
+                component="aggregator",
+                task_id=self.task_id,
+                event_type="run_completed",
+                payload={
+                    "duration_sec": time.perf_counter() - run_start,
+                    "outcome": "rejected_by_miners",
+                    "accuracy": acc,
+                },
+            )
             self.running = False
             return
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="verification_wait",
+            payload={
+                "duration_sec": time.perf_counter() - stage_start,
+                "approved": True,
+                "candidate_hash": candidate.get("hash"),
+            },
+        )
 
         # =========================
         # M6: Publish Payload
         # =========================
+        stage_start = time.perf_counter()
         self._publish_candidate(candidate)
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="publish_payload",
+            payload={
+                "duration_sec": time.perf_counter() - stage_start,
+                "candidate_hash": candidate.get("hash"),
+            },
+        )
         self.state.set_status(TASK_STATE_PUBLISHED)
 
         logger.info(f"[Aggregator] Task {self.task_id} completed (awaiting reveal)")
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="run_completed",
+            payload={
+                "duration_sec": time.perf_counter() - run_start,
+                "outcome": "published",
+                "accuracy": acc,
+            },
+        )
         self.running = False
 
     # ------------------------------------------------------------------
@@ -427,6 +549,7 @@ class HealChainAggregator:
             skA=self.keys.skA,
             pkTP=self.keys.pkTP,
             weights=active_weights,
+            task_id=self.task_id,
         )
 
         self.progress.mark("aggregation_complete")
@@ -505,9 +628,19 @@ class HealChainAggregator:
         )
 
         # Algorithm 4 (line 42): B.signatureA <- Sign(skA, HASH(B))
+        signature_start = time.perf_counter()
         signature_a = sign_hash_hex_with_scalar(
             private_scalar=self.keys.skA,
             hash_hex=candidate["hash"],
+        )
+        record_metric_event(
+            component="aggregator",
+            task_id=self.task_id,
+            event_type="candidate_signature",
+            payload={
+                "candidate_hash": candidate["hash"],
+                "duration_sec": time.perf_counter() - signature_start,
+            },
         )
         candidate["artifact_hash"] = artifact_hash
         candidate["model_metadata"] = model_meta
