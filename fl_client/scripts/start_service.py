@@ -613,9 +613,19 @@ def submit_gradient():
                 "signatureValue": str(api_signature)[:50] if api_signature else None
             }), 400
 
-        # Submit to backend with both gradient data and wallet auth
+        # Submit to backend with both gradient data and wallet auth.
+        # Reuse the canonical ciphertext string generated during training when
+        # available; rebuilding it here can duplicate hundreds of MB in memory.
         import requests
         import json
+        ciphertext_payload = payload.get("ciphertext_concat")
+        if not isinstance(ciphertext_payload, str) or not ciphertext_payload:
+            ciphertext_payload = json.dumps(
+                payload["ciphertext"],
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+
         submission_data = {
             # Gradient submission fields (M3) - Algorithm 3
             "taskID": payload["taskID"],
@@ -623,7 +633,7 @@ def submit_gradient():
             "miner_pk": payload.get("miner_pk"),  # Public key used to sign submission
             "scoreCommit": payload["scoreCommit"],
             "encryptedHash": payload["encryptedHash"],
-            "ciphertext": json.dumps(payload["ciphertext"]),  # JSON payload (sparse metadata + values)
+            "ciphertext": ciphertext_payload,  # JSON payload (sparse metadata + values)
             "minerSignature": payload.get("signature"),  # Miner signature for submission verification (separate from wallet auth)
             # Wallet auth fields (for API authentication - required by requireWalletAuth middleware)
             "address": api_address,
@@ -637,13 +647,30 @@ def submit_gradient():
         print(f"[M3] Wallet auth - Signature preview: {api_signature[:20] if api_signature else 'None'}...")
 
         submit_started = time.perf_counter()
-        request_size_bytes = len(json.dumps(submission_data, default=str).encode("utf-8"))
+        # Avoid materializing the complete request body just to measure it.
+        # The ciphertext is ASCII JSON, so its character count is a close lower
+        # bound for the eventual request bytes; small metadata overhead is added.
+        request_size_bytes = len(ciphertext_payload) + sum(
+            len(str(value))
+            for key, value in submission_data.items()
+            if key != "ciphertext" and value is not None
+        ) + 512
+        timeout_env = os.getenv("SUBMISSION_TIMEOUT_SEC", "").strip()
+        submit_timeout_sec = None
+        if timeout_env:
+            try:
+                submit_timeout_sec = max(1.0, float(timeout_env))
+            except ValueError:
+                print(
+                    "[M3] Invalid SUBMISSION_TIMEOUT_SEC value "
+                    f"'{timeout_env}', using no timeout"
+                )
         try:
             response = requests.post(
                 f"{backend_url}/aggregator/submit-update",
                 json=submission_data,
                 headers={"Content-Type": "application/json"},
-                timeout=30
+                timeout=submit_timeout_sec
             )
             submit_elapsed = time.perf_counter() - submit_started
             record_metric_event(
@@ -656,6 +683,8 @@ def submit_gradient():
                     "status_code": response.status_code,
                     "success": response.status_code == 200,
                     "request_size_bytes": request_size_bytes,
+                    "request_size_estimated": True,
+                    "timeout_sec": submit_timeout_sec if submit_timeout_sec is not None else "infinite",
                     "duration_sec": submit_elapsed,
                 },
             )
@@ -669,6 +698,8 @@ def submit_gradient():
                     "backend_url": backend_url,
                     "success": False,
                     "request_size_bytes": request_size_bytes,
+                    "request_size_estimated": True,
+                    "timeout_sec": submit_timeout_sec if submit_timeout_sec is not None else "infinite",
                     "duration_sec": time.perf_counter() - submit_started,
                     "error": str(submit_error),
                 },
