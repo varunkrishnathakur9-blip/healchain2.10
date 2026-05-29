@@ -706,7 +706,6 @@ def submit_gradient():
             result = response.json()
             
             # Update training status with submission info
-            import time
             current_timestamp = int(time.time())  # Unix timestamp in seconds
             
             if task_id in training_status:
