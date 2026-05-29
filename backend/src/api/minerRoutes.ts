@@ -289,7 +289,11 @@ router.post(
       if (result.success) {
         res.json({ success: true, message: result.message });
       } else {
-        res.status(400).json({ success: false, message: result.message });
+        res.status(400).json({
+          success: false,
+          message: result.message,
+          ...(result.suggestion ? { suggestion: result.suggestion } : {})
+        });
       }
     } catch (err: any) {
       // Log the error for debugging
@@ -360,7 +364,11 @@ router.post(
       if (result.success) {
         res.json({ success: true, message: result.message });
       } else {
-        res.status(400).json({ success: false, message: result.message });
+        res.status(400).json({
+          success: false,
+          message: result.message,
+          ...(result.suggestion ? { suggestion: result.suggestion } : {})
+        });
       }
     } catch (err) {
       console.error(`[POST /miners/${req.params.address}/tasks/${req.params.taskID}/submit-gradient] Error:`, err);

@@ -85,10 +85,14 @@ api.interceptors.response.use(
     
     // Only log if there's actual information
     if (Object.keys(errorInfo).length > 0) {
-      console.error('[API] Response error:', errorInfo);
+      console.error('[API] Response error:', JSON.stringify(errorInfo, null, 2));
     } else {
       // Fallback: log the error object itself
-      console.error('[API] Response error (unknown format):', error);
+      const fallbackInfo = error?.toJSON ? error.toJSON() : {
+        message: error?.message,
+        name: error?.name,
+      };
+      console.error('[API] Response error (unknown format):', JSON.stringify(fallbackInfo, null, 2));
     }
     if (error.response) {
       // Server responded with error status

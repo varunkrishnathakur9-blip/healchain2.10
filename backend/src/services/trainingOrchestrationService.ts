@@ -429,6 +429,21 @@ export async function triggerSubmission(
       };
     }
 
+    if (error.response?.status >= 500) {
+      const errorData = error.response?.data || {};
+      const errorMessage =
+        errorData.error ||
+        errorData.message ||
+        errorData.details ||
+        error.message;
+      return {
+        success: false,
+        message: errorMessage
+          ? `FL client submission failed (${error.response.status}): ${errorMessage}`
+          : `FL client submission failed with status ${error.response.status}`
+      };
+    }
+
     return {
       success: false,
       message: `Failed to submit gradient: ${error.message || 'Unknown error'}`
