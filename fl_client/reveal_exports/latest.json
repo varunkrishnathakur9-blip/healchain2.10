@@ -1,10 +1,10 @@
 {
   "taskID": "task_039",
   "minerAddress": "0xaeb1b0ab57ebc91ff0fcc1cd35ff314653ebe529",
-  "score": 0.8939647674560547,
-  "scoreUint": 893964,
-  "nonce": "0x8ecf5f846ee20b48b62e17fdd06163e2cfc635713b109448ab78936f4e5f8be3",
-  "commit": "0x690d4f86ee4b433ebb0b5cf011250640a6c990ac3fd7dac91913801ce0b00e7d",
+  "score": 2.4219512939453125,
+  "scoreUint": 2421951,
+  "nonce": "0x563e4ca2b12552ca581da8a6a844e4b2eaf4b9e4f7a1898ce9c6a14962b58a3a",
+  "commit": "0x68b9a7450167656fc2ca21b090bea3dc25e30adb2b0659943f18ff9e05b43e3d",
   "scorePrecision": 1000000,
-  "createdAt": "2026-05-29T06:49:05.892517+00:00"
+  "createdAt": "2026-05-30T07:18:14.709593+00:00"
 }
