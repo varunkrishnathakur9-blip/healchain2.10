@@ -1,0 +1,10 @@
+{
+  "taskID": "task_040",
+  "minerAddress": "0xaeb1b0ab57ebc91ff0fcc1cd35ff314653ebe529",
+  "score": 5.405684471130371,
+  "scoreUint": 5405684,
+  "nonce": "0x9437d3b09453308fc5629a34c72685a5d26b5b1e09bbad07a5084f2c4c84b913",
+  "commit": "0x63f4568d54c3c30c9ef6c51aa88b2cf2c93e3f6ab240eb477965f5dbd21e81ba",
+  "scorePrecision": 1000000,
+  "createdAt": "2026-06-01T17:16:07.793909+00:00"
+}

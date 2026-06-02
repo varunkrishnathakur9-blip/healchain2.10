@@ -39,6 +39,19 @@ logger = get_logger("model.artifact")
 ARTIFACT_DIR = os.getenv("MODEL_ARTIFACT_DIR", "./artifacts")
 
 
+def _timeout_env(name: str, default: float | None) -> float | None:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    value = raw.strip().lower()
+    if value in {"", "0", "none", "null", "infinite", "inf", "off"}:
+        return None
+    timeout = float(value)
+    if timeout < 0:
+        return None
+    return timeout
+
+
 def _normalize_ipfs_api_base(raw: str) -> str:
     """
     Normalize IPFS Desktop / Kubo API address formats into HTTP base URL.
@@ -72,7 +85,15 @@ def _upload_json_to_ipfs(*, filename: str, payload: bytes) -> str:
     )
     add_url = f"{api_base}/api/v0/add?pin=true"
     files = {"file": (filename, payload, "application/json")}
-    resp = requests.post(add_url, files=files, timeout=60)
+    connect_timeout = _timeout_env("MODEL_ARTIFACT_IPFS_CONNECT_TIMEOUT_SEC", 10.0)
+    read_timeout = _timeout_env("MODEL_ARTIFACT_IPFS_READ_TIMEOUT_SEC", None)
+    timeout = (connect_timeout, read_timeout)
+    logger.info(
+        "[M4] Uploading model artifact to IPFS | "
+        f"url={add_url}, file={filename}, bytes={len(payload)}, "
+        f"connect_timeout={connect_timeout}, read_timeout={read_timeout or 'infinite'}"
+    )
+    resp = requests.post(add_url, files=files, timeout=timeout)
     resp.raise_for_status()
     data = resp.json()
     cid = data.get("Hash")
