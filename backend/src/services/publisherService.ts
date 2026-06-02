@@ -2,7 +2,10 @@ import { prisma } from "../config/database.config.js";
 import { blockPublisher } from "../contracts/blockPublisher.js";
 import { TaskStatus } from "@prisma/client";
 import { verifyCandidateBlockSignature } from "../crypto/candidateSignature.js";
-import { normalizeMinerPublicKey } from "../utils/publicKey.js";
+import {
+  normalizeMinerPublicKey,
+  normalizeMinerPublicKeyIdentity,
+} from "../utils/publicKey.js";
 
 /**
  * M6: Publish block on-chain after verification
@@ -143,7 +146,7 @@ export async function publishOnChain(
   for (const m of taskMiners) {
     if (!m.publicKey) continue;
     try {
-      pkToAddress.set(normalizeMinerPublicKey(m.publicKey), m.address.toLowerCase());
+      pkToAddress.set(normalizeMinerPublicKeyIdentity(m.publicKey), m.address.toLowerCase());
     } catch {
       // Ignore malformed stored keys; they will fail mapping later if needed.
     }
@@ -157,8 +160,8 @@ export async function publishOnChain(
       "Selected aggregator public key is missing from miner registry; strict M6 identity binding failed"
     );
   }
-  const normalizedCandidateAggregatorPK = normalizeMinerPublicKey(String(b.aggregatorPK));
-  const normalizedSelectedAggregatorPK = normalizeMinerPublicKey(
+  const normalizedCandidateAggregatorPK = normalizeMinerPublicKeyIdentity(String(b.aggregatorPK));
+  const normalizedSelectedAggregatorPK = normalizeMinerPublicKeyIdentity(
     String(selectedAggregatorMiner.publicKey)
   );
   if (normalizedCandidateAggregatorPK !== normalizedSelectedAggregatorPK) {
@@ -177,7 +180,7 @@ export async function publishOnChain(
 
     // Legacy path: participant is miner_pk "x,y". Map it to registered miner address.
     try {
-      const normalizedPk = normalizeMinerPublicKey(raw);
+      const normalizedPk = normalizeMinerPublicKeyIdentity(raw);
       const mapped = pkToAddress.get(normalizedPk);
       if (mapped && isAddressHex(mapped)) {
         return mapped.toLowerCase() as `0x${string}`;
@@ -321,8 +324,11 @@ export async function publishOnChain(
 
   // Wait for mining so strict post-publish validation can run deterministically.
   const receipt = await tx.wait();
-  if (!receipt || receipt.status !== 1n) {
-    throw new Error("M6 publish transaction failed on-chain");
+  const receiptStatus = receipt ? String((receipt as any).status ?? "") : "";
+  if (!receipt || receiptStatus !== "1") {
+    throw new Error(
+      `M6 publish transaction failed on-chain (tx=${String(tx.hash || "unknown")}, status=${receiptStatus || "missing"})`
+    );
   }
 
   await assertOnChainMetadataMatches();

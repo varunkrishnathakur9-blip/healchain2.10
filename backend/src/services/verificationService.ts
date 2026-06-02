@@ -7,7 +7,10 @@
 
 import { prisma } from "../config/database.config.js";
 import { TaskStatus } from "@prisma/client";
-import { normalizeMinerPublicKey } from "../utils/publicKey.js";
+import {
+  normalizeMinerPublicKey,
+  normalizeMinerPublicKeyIdentity,
+} from "../utils/publicKey.js";
 import {
   canonicalFeedbackMessage,
   verifyFeedbackSignature,
@@ -47,7 +50,6 @@ export async function submitVerification(
   if (!minerPkRaw) {
     throw new Error("miner_pk is required");
   }
-  const normalizedMinerPk = normalizeMinerPublicKey(minerPkRaw);
   if (typeof reason !== "string") {
     throw new Error("reason must be a string");
   }
@@ -113,8 +115,9 @@ export async function submitVerification(
   if (!miner.publicKey) {
     throw new Error(`Miner ${minerAddress} has no registered public key`);
   }
-  const registeredMinerPk = normalizeMinerPublicKey(miner.publicKey);
-  if (registeredMinerPk !== normalizedMinerPk) {
+  const registeredMinerPk = normalizeMinerPublicKeyIdentity(miner.publicKey);
+  const submittedMinerPkIdentity = normalizeMinerPublicKeyIdentity(minerPkRaw);
+  if (registeredMinerPk !== submittedMinerPkIdentity) {
     throw new Error("miner_pk does not match registered miner public key");
   }
 
@@ -129,9 +132,9 @@ export async function submitVerification(
   }
 
   const candidateParticipants = ((task.block as any).participants || []).map((v: string) =>
-    normalizeMinerPublicKey(v)
+    normalizeMinerPublicKeyIdentity(v)
   );
-  if (candidateParticipants.length > 0 && !candidateParticipants.includes(normalizedMinerPk)) {
+  if (candidateParticipants.length > 0 && !candidateParticipants.includes(submittedMinerPkIdentity)) {
     throw new Error("Miner is not in candidate participant list");
   }
 
