@@ -478,9 +478,9 @@ def bool_or_none(value: Any) -> bool | None:
     if isinstance(value, (int, float)):
         return bool(value)
     text = str(value).strip().lower()
-    if text in {"1", "true", "yes", "y", "malicious", "detected", "filtered"}:
+    if text in {"1", "true", "yes", "y", "success", "succeeded", "ok", "malicious", "detected", "filtered"}:
         return True
-    if text in {"0", "false", "no", "n", "benign", "clean", "not_detected", "unfiltered"}:
+    if text in {"0", "false", "no", "n", "fail", "failed", "error", "reverted", "benign", "clean", "not_detected", "unfiltered"}:
         return False
     return None
 
@@ -955,8 +955,8 @@ class BlockchainMonitor:
 
     def _row_from_event(self, event: Mapping[str, Any], p: Mapping[str, Any]) -> BlockchainMetric:
         tx_hash = str(first_present(p, ["tx_hash", "transaction_hash", "txHash", "hash"]) or "")
-        gas_used = fint(first_present(p, ["gas_used", "gasUsed", "gas"]))
-        gas_price_wei = fint(first_present(p, ["gas_price_wei", "effectiveGasPrice", "gasPrice"]))
+        gas_used = self._int_like(first_present(p, ["gas_used", "gasUsed", "gas"]))
+        gas_price_wei = self._int_like(first_present(p, ["gas_price_wei", "effectiveGasPrice", "gasPrice"]))
         success = bool_or_none(first_present(p, ["success", "status", "tx_success"]))
         row = BlockchainMetric(
             round=infer_round(event, p),
@@ -1042,6 +1042,11 @@ class BlockchainMonitor:
             return int(text, 16) if text.startswith("0x") else int(text)
         except ValueError:
             return None
+
+    @classmethod
+    def _int_like(cls, value: Any) -> int | None:
+        parsed = cls._hex_int(value)
+        return parsed if parsed is not None else fint(value)
 
     def _find_tx_hashes(self, obj: Any, path: str = "") -> list[tuple[str, str]]:
         found: list[tuple[str, str]] = []
