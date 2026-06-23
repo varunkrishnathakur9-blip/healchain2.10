@@ -236,7 +236,146 @@ Then proceed manually through HealChain:
 If you do not use `--stop-at-terminal`, press `Ctrl+C` after M7. The monitor
 will still generate the report.
 
-## 6. Experiment Matrix For The Paper
+## 6. Correct Experimentation Runbook
+
+Use this workflow for every final experiment. The goal is to avoid spending
+hours on M1-M7 only to discover that the run is not paper-quality.
+
+### 6.1 Pre-Run Sanity Checks
+
+Before starting M1, verify the basic training path outside the full protocol:
+
+1. Confirm the dataset split folder exists and contains one folder per client.
+2. Confirm every client folder has both `NORMAL` and `PNEUMONIA` samples for
+   IID experiments.
+3. Run a small local training/evaluation check if available. The clean model
+   should produce accuracy above random baseline and loss should decrease.
+4. Confirm the validation set is loaded from the intended path.
+5. Confirm labels are encoded consistently, for example `NORMAL=0` and
+   `PNEUMONIA=1`, or document the actual mapping.
+
+Do not proceed to the full matrix if clean accuracy is stuck at exactly
+`50.00%`, loss is missing for every round, or the validation set cannot produce
+TP/TN/FP/FN or prediction vectors. Fix the data/model/evaluation path first.
+
+### 6.2 Service Setup Checklist
+
+Use one terminal per service, and set the shared metrics directory before
+starting each service:
+
+```powershell
+$env:HEALCHAIN_METRICS_DIR="C:\repos\healchain\experimentation_and_result_Analysis\monitoring_metrics"
+```
+
+Restart any backend, aggregator, or FL client service that was already running
+before this variable was set.
+
+For each miner:
+
+1. Use a unique wallet/private key.
+2. Use the correct `client_XX` dataset split.
+3. Use a separate FL client working directory if running miners concurrently
+   from one machine.
+4. Confirm the miner service port and backend registration address are unique.
+5. Record the miner address to client split mapping in your experiment notes.
+
+### 6.3 Task Naming
+
+Use descriptive task IDs for final runs. Avoid opaque IDs like `task_040`
+except for debugging.
+
+```text
+task_iid_7c_clean_0_seed42
+task_iid_7c_label_flip_20_seed42
+task_non_iid_7c_byzantine_40_seed123
+```
+
+Each experimental setting and seed must use a fresh task ID.
+
+### 6.4 M1-M7 Execution Gates
+
+At each stage, verify the gate condition before moving on:
+
+| Stage | Action | Gate before proceeding |
+| --- | --- | --- |
+| M1 | Publish task and escrow reward | Task is visible in backend; publish tx/hash is recorded |
+| M2 | Register/select miners | Registered miner count equals the planned client count, or the exception is documented |
+| M3 | Local training and gradient submission | Expected miners submit gradients; local accuracy/loss/sample metrics are emitted |
+| M4 | Secure aggregation and evaluation | Global model is evaluated; accuracy and confusion counts or prediction vectors are emitted |
+| M5 | Verification feedback | Verification votes/signatures are emitted for selected participants |
+| M6 | Publish candidate/global model | Candidate hash, model hash/link, participant list, and transaction data are recorded |
+| M7 | Reveal scores and distribute rewards | Rewards are distributed; final task status reaches `REWARDED` |
+
+If a gate fails, stop and diagnose the run. Do not continue or treat the final
+report as a final experiment.
+
+### 6.5 Minimum Metrics Required For Final Results
+
+For clean classification tables, collect:
+
+- final accuracy, best accuracy, and per-round accuracy
+- precision, recall, F1 score, specificity, and sensitivity
+- TP, TN, FP, FN, or `y_true`/`y_pred` vectors
+- validation loss or test loss
+- per-client local accuracy, local loss, and samples used
+
+For protocol overhead tables, collect:
+
+- per-client training time and pipeline time
+- NDD-FE encryption/decryption time
+- signature time
+- upload/download bytes
+- aggregation time
+- CPU/RAM/disk usage
+
+For blockchain overhead tables, collect:
+
+- transaction hash and transaction type
+- gas used
+- gas price
+- transaction success/failure status
+- confirmation time or block inclusion delay
+- ETH/USD/INR cost
+
+For attack experiments, collect:
+
+- attack type and attack ratio
+- malicious client IDs
+- poisoned sample count
+- clean and robust accuracy
+- attack success rate
+- detection TP/TN/FP/FN
+- malicious filtered and benign incorrectly filtered counts
+
+### 6.6 Repeatability
+
+For final paper results, run each setting at least three times with different
+seeds and report mean plus standard deviation:
+
+```text
+seed 42
+seed 123
+seed 2026
+```
+
+Keep the generated report directory, code commit/version, dataset split path,
+task ID, and seed together in your experiment log.
+
+### 6.7 Recommended Execution Order
+
+Run experiments in this order:
+
+1. IID clean baseline with a small client count.
+2. Non-IID clean baseline with the same client count.
+3. IID attack experiments after the clean IID baseline learns correctly.
+4. Non-IID attack experiments after the clean non-IID baseline learns correctly.
+5. Scalability runs after correctness and instrumentation are stable.
+
+Task 40 is a good example of a pipeline-validation run: it reached `REWARDED`,
+but accuracy remained `50.00%` and several required metrics were missing. Treat
+such runs as diagnostics, not final result rows.
+
+## 7. Experiment Matrix For The Paper
 
 For a complete IEEE-style evaluation, run both split types across the required
 attack ratios:
@@ -267,7 +406,7 @@ Recommended minimum result set:
 
 Use a fresh task ID for every row in the experiment matrix.
 
-## 7. Monitor Outputs
+## 8. Monitor Outputs
 
 Each monitor run creates:
 
@@ -316,7 +455,7 @@ Generated figures include:
 
 All plots are saved at publication quality with 300 DPI.
 
-## 8. Metrics Collected
+## 9. Metrics Collected
 
 The monitor aggregates metrics from backend polling, FL client probes,
 aggregator probes, system sampling, optional RPC transaction receipts, and any
@@ -386,7 +525,43 @@ If a value is shown as `N/A`, the protocol completed without emitting that
 specific metric. The report is still valid, but the missing field should not be
 claimed in the paper.
 
-## 9. Adding Richer Instrumentation
+### 9.1 Why Task 40 Has `N/A` Metrics
+
+Task `task_040` completed the protocol and reached `REWARDED`, but its metric
+events were mostly timing and communication events:
+
+```text
+gradient_submission_communication, training_pipeline, run_started,
+key_initialization, secure_aggregation_total, model_update_evaluation,
+ndd_fe_decrypt, submission_collection, dequantization, bsgs_recovery,
+candidate_local_verification, verification_vote, run_completed,
+candidate_broadcast_communication, candidate_formation_broadcast,
+candidate_signature
+```
+
+The `N/A` values come from missing source fields, not from report generation
+failure:
+
+| `N/A` area | Reason in task 40 | Fix for future runs |
+| --- | --- | --- |
+| Precision, recall, F1, specificity, sensitivity | The backend exposed final accuracy, but no TP/TN/FP/FN, 2x2 confusion matrix, or `y_true`/`y_pred` vectors were emitted | Emit `tp`, `tn`, `fp`, `fn`, `confusion_matrix`, or `y_true`/`y_pred` during global evaluation in M4 |
+| ROC AUC and PR AUC | No probability/score vector was emitted | Emit `y_score`, `probabilities`, or `scores` with `y_true` |
+| Confusion matrix plot | No confusion counts or prediction vectors were available | Emit confusion counts or vectors before report generation |
+| Local loss and samples used | Client events did not include `local_loss` or `samples_used` | Add `record_client_training_metric(...)` calls in each FL client after local evaluation |
+| Gradient norm/similarity/variance/divergence | Submission events did not include these gradient statistics | Emit gradient statistics before encryption/submission, or compute them in a privacy-safe debug path |
+| Participation frequency | No service emitted a participation count/frequency per miner | Emit participation count after miner selection or reward calculation |
+| Blockchain gas/cost/confirmation | Task snapshots exposed tx hashes, but no gas/status/confirmation fields were emitted or enriched from RPC | Pass a working `--rpc-url`, ensure receipts are available, or emit `gas_used`, `gas_price_wei`, `success`, and `confirmation_time_sec` with `record_blockchain_transaction_metric(...)` |
+| Successful/failed transaction counts | No transaction status was emitted; `0 successful` and `0 failed` means unknown, not failed | Emit `success=True/False` or use RPC receipt enrichment |
+| Attack metrics | Attack type was `none`, so attack success/detection metrics do not apply | Only expect these for attack runs; emit detection counts for label-flipping, poisoning, or Byzantine settings |
+| GPU metrics | GPU/NVML data was unavailable | Install NVIDIA drivers and `pynvml`, or leave GPU fields out of claims |
+| Throughput | The task 40 monitor config did not set `--num-clients`, so throughput could not be computed | Always pass `--num-clients <N>` for final runs |
+
+Task 40 also showed a participation mismatch: the report context expected seven
+clients, while backend snapshots showed six registered miners and five gradient
+submissions. For final experiments, resolve that mismatch before M4 or document
+the run as incomplete.
+
+## 10. Adding Richer Instrumentation
 
 The monitor already reads the basic JSONL timing events emitted by the FL client
 and aggregator. For richer attack, client, or blockchain metrics, use the helper
@@ -430,7 +605,7 @@ record_attack_metric(
 )
 ```
 
-## 10. Generate Reports From Existing Logs Only
+## 11. Generate Reports From Existing Logs Only
 
 If a run already completed and you only want to regenerate artifacts from
 existing JSONL metrics:
@@ -446,7 +621,7 @@ python monitor_protocol_performance.py `
 This skips live backend polling and rebuilds the CSV/JSON/Markdown/LaTeX/plots
 from available metric logs.
 
-## 11. Using Results In The IEEE Paper
+## 12. Using Results In The IEEE Paper
 
 Use these generated artifacts directly:
 
@@ -470,7 +645,7 @@ For every paper table, record:
 
 This makes every reported number traceable to a specific run.
 
-## 12. Legacy Baseline Reporting
+## 13. Legacy Baseline Reporting
 
 Older benchmark scripts are still available:
 
@@ -490,7 +665,7 @@ Use the upgraded `monitor_protocol_performance.py` workflow for the IEEE
 experimentation and results section. Use `run_real_analysis.py` only when you
 need the older baseline/demo report format.
 
-## 13. Troubleshooting
+## 14. Troubleshooting
 
 Backend or DB not reachable:
 
@@ -509,6 +684,11 @@ Missing metric values:
 - Restart FL client and aggregator after setting the variable.
 - Start the monitor before M1 to capture the full timeline.
 - Add explicit helper calls for metrics that are not emitted by the current services.
+- For classification metrics, emit TP/TN/FP/FN, a 2x2 `confusion_matrix`, or
+  `y_true`/`y_pred` vectors during M4 evaluation.
+- For blockchain gas/cost metrics, pass a working `--rpc-url` or emit gas and
+  transaction status fields directly.
+- For throughput, always pass `--num-clients`.
 
 Multiple miners reading the same data:
 

@@ -23,6 +23,13 @@ from utils.logging import get_logger
 
 logger = get_logger("model.runtime_evaluator")
 
+
+def _safe_div(numerator: float, denominator: float) -> Optional[float]:
+    if denominator == 0:
+        return None
+    return numerator / denominator
+
+
 VALIDATION_CACHE_DIR = Path(
     os.getenv(
         "VALIDATION_CACHE_DIR",
@@ -226,6 +233,7 @@ class SparseBinaryVectorEvaluator:
     def __init__(self, dataset_path: Path, threshold: float = 0.0):
         self.dataset_path = dataset_path
         self.threshold = float(threshold)
+        self.last_metrics: Dict[str, Any] = {}
         self._preflight()
 
     def _preflight(self):
@@ -246,6 +254,7 @@ class SparseBinaryVectorEvaluator:
 
         total = 0
         correct = 0
+        tp = tn = fp = fn = 0
         wlen = len(weights)
 
         for label, indices, values in _iter_sparse_samples(self.dataset_path):
@@ -254,15 +263,46 @@ class SparseBinaryVectorEvaluator:
                 if i >= wlen:
                     raise ValueError(
                         f"Validation index {i} out of range for model length {wlen}"
-                    )
+                )
                 score += float(weights[i]) * float(v)
             pred = 1 if score >= self.threshold else 0
             correct += int(pred == label)
+            if label == 1 and pred == 1:
+                tp += 1
+            elif label == 0 and pred == 0:
+                tn += 1
+            elif label == 0 and pred == 1:
+                fp += 1
+            elif label == 1 and pred == 0:
+                fn += 1
             total += 1
 
         if total == 0:
             raise ValueError("Validation dataset has no samples")
-        return correct / total
+        accuracy = correct / total
+        precision = _safe_div(tp, tp + fp)
+        recall = _safe_div(tp, tp + fn)
+        specificity = _safe_div(tn, tn + fp)
+        f1_score = (
+            2.0 * precision * recall / (precision + recall)
+            if precision is not None and recall is not None and precision + recall > 0
+            else None
+        )
+        self.last_metrics = {
+            "accuracy": accuracy,
+            "precision": precision,
+            "recall": recall,
+            "f1_score": f1_score,
+            "specificity": specificity,
+            "sensitivity": recall,
+            "tp": tp,
+            "tn": tn,
+            "fp": fp,
+            "fn": fn,
+            "confusion_matrix": [[tn, fp], [fn, tp]],
+            "samples_used": total,
+        }
+        return accuracy
 
 
 def _build_python_hook(
@@ -283,13 +323,18 @@ def _build_python_hook(
 
     def _wrapped(model: Any) -> float:
         try:
-            return float(fn(model=model, task_id=task_id, task_details=task_details))
+            result = fn(model=model, task_id=task_id, task_details=task_details)
         except TypeError:
             # Backward-compatible simpler signatures.
             try:
-                return float(fn(model, task_id, task_details))
+                result = fn(model, task_id, task_details)
             except TypeError:
-                return float(fn(model))
+                result = fn(model)
+        if isinstance(result, dict):
+            setattr(_wrapped, "last_metrics", result)
+            return result
+        setattr(_wrapped, "last_metrics", {"accuracy": float(result)})
+        return float(result)
 
     return _wrapped
 

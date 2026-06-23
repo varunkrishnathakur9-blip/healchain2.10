@@ -161,7 +161,7 @@ class HealChainAggregator:
         )
 
         stage_start = time.perf_counter()
-        updated_model, acc = self._update_and_evaluate(aggregate)
+        updated_model, acc, eval_metrics = self._update_and_evaluate(aggregate)
         record_metric_event(
             component="aggregator",
             task_id=self.task_id,
@@ -170,6 +170,7 @@ class HealChainAggregator:
                 "duration_sec": time.perf_counter() - stage_start,
                 "accuracy": acc,
                 "round": self.state.round,
+                **eval_metrics,
             },
         )
 
@@ -585,12 +586,21 @@ class HealChainAggregator:
         )
 
         acc = evaluate_model(new_model, evaluator=self.runtime_evaluator)
+        eval_metrics = {}
+        if self.runtime_evaluator is not None:
+            raw_metrics = getattr(self.runtime_evaluator, "last_metrics", None)
+            if isinstance(raw_metrics, dict):
+                eval_metrics = {
+                    key: value
+                    for key, value in raw_metrics.items()
+                    if value is not None
+                }
 
         self.state.update_model(new_model)
         self.progress.mark("model_evaluated")
 
         logger.info(f"[Aggregator] Model accuracy: {acc:.4f}")
-        return new_model, acc
+        return new_model, acc, eval_metrics
 
     # ------------------------------------------------------------------
     # M4 – Candidate Block

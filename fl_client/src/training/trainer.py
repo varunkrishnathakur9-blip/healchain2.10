@@ -8,7 +8,7 @@ def local_train(model, dataloader, epochs):
     optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
     loss_fn = tf.keras.losses.BinaryCrossentropy(from_logits=False)
 
-    model.compile(optimizer=optimizer, loss=loss_fn)
+    model.compile(optimizer=optimizer, loss=loss_fn, metrics=["accuracy"])
 
     # Convert dataloader to a tf.data.Dataset if it's not already one
     # This is a generic approach; a more specific one might be needed depending on the dataloader

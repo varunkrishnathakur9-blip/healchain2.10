@@ -21,6 +21,40 @@ import time
 SPARSE_PROTOCOL_VERSION = "nddfe_sparse_v1"
 
 
+def _count_dataset_samples(dataset):
+    try:
+        total = 0
+        for batch in dataset:
+            labels = batch[1]
+            if hasattr(labels, "shape") and labels.shape[0] is not None:
+                total += int(labels.shape[0])
+            else:
+                total += int(len(labels))
+        return total
+    except Exception:
+        return None
+
+
+def _evaluate_local_model(model, dataset):
+    metrics = {
+        "local_loss": None,
+        "local_accuracy": None,
+        "samples_used": _count_dataset_samples(dataset),
+    }
+    try:
+        result = model.evaluate(dataset, verbose=0)
+        names = list(getattr(model, "metrics_names", []) or [])
+        values = result if isinstance(result, (list, tuple)) else [result]
+        by_name = {name: value for name, value in zip(names, values)}
+        metrics["local_loss"] = float(by_name.get("loss", values[0]))
+        accuracy = by_name.get("accuracy") or by_name.get("binary_accuracy")
+        if accuracy is not None:
+            metrics["local_accuracy"] = float(accuracy)
+    except Exception as e:
+        metrics["local_evaluation_error"] = str(e)
+    return metrics
+
+
 def _resolve_task_counter(task: dict) -> int:
     """
     Resolve the NDD-FE counter (ctr) from task metadata.
@@ -82,6 +116,13 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
     model = local_train(model, loader, LOCAL_EPOCHS)
     timings["local_training_sec"] = time.perf_counter() - stage_start
     print(f"[M3] ✅ Training complete")
+    local_eval_metrics = _evaluate_local_model(model, loader)
+    if local_eval_metrics.get("local_accuracy") is not None:
+        print(
+            "[M3] Local evaluation: "
+            f"loss={local_eval_metrics.get('local_loss')}, "
+            f"accuracy={local_eval_metrics.get('local_accuracy')}"
+        )
     if progress_callback:
         progress_callback(30, "Compressing Gradients (DGC)...")
     stage_start = time.perf_counter()
@@ -274,8 +315,11 @@ def run_task(task, miner_addr, progress_callback=None, miner_private_key_overrid
             "total_parameters": total_params,
             "nonzero_parameters": num_nonzero,
             "sparsity_percent": sparsity,
+            "compression_ratio": num_nonzero / total_params if total_params else None,
             "score": score,
             "score_commit": commit,
+            "gradient_norm_l2": score,
+            **local_eval_metrics,
             "timings_sec": timings,
         },
     )

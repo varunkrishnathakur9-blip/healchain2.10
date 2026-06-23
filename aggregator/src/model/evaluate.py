@@ -21,7 +21,7 @@ NON-RESPONSIBILITIES:
 - No backend or blockchain interaction
 """
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Mapping, Optional
 
 from utils.logging import get_logger
 
@@ -71,10 +71,11 @@ def evaluate_model(
     # Use injected evaluator if provided
     # ------------------------------------------------------------
     if evaluator is not None:
-        acc = evaluator(model)
+        result = evaluator(model)
+        acc = result.get("accuracy") if isinstance(result, Mapping) else result
         _validate_accuracy(acc)
         logger.info(f"[M4] Model evaluated (custom evaluator): acc={acc:.6f}")
-        return acc
+        return float(acc)
 
     # ------------------------------------------------------------
     # Fallback: model provides its own evaluation method
