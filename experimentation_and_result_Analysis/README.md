@@ -203,7 +203,7 @@ python monitor_protocol_performance.py `
   --attack-type none `
   --attack-ratio 0 `
   --backend-url http://localhost:3000 `
-  --rpc-url http://127.0.0.1:8545 `
+  --rpc-url http://127.0.0.1:7545 `
   --stop-at-terminal
 ```
 
