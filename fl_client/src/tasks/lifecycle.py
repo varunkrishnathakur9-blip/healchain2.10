@@ -35,6 +35,76 @@ def _count_dataset_samples(dataset):
         return None
 
 
+def _scalar_float(value):
+    if value is None:
+        return None
+    try:
+        if hasattr(value, "numpy"):
+            value = value.numpy()
+        if hasattr(value, "item"):
+            value = value.item()
+        if isinstance(value, (list, tuple)):
+            if len(value) != 1:
+                return None
+            value = value[0]
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _flatten_metric_dict(result, prefix=""):
+    if not isinstance(result, dict):
+        return {}
+
+    flattened = {}
+    for key, value in result.items():
+        metric_name = f"{prefix}.{key}" if prefix else str(key)
+        if isinstance(value, dict):
+            flattened.update(_flatten_metric_dict(value, metric_name))
+        else:
+            flattened[metric_name] = value
+    return flattened
+
+
+def _metric_by_name(metric_values, explicit_names, contains=None):
+    normalized_explicit = {name.lower() for name in explicit_names}
+    for key, value in metric_values.items():
+        normalized_key = str(key).lower().replace(" ", "_")
+        last_part = normalized_key.rsplit(".", 1)[-1]
+        if normalized_key in normalized_explicit or last_part in normalized_explicit:
+            scalar = _scalar_float(value)
+            if scalar is not None:
+                return scalar
+
+    if contains:
+        for key, value in metric_values.items():
+            normalized_key = str(key).lower().replace(" ", "_")
+            if contains in normalized_key:
+                scalar = _scalar_float(value)
+                if scalar is not None:
+                    return scalar
+    return None
+
+
+def _single_non_loss_metric(metric_values):
+    candidates = []
+    for key, value in metric_values.items():
+        normalized_key = str(key).lower().replace(" ", "_")
+        if "loss" in normalized_key:
+            continue
+        scalar = _scalar_float(value)
+        if scalar is not None:
+            candidates.append(scalar)
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def _evaluate_with_return_dict(model, dataset):
+    try:
+        return model.evaluate(dataset, verbose=0, return_dict=True)
+    except TypeError:
+        return model.evaluate(dataset, verbose=0)
+
+
 def _evaluate_local_model(model, dataset):
     metrics = {
         "local_loss": None,
@@ -42,14 +112,38 @@ def _evaluate_local_model(model, dataset):
         "samples_used": _count_dataset_samples(dataset),
     }
     try:
-        result = model.evaluate(dataset, verbose=0)
-        names = list(getattr(model, "metrics_names", []) or [])
-        values = result if isinstance(result, (list, tuple)) else [result]
-        by_name = {name: value for name, value in zip(names, values)}
-        metrics["local_loss"] = float(by_name.get("loss", values[0]))
-        accuracy = by_name.get("accuracy") or by_name.get("binary_accuracy")
-        if accuracy is not None:
-            metrics["local_accuracy"] = float(accuracy)
+        result = _evaluate_with_return_dict(model, dataset)
+        values = list(result) if isinstance(result, (list, tuple)) else [result]
+        by_name = _flatten_metric_dict(result)
+
+        if not by_name:
+            names = list(getattr(model, "metrics_names", []) or [])
+            by_name = {name: value for name, value in zip(names, values)}
+
+        loss = _metric_by_name(by_name, {"loss"}, contains="loss")
+        if loss is None and values:
+            loss = _scalar_float(values[0])
+
+        accuracy = _metric_by_name(
+            by_name,
+            {
+                "accuracy",
+                "acc",
+                "binary_accuracy",
+                "categorical_accuracy",
+                "sparse_categorical_accuracy",
+            },
+            contains="accuracy",
+        )
+        if accuracy is None:
+            accuracy = _single_non_loss_metric(by_name)
+        if accuracy is None and len(values) == 2:
+            # Keras 3 may report metrics_names as ["loss", "compile_metrics"]
+            # while still returning [loss, accuracy] for a single compiled metric.
+            accuracy = _scalar_float(values[1])
+
+        metrics["local_loss"] = loss
+        metrics["local_accuracy"] = accuracy
     except Exception as e:
         metrics["local_evaluation_error"] = str(e)
     return metrics
