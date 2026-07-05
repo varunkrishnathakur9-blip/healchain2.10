@@ -34,12 +34,14 @@ def process_images(source_dir):
     labels = {}
     count = 0
     
-    # Supported extensions
-    extensions = ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.tif', '*.tiff']
-    files = []
-    for ext in extensions:
-        # Recursive search using rglob
-        files.extend(list(source.rglob(ext)) + list(source.rglob(ext.upper())))
+    # Supported extensions. Use suffix matching instead of lower/upper glob
+    # pairs so Windows does not count the same case-insensitive match twice.
+    extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff'}
+    files_by_path = {}
+    for img_path in source.rglob("*"):
+        if img_path.is_file() and img_path.suffix.lower() in extensions:
+            files_by_path[str(img_path.resolve()).lower()] = img_path
+    files = sorted(files_by_path.values(), key=lambda path: str(path).lower())
     
     if not files:
         print(f"❌ No image files found in {source} (recursively)")
