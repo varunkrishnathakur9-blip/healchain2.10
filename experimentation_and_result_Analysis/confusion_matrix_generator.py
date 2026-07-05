@@ -303,7 +303,7 @@ class ConfusionMatrixGenerator:
         return text
 
 
-def create_sample_task_confusion_matrix(task_id: str = 'task_037', 
+def create_sample_task_confusion_matrix(task_id: str = 'task_041', 
                                        num_samples: int = 600,
                                        num_classes: int = 10,
                                        accuracy: float = 0.90) -> ConfusionMatrixGenerator:

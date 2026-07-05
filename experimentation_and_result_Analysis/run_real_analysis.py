@@ -44,7 +44,7 @@ def main() -> None:
     md_file, json_file = generator.create_full_report(
         output_prefix="healchain_benchmark_report",
         include_actual_metrics=True,
-        task_ids=["task_037", "task_038"],
+        task_ids=["task_039", "task_040", "task_041"],
     )
 
     # Also keep stable copies under experimentation_results/reports for easy reference.
