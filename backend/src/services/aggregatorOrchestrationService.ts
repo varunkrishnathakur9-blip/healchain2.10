@@ -149,7 +149,7 @@ export async function getAggregatorStatus(
     const response = await axios.get(
       `${aggregatorServiceUrl}/api/status/${taskID}`,
       {
-        timeout: 3000
+        timeout: 30000
       }
     );
 

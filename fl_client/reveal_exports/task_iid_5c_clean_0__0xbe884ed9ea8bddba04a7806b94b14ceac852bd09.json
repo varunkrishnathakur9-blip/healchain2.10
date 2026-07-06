@@ -1,0 +1,10 @@
+{
+  "taskID": "task_iid_5c_clean_0",
+  "minerAddress": "0xbe884ed9ea8bddba04a7806b94b14ceac852bd09",
+  "score": 2.2783820629119873,
+  "scoreUint": 2278382,
+  "nonce": "0xdd8369e4af3162d7d350282f37d268dcdab7e8bac2ae6c6a6408eea0d870d9cd",
+  "commit": "0xb7a307fd00d4c3749bc6185c5c9f53eb54afa30eb05d9aa11ca2faa455dcffe7",
+  "scorePrecision": 1000000,
+  "createdAt": "2026-07-06T09:07:14.241796+00:00"
+}
