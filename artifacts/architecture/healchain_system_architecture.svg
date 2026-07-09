@@ -1,0 +1,380 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1320" viewBox="0 0 1800 1320">
+<defs>
+  <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto" markerUnits="strokeWidth">
+    <path d="M 0 0 L 10 5.5 L 0 11 z" fill="#39485a" />
+  </marker>
+  <filter id="softShadow" x="-10%" y="-10%" width="120%" height="130%">
+    <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.10"/>
+  </filter>
+  <style>
+    .card { filter: url(#softShadow); }
+    .smallcaps { font-variant: small-caps; letter-spacing: 1px; }
+  </style>
+</defs>
+<rect x="0.0" y="0.0" width="1800.0" height="1320.0" fill="#fbfcfe" stroke="none" stroke-width="1.0" />
+<line x1="60.0" y1="0.0" x2="60.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="180.0" y1="0.0" x2="180.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="300.0" y1="0.0" x2="300.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="420.0" y1="0.0" x2="420.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="540.0" y1="0.0" x2="540.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="660.0" y1="0.0" x2="660.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="780.0" y1="0.0" x2="780.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="900.0" y1="0.0" x2="900.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="1020.0" y1="0.0" x2="1020.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="1140.0" y1="0.0" x2="1140.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="1260.0" y1="0.0" x2="1260.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="1380.0" y1="0.0" x2="1380.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="1500.0" y1="0.0" x2="1500.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="1620.0" y1="0.0" x2="1620.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="1740.0" y1="0.0" x2="1740.0" y2="1320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="80.0" x2="1800.0" y2="80.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="200.0" x2="1800.0" y2="200.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="320.0" x2="1800.0" y2="320.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="440.0" x2="1800.0" y2="440.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="560.0" x2="1800.0" y2="560.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="680.0" x2="1800.0" y2="680.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="800.0" x2="1800.0" y2="800.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="920.0" x2="1800.0" y2="920.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="1040.0" x2="1800.0" y2="1040.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="1160.0" x2="1800.0" y2="1160.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<line x1="0.0" y1="1280.0" x2="1800.0" y2="1280.0" stroke="#edf1f7" stroke-width="1.0" fill="none" opacity="0.550" />
+<text x="60.0" y="43.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="30" font-weight="850" fill="#172033" text-anchor="start" opacity="1.000">HealChain System Architecture</text>
+<text x="60.0" y="69.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="17" font-weight="500" fill="#536170" text-anchor="start" opacity="1.000">Privacy-preserving federated learning with blockchain escrow, secure aggregation, consensus, and reward distribution</text>
+<rect x="60.0" y="90.0" width="229.0" height="62.0" fill="#ffffff" stroke="#b7c3d7" stroke-width="1.4" rx="8.0" ry="8.0" />
+<rect x="60.0" y="90.0" width="47.0" height="62.0" fill="#172033" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<text x="83.5" y="128.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="17" font-weight="850" fill="#ffffff" text-anchor="middle" opacity="1.000">M1</text>
+<text x="120.0" y="115.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Task publishing</text>
+<text x="120.0" y="137.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#536170" text-anchor="start" opacity="1.000">escrow lock + accuracy commit</text>
+<line x1="291.0" y1="121.0" x2="297.0" y2="121.0" stroke="#39485a" stroke-width="2.2" fill="none" opacity="1.000" marker-end="url(#arrow)" />
+<rect x="301.0" y="90.0" width="229.0" height="62.0" fill="#ffffff" stroke="#b7c3d7" stroke-width="1.4" rx="8.0" ry="8.0" />
+<rect x="301.0" y="90.0" width="47.0" height="62.0" fill="#172033" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<text x="324.5" y="128.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="17" font-weight="850" fill="#ffffff" text-anchor="middle" opacity="1.000">M2</text>
+<text x="361.0" y="115.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Registration</text>
+<text x="361.0" y="137.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#536170" text-anchor="start" opacity="1.000">miner proof, PoS, key delivery</text>
+<line x1="532.0" y1="121.0" x2="538.0" y2="121.0" stroke="#39485a" stroke-width="2.2" fill="none" opacity="1.000" marker-end="url(#arrow)" />
+<rect x="542.0" y="90.0" width="229.0" height="62.0" fill="#ffffff" stroke="#b7c3d7" stroke-width="1.4" rx="8.0" ry="8.0" />
+<rect x="542.0" y="90.0" width="47.0" height="62.0" fill="#172033" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<text x="565.5" y="128.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="17" font-weight="850" fill="#ffffff" text-anchor="middle" opacity="1.000">M3</text>
+<text x="602.0" y="115.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Local training</text>
+<text x="602.0" y="137.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#536170" text-anchor="start" opacity="1.000">DGC + score commit + NDD-FE</text>
+<line x1="773.0" y1="121.0" x2="779.0" y2="121.0" stroke="#39485a" stroke-width="2.2" fill="none" opacity="1.000" marker-end="url(#arrow)" />
+<rect x="783.0" y="90.0" width="229.0" height="62.0" fill="#ffffff" stroke="#b7c3d7" stroke-width="1.4" rx="8.0" ry="8.0" />
+<rect x="783.0" y="90.0" width="47.0" height="62.0" fill="#172033" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<text x="806.5" y="128.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="17" font-weight="850" fill="#ffffff" text-anchor="middle" opacity="1.000">M4</text>
+<text x="843.0" y="115.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Aggregation</text>
+<text x="843.0" y="137.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#536170" text-anchor="start" opacity="1.000">decrypt, BSGS, update, evaluate</text>
+<line x1="1014.0" y1="121.0" x2="1020.0" y2="121.0" stroke="#39485a" stroke-width="2.2" fill="none" opacity="1.000" marker-end="url(#arrow)" />
+<rect x="1024.0" y="90.0" width="229.0" height="62.0" fill="#ffffff" stroke="#b7c3d7" stroke-width="1.4" rx="8.0" ry="8.0" />
+<rect x="1024.0" y="90.0" width="47.0" height="62.0" fill="#172033" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<text x="1047.5" y="128.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="17" font-weight="850" fill="#ffffff" text-anchor="middle" opacity="1.000">M5</text>
+<text x="1084.0" y="115.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Verification</text>
+<text x="1084.0" y="137.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#536170" text-anchor="start" opacity="1.000">candidate hash + signed votes</text>
+<line x1="1255.0" y1="121.0" x2="1261.0" y2="121.0" stroke="#39485a" stroke-width="2.2" fill="none" opacity="1.000" marker-end="url(#arrow)" />
+<rect x="1265.0" y="90.0" width="229.0" height="62.0" fill="#ffffff" stroke="#b7c3d7" stroke-width="1.4" rx="8.0" ry="8.0" />
+<rect x="1265.0" y="90.0" width="47.0" height="62.0" fill="#172033" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<text x="1288.5" y="128.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="17" font-weight="850" fill="#ffffff" text-anchor="middle" opacity="1.000">M6</text>
+<text x="1325.0" y="115.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Publication</text>
+<text x="1325.0" y="137.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#536170" text-anchor="start" opacity="1.000">verified model metadata on-chain</text>
+<line x1="1496.0" y1="121.0" x2="1502.0" y2="121.0" stroke="#39485a" stroke-width="2.2" fill="none" opacity="1.000" marker-end="url(#arrow)" />
+<rect x="1506.0" y="90.0" width="229.0" height="62.0" fill="#ffffff" stroke="#b7c3d7" stroke-width="1.4" rx="8.0" ry="8.0" />
+<rect x="1506.0" y="90.0" width="47.0" height="62.0" fill="#172033" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<text x="1529.5" y="128.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="17" font-weight="850" fill="#ffffff" text-anchor="middle" opacity="1.000">M7</text>
+<text x="1566.0" y="115.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Rewards</text>
+<text x="1566.0" y="137.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="500" fill="#536170" text-anchor="start" opacity="1.000">accuracy/score reveal + payout</text>
+<rect x="60.0" y="178.0" width="1680.0" height="225.0" fill="#f7faff" stroke="#2f6fed" stroke-width="1.4" rx="10.0" ry="10.0" opacity="0.860" />
+<text x="82.0" y="205.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#2f6fed" text-anchor="start" opacity="1.000">APPLICATION AND PARTICIPANT LAYER</text>
+<rect x="60.0" y="438.0" width="1680.0" height="265.0" fill="#f7fcf9" stroke="#23875f" stroke-width="1.4" rx="10.0" ry="10.0" opacity="0.860" />
+<text x="82.0" y="465.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#23875f" text-anchor="start" opacity="1.000">OFF-CHAIN COORDINATION AND STORAGE LAYER</text>
+<rect x="60.0" y="738.0" width="1680.0" height="290.0" fill="#fff9f2" stroke="#d97706" stroke-width="1.4" rx="10.0" ry="10.0" opacity="0.860" />
+<text x="82.0" y="765.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#d97706" text-anchor="start" opacity="1.000">SECURE AGGREGATION AND CONSENSUS LAYER</text>
+<rect x="60.0" y="1063.0" width="1680.0" height="210.0" fill="#faf8ff" stroke="#7357d5" stroke-width="1.4" rx="10.0" ry="10.0" opacity="0.860" />
+<text x="82.0" y="1090.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="15" font-weight="700" fill="#7357d5" text-anchor="start" opacity="1.000">BLOCKCHAIN SETTLEMENT LAYER</text>
+<g id="publisher" class="card">
+<rect x="100.0" y="224.0" width="300.0" height="140.0" fill="#f4f8ff" stroke="#2f6fed" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="100.0" y="224.0" width="300.0" height="8.0" fill="#2f6fed" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="114.0" y="244.0" width="48.0" height="27.0" fill="#2f6fed" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="138.0" y="263.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">USER</text>
+<text x="174.0" y="258.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Task Publisher /</text>
+<text x="174.0" y="276.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Researcher</text>
+<text x="118.0" y="304.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Defines dataset, initial model,</text>
+<text x="118.0" y="321.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  reward, deadline, target accuracy</text>
+<text x="118.0" y="339.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Commits H(accuracy || nonceTP)</text>
+<text x="118.0" y="356.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Reveals accuracy after publication</text>
+</g>
+<g id="frontend" class="card">
+<rect x="445.0" y="224.0" width="335.0" height="140.0" fill="#f4f8ff" stroke="#2f6fed" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="445.0" y="224.0" width="335.0" height="8.0" fill="#2f6fed" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="459.0" y="244.0" width="48.0" height="27.0" fill="#2f6fed" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="483.0" y="263.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">UI</text>
+<text x="519.0" y="258.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Frontend UI (Next.js)</text>
+<text x="463.0" y="289.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Wallet-based task publishing, miner</text>
+<text x="463.0" y="306.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  registration, training trigger</text>
+<text x="463.0" y="324.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Verification, reveal, and reward</text>
+<text x="463.0" y="341.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  screens</text>
+<text x="463.0" y="359.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Reads backend state and sends contract</text>
+<text x="463.0" y="376.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  transactions</text>
+</g>
+<g id="miners" class="card">
+<rect x="830.0" y="224.0" width="405.0" height="140.0" fill="#f4f8ff" stroke="#2f6fed" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="830.0" y="224.0" width="405.0" height="8.0" fill="#2f6fed" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="844.0" y="244.0" width="48.0" height="27.0" fill="#2f6fed" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="868.0" y="263.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">M3</text>
+<text x="904.0" y="258.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Miner FL Clients (N</text>
+<text x="904.0" y="276.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">participants)</text>
+<text x="848.0" y="304.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Raw medical data remains local</text>
+<text x="848.0" y="321.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Train model, compute gradients, apply DGC</text>
+<text x="848.0" y="339.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  compression</text>
+<text x="848.0" y="356.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Create score commit, NDD-FE sparse ciphertext,</text>
+<text x="848.0" y="374.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  ECDSA signature</text>
+</g>
+<g id="aggregator_operator" class="card">
+<rect x="1285.0" y="224.0" width="355.0" height="140.0" fill="#f4f8ff" stroke="#2f6fed" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="1285.0" y="224.0" width="355.0" height="8.0" fill="#2f6fed" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="1299.0" y="244.0" width="48.0" height="27.0" fill="#2f6fed" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="1323.0" y="263.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">M2</text>
+<text x="1359.0" y="258.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Selected Aggregator</text>
+<text x="1359.0" y="276.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Endpoint</text>
+<text x="1303.0" y="304.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Chosen through task/miner state and</text>
+<text x="1303.0" y="321.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  stake-aware orchestration</text>
+<text x="1303.0" y="339.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Runs Python API service for aggregation</text>
+<text x="1303.0" y="356.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  jobs</text>
+<text x="1303.0" y="374.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Uses task-scoped keys and backend</text>
+<text x="1303.0" y="391.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  metadata</text>
+</g>
+<g id="backend" class="card">
+<rect x="100.0" y="488.0" width="425.0" height="170.0" fill="#f6fbf8" stroke="#23875f" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="100.0" y="488.0" width="425.0" height="8.0" fill="#23875f" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="114.0" y="508.0" width="48.0" height="27.0" fill="#23875f" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="138.0" y="527.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">API</text>
+<text x="174.0" y="522.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Backend Coordination API (Express</text>
+<text x="174.0" y="540.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">+ Prisma)</text>
+<text x="118.0" y="568.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Task lifecycle, wallet signature checks, proof</text>
+<text x="118.0" y="585.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  verification</text>
+<text x="118.0" y="603.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Miner registration, PoS selection, key derivation</text>
+<text x="118.0" y="620.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  and delivery</text>
+<text x="118.0" y="638.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Opaque relay for submissions, verification votes,</text>
+<text x="118.0" y="655.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  publish/reward APIs</text>
+</g>
+<g id="postgres" class="card">
+<rect x="585.0" y="488.0" width="330.0" height="170.0" fill="#f6fbf8" stroke="#23875f" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="585.0" y="488.0" width="330.0" height="8.0" fill="#23875f" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="599.0" y="508.0" width="48.0" height="27.0" fill="#23875f" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="623.0" y="527.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">DB</text>
+<text x="659.0" y="522.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">PostgreSQL State Store</text>
+<text x="603.0" y="553.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Task, Miner, Gradient, Block,</text>
+<text x="603.0" y="570.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  Verification, Reward tables</text>
+<text x="603.0" y="588.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Round status and current model links</text>
+<text x="603.0" y="605.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Audit trail for protocol progress</text>
+</g>
+<g id="artifacts" class="card">
+<rect x="970.0" y="488.0" width="330.0" height="170.0" fill="#eff9fb" stroke="#138496" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="970.0" y="488.0" width="330.0" height="8.0" fill="#138496" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="984.0" y="508.0" width="48.0" height="27.0" fill="#138496" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="1008.0" y="527.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">IPFS</text>
+<text x="1044.0" y="522.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Artifact / IPFS Storage</text>
+<text x="988.0" y="553.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Initial models and validation datasets</text>
+<text x="988.0" y="570.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Miner proofs and model artifact links</text>
+<text x="988.0" y="588.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Updated W_new artifacts for iterative</text>
+<text x="988.0" y="605.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  rounds</text>
+</g>
+<g id="monitoring" class="card">
+<rect x="1355.0" y="488.0" width="285.0" height="170.0" fill="#fff4f6" stroke="#c9345b" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="1355.0" y="488.0" width="285.0" height="8.0" fill="#c9345b" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="1369.0" y="508.0" width="48.0" height="27.0" fill="#c9345b" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="1393.0" y="527.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">IEEE</text>
+<text x="1429.0" y="522.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Experiment Monitor</text>
+<text x="1429.0" y="540.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">and Paper Outputs</text>
+<text x="1373.0" y="568.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Run-scoped JSONL service metrics</text>
+<text x="1373.0" y="585.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- experiment_summary.json</text>
+<text x="1373.0" y="603.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- round_metrics.csv and</text>
+<text x="1373.0" y="620.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  client_metrics.csv</text>
+</g>
+<g id="aggregator" class="card">
+<rect x="100.0" y="795.0" width="425.0" height="180.0" fill="#fff7ee" stroke="#d97706" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="100.0" y="795.0" width="425.0" height="8.0" fill="#d97706" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="114.0" y="815.0" width="48.0" height="27.0" fill="#d97706" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="138.0" y="834.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">M4</text>
+<text x="174.0" y="829.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Aggregator Orchestrator (Python</text>
+<text x="174.0" y="847.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">M4-M6)</text>
+<text x="118.0" y="875.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Polls backend for task metadata, selected miners,</text>
+<text x="118.0" y="892.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  keys, submissions</text>
+<text x="118.0" y="910.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Validates sparse schema, signatures, hashes, and</text>
+<text x="118.0" y="927.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  participant limits</text>
+<text x="118.0" y="945.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Builds candidate block and submits final payload</text>
+</g>
+<g id="secure_aggregation_core" class="card">
+<rect x="585.0" y="795.0" width="365.0" height="180.0" fill="#fff7ee" stroke="#d97706" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="585.0" y="795.0" width="365.0" height="8.0" fill="#d97706" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="599.0" y="815.0" width="48.0" height="27.0" fill="#d97706" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="623.0" y="834.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">SEC</text>
+<text x="659.0" y="829.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Secure Aggregation Core</text>
+<text x="603.0" y="860.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- NDD-FE designated decryption over sparse</text>
+<text x="603.0" y="877.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  ciphertext</text>
+<text x="603.0" y="895.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- BSGS recovery of quantized gradient</text>
+<text x="603.0" y="912.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  coordinates</text>
+<text x="603.0" y="930.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Dense reconstruction only after strict</text>
+<text x="603.0" y="947.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  sparse recovery</text>
+</g>
+<g id="model_update" class="card">
+<rect x="1010.0" y="795.0" width="330.0" height="180.0" fill="#fff7ee" stroke="#d97706" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="1010.0" y="795.0" width="330.0" height="8.0" fill="#d97706" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="1024.0" y="815.0" width="48.0" height="27.0" fill="#d97706" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="1048.0" y="834.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">EVAL</text>
+<text x="1084.0" y="829.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Model Update and</text>
+<text x="1084.0" y="847.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Evaluation</text>
+<text x="1028.0" y="875.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Apply W(t+1) = W(t) + eta * aggregate</text>
+<text x="1028.0" y="892.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  update</text>
+<text x="1028.0" y="910.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Evaluate accuracy on validation data</text>
+<text x="1028.0" y="927.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Publish modelLink or carry-forward</text>
+<text x="1028.0" y="945.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  W_new for next round</text>
+</g>
+<g id="consensus" class="card">
+<rect x="1400.0" y="795.0" width="240.0" height="180.0" fill="#fff7ee" stroke="#d97706" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="1400.0" y="795.0" width="240.0" height="8.0" fill="#d97706" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="1414.0" y="815.0" width="48.0" height="27.0" fill="#d97706" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="1438.0" y="834.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">M5</text>
+<text x="1474.0" y="829.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Miner Verification</text>
+<text x="1474.0" y="847.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Consensus</text>
+<text x="1418.0" y="875.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Candidate hash broadcast</text>
+<text x="1418.0" y="892.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Signed VALID / INVALID</text>
+<text x="1418.0" y="910.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  votes</text>
+<text x="1418.0" y="927.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Majority decision before</text>
+<text x="1418.0" y="945.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  publication</text>
+</g>
+<g id="evm" class="card">
+<rect x="100.0" y="1114.0" width="335.0" height="125.0" fill="#f7f5ff" stroke="#7357d5" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="100.0" y="1114.0" width="335.0" height="8.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="114.0" y="1134.0" width="48.0" height="27.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="138.0" y="1153.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">RPC</text>
+<text x="174.0" y="1148.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">EVM Network (Ganache /</text>
+<text x="174.0" y="1166.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">Testnet)</text>
+<text x="118.0" y="1194.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- JSON-RPC provider and wallet-signed</text>
+<text x="118.0" y="1211.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  transactions</text>
+<text x="118.0" y="1229.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Immutable event log for task and reward</text>
+<text x="118.0" y="1246.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  state</text>
+</g>
+<g id="escrow" class="card">
+<rect x="495.0" y="1114.0" width="270.0" height="125.0" fill="#f7f5ff" stroke="#7357d5" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="495.0" y="1114.0" width="270.0" height="8.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="509.0" y="1134.0" width="48.0" height="27.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="533.0" y="1153.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">M1</text>
+<text x="569.0" y="1148.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">HealChainEscrow</text>
+<text x="513.0" y="1179.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- M1 reward lock and accuracy</text>
+<text x="513.0" y="1196.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  commit</text>
+<text x="513.0" y="1214.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Task status and refund safety</text>
+<text x="513.0" y="1231.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  path</text>
+</g>
+<g id="stake_registry" class="card">
+<rect x="810.0" y="1114.0" width="225.0" height="125.0" fill="#f7f5ff" stroke="#7357d5" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="810.0" y="1114.0" width="225.0" height="8.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="824.0" y="1134.0" width="48.0" height="27.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="848.0" y="1153.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">M2</text>
+<text x="884.0" y="1148.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">StakeRegistry</text>
+<text x="828.0" y="1179.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Stake-aware miner</text>
+<text x="828.0" y="1196.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  support</text>
+<text x="828.0" y="1214.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Selection context for</text>
+<text x="828.0" y="1231.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  participation</text>
+</g>
+<g id="block_publisher" class="card">
+<rect x="1080.0" y="1114.0" width="260.0" height="125.0" fill="#f7f5ff" stroke="#7357d5" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="1080.0" y="1114.0" width="260.0" height="8.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="1094.0" y="1134.0" width="48.0" height="27.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="1118.0" y="1153.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">M6</text>
+<text x="1154.0" y="1148.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">BlockPublisher</text>
+<text x="1098.0" y="1179.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- M6 model hash, accuracy,</text>
+<text x="1098.0" y="1196.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  score commits</text>
+<text x="1098.0" y="1214.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- On-chain training result</text>
+<text x="1098.0" y="1231.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  metadata</text>
+</g>
+<g id="reward_distribution" class="card">
+<rect x="1385.0" y="1114.0" width="255.0" height="125.0" fill="#f7f5ff" stroke="#7357d5" stroke-width="2.0" rx="8.0" ry="8.0" />
+<rect x="1385.0" y="1114.0" width="255.0" height="8.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="8.0" ry="8.0" />
+<rect x="1399.0" y="1134.0" width="48.0" height="27.0" fill="#7357d5" stroke="none" stroke-width="1.0" rx="6.0" ry="6.0" />
+<text x="1423.0" y="1153.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" opacity="1.000">M7</text>
+<text x="1459.0" y="1148.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="18" font-weight="800" fill="#172033" text-anchor="start" opacity="1.000">RewardDistribution</text>
+<text x="1403.0" y="1179.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- M7 accuracy and score reveal</text>
+<text x="1403.0" y="1196.5" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">- Proportional payout to</text>
+<text x="1403.0" y="1214.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="14" font-weight="400" fill="#536170" text-anchor="start" opacity="1.000">  miners</text>
+</g>
+<polyline points="400.0,294.0 445.0,294.0" stroke="#39485a" stroke-width="2.4" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="333.0" y="250.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="423.0" y="271.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">wallet inputs and task</text>
+<text x="423.0" y="287.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">intent</text>
+<polyline points="612.5,364.0 612.5,424.0 312.5,424.0 312.5,488.0" stroke="#39485a" stroke-width="2.4" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="450.0" y="397.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="540.0" y="418.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">REST task, miner,</text>
+<text x="540.0" y="434.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">train, reveal APIs</text>
+<polyline points="1032.5,364.0 1032.5,428.0 470.0,428.0 470.0,488.0" stroke="#39485a" stroke-width="2.4" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="670.0" y="389.0" width="180.0" height="68.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="760.0" y="418.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">signed sparse</text>
+<text x="760.0" y="434.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">ciphertext + score</text>
+<text x="760.0" y="450.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">commit</text>
+<polyline points="525.0,573.0 585.0,573.0" stroke="#23875f" stroke-width="2.3" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="465.0" y="557.0" width="180.0" height="36.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="555.0" y="570.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">persist protocol state</text>
+<polyline points="525.0,611.0 970.0,611.0" stroke="#138496" stroke-width="2.3" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="658.0" y="606.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="748.0" y="627.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">store and resolve</text>
+<text x="748.0" y="643.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">model/proof links</text>
+<polyline points="1462.5,364.0 1462.5,744.0 490.0,744.0 490.0,795.0" stroke="#39485a" stroke-width="2.2" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="806.0" y="718.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="896.0" y="739.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">selected aggregator</text>
+<text x="896.0" y="755.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">job</text>
+<polyline points="312.5,658.0 312.5,742.0 312.5,742.0 312.5,795.0" stroke="#d97706" stroke-width="2.4" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="225.0" y="709.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="315.0" y="730.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">task metadata, keys,</text>
+<text x="315.0" y="746.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">submissions</text>
+<polyline points="525.0,885.0 585.0,885.0" stroke="#d97706" stroke-width="2.3" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="465.0" y="867.0" width="180.0" height="36.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="555.0" y="880.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">validated payloads</text>
+<polyline points="950.0,885.0 1010.0,885.0" stroke="#d97706" stroke-width="2.3" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="891.0" y="859.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="981.0" y="880.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">aggregate update</text>
+<text x="981.0" y="896.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">vector</text>
+<polyline points="1340.0,885.0 1400.0,885.0" stroke="#d97706" stroke-width="2.3" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="1278.0" y="867.0" width="180.0" height="36.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="1368.0" y="880.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">candidate block hash</text>
+<polyline points="1520.0,975.0 1520.0,1047.0 565.0,1047.0 565.0,658.0" stroke="#d97706" stroke-width="2.4" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="945.0" y="1021.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="1035.0" y="1042.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">majority-valid</text>
+<text x="1035.0" y="1058.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">candidate</text>
+<polyline points="1175.0,795.0 1175.0,716.0 1135.0,716.0 1135.0,658.0" stroke="#138496" stroke-width="2.3" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" stroke-dasharray="8 6" marker-end="url(#arrow)" />
+<rect x="996.0" y="690.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="1086.0" y="711.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">read validation data;</text>
+<text x="1086.0" y="727.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">write modelLink/W_new</text>
+<polyline points="1235.0,306.0 1675.0,306.0 1675.0,885.0 1640.0,885.0" stroke="#d97706" stroke-width="2.2" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" stroke-dasharray="8 6" marker-end="url(#arrow)" />
+<rect x="1456.0" y="622.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="1546.0" y="643.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">M5 signed verification</text>
+<text x="1546.0" y="659.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">votes</text>
+<polyline points="483.0,364.0 483.0,1087.0 267.5,1087.0 267.5,1114.0" stroke="#7357d5" stroke-width="2.2" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="180.0" y="1061.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="270.0" y="1082.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">publisher/miner wallet</text>
+<text x="270.0" y="1098.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">transactions</text>
+<polyline points="155.0,658.0 155.0,1048.0 1210.0,1048.0 1210.0,1114.0" stroke="#7357d5" stroke-width="2.4" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="597.0" y="1022.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="687.0" y="1043.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">M6 backend chain</text>
+<text x="687.0" y="1059.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">bridge</text>
+<polyline points="435.0,1176.5 495.0,1176.5" stroke="#7357d5" stroke-width="2.0" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<polyline points="765.0,1176.5 810.0,1176.5" stroke="#7357d5" stroke-width="2.0" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<polyline points="1035.0,1176.5 1080.0,1176.5" stroke="#7357d5" stroke-width="2.0" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<polyline points="1340.0,1176.5 1385.0,1176.5" stroke="#7357d5" stroke-width="2.0" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" marker-end="url(#arrow)" />
+<rect x="1270.0" y="1151.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="1360.0" y="1172.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">published block</text>
+<text x="1360.0" y="1188.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">enables reveal</text>
+<polyline points="1512.5,1114.0 1512.5,1070.0 1032.5,1070.0 1032.5,364.0" stroke="#7357d5" stroke-width="2.0" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.920" stroke-dasharray="8 6" marker-end="url(#arrow)" />
+<rect x="1125.0" y="1044.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="1215.0" y="1065.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">M7 proportional</text>
+<text x="1215.0" y="1081.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">rewards</text>
+<polyline points="525.0,516.0 1355.0,516.0" stroke="#c9345b" stroke-width="1.9" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.820" stroke-dasharray="5 5" marker-end="url(#arrow)" />
+<rect x="858.0" y="498.0" width="180.0" height="36.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="948.0" y="511.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">API and DB metrics</text>
+<polyline points="525.0,957.0 1497.5,957.0 1497.5,658.0" stroke="#c9345b" stroke-width="1.9" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity="0.820" stroke-dasharray="5 5" marker-end="url(#arrow)" />
+<rect x="942.0" y="932.0" width="180.0" height="52.0" fill="#ffffff" stroke="#c7d0dd" stroke-width="1.0" rx="6.0" ry="6.0" opacity="0.960" />
+<text x="1032.0" y="953.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">aggregation logs and</text>
+<text x="1032.0" y="969.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#39485a" text-anchor="middle" opacity="1.000">round metrics</text>
+<line x1="72.0" y1="1293.0" x2="142.0" y2="1293.0" stroke="#39485a" stroke-width="2.4" fill="none" opacity="1.000" marker-end="url(#arrow)" />
+<text x="155.0" y="1298.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="13" font-weight="650" fill="#536170" text-anchor="start" opacity="1.000">solid: API call or blockchain transaction</text>
+<line x1="430.0" y1="1293.0" x2="500.0" y2="1293.0" stroke="#c9345b" stroke-width="2.0" fill="none" opacity="1.000" stroke-dasharray="6 5" marker-end="url(#arrow)" />
+<text x="512.0" y="1298.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="13" font-weight="650" fill="#536170" text-anchor="start" opacity="1.000">dashed: artifact, metrics, or verification side flow</text>
+<text x="1738.0" y="1298.0" font-family="Inter, Arial, Helvetica, sans-serif" font-size="13" font-weight="650" fill="#536170" text-anchor="end" opacity="1.000">Generated from repository architecture docs</text>
+</svg>
