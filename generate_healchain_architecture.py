@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Generate a paper-ready HealChain system architecture figure.
 
-The script writes a deterministic SVG without external dependencies. The
-resulting vector file can be imported into Inkscape, Illustrator, Word, or
-LaTeX workflows and exported to PDF/PNG for an IEEE paper.
+The output is a high-resolution SVG that avoids text overlap by separating
+component details from edge explanations. Flow details are shown as numbered
+markers plus a legend, which works better when the figure is converted to PNG,
+PDF, Word, or LaTeX formats for an IEEE paper.
 """
 
 from __future__ import annotations
@@ -11,20 +12,21 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import textwrap
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 from xml.sax.saxutils import escape
 
 
-CANVAS_WIDTH = 1800
-CANVAS_HEIGHT = 1320
+CANVAS_WIDTH = 3600
+CANVAS_HEIGHT = 2600
 
 
 PALETTE = {
     "ink": "#172033",
     "muted": "#536170",
     "paper": "#ffffff",
-    "grid": "#edf1f7",
+    "grid": "#eef2f7",
     "client_fill": "#f4f8ff",
     "client_stroke": "#2f6fed",
     "coord_fill": "#f6fbf8",
@@ -35,11 +37,42 @@ PALETTE = {
     "chain_stroke": "#7357d5",
     "store_fill": "#eff9fb",
     "store_stroke": "#138496",
-    "monitor_fill": "#fff4f6",
-    "monitor_stroke": "#c9345b",
-    "edge": "#39485a",
-    "edge_soft": "#637083",
+    "edge": "#344256",
+    "edge_soft": "#667386",
 }
+
+
+@dataclass(frozen=True)
+class Box:
+    key: str
+    x: float
+    y: float
+    w: float
+    h: float
+
+    @property
+    def left(self) -> float:
+        return self.x
+
+    @property
+    def right(self) -> float:
+        return self.x + self.w
+
+    @property
+    def top(self) -> float:
+        return self.y
+
+    @property
+    def bottom(self) -> float:
+        return self.y + self.h
+
+    @property
+    def cx(self) -> float:
+        return self.x + self.w / 2
+
+    @property
+    def cy(self) -> float:
+        return self.y + self.h / 2
 
 
 class Svg:
@@ -64,6 +97,7 @@ class Svg:
         rx: float = 0.0,
         opacity: float | None = None,
         dash: str | None = None,
+        css_class: str | None = None,
     ) -> None:
         attrs = [
             f'x="{x:.1f}"',
@@ -75,12 +109,13 @@ class Svg:
             f'stroke-width="{sw:.1f}"',
         ]
         if rx:
-            attrs.append(f'rx="{rx:.1f}"')
-            attrs.append(f'ry="{rx:.1f}"')
+            attrs.extend([f'rx="{rx:.1f}"', f'ry="{rx:.1f}"'])
         if opacity is not None:
             attrs.append(f'opacity="{opacity:.3f}"')
         if dash:
             attrs.append(f'stroke-dasharray="{dash}"')
+        if css_class:
+            attrs.append(f'class="{css_class}"')
         self.add(f"<rect {' '.join(attrs)} />")
 
     def line(
@@ -104,6 +139,7 @@ class Svg:
             f'stroke="{stroke}"',
             f'stroke-width="{sw:.1f}"',
             'fill="none"',
+            'stroke-linecap="round"',
             f'opacity="{opacity:.3f}"',
         ]
         if dash:
@@ -138,6 +174,21 @@ class Svg:
             attrs.append('marker-end="url(#arrow)"')
         self.add(f"<polyline {' '.join(attrs)} />")
 
+    def circle(
+        self,
+        x: float,
+        y: float,
+        r: float,
+        *,
+        fill: str,
+        stroke: str = "none",
+        sw: float = 1.0,
+    ) -> None:
+        self.add(
+            f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="{sw:.1f}" />'
+        )
+
     def text(
         self,
         x: float,
@@ -148,7 +199,7 @@ class Svg:
         weight: int | str = 400,
         fill: str = PALETTE["ink"],
         anchor: str = "start",
-        family: str = "Inter, Arial, Helvetica, sans-serif",
+        family: str = "Arial, Helvetica, sans-serif",
         opacity: float = 1.0,
     ) -> None:
         self.add(
@@ -164,15 +215,15 @@ class Svg:
         width: float,
         lines: Iterable[str],
         *,
-        size: int = 15,
+        size: int = 18,
         fill: str = PALETTE["muted"],
         weight: int | str = 400,
-        line_height: float = 1.25,
+        line_height: float = 1.28,
         bullet: bool = False,
         max_lines: int | None = None,
     ) -> int:
         rendered = 0
-        max_chars = max(18, int(width / (size * 0.52)))
+        max_chars = max(22, int(width / (size * 0.54)))
         for original in lines:
             prefix = "- " if bullet else ""
             wrapped = textwrap.wrap(
@@ -193,15 +244,14 @@ class Svg:
     def finish(self) -> str:
         header = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{self.width}" height="{self.height}" viewBox="0 0 {self.width} {self.height}">
 <defs>
-  <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5.5" orient="auto" markerUnits="strokeWidth">
-    <path d="M 0 0 L 10 5.5 L 0 11 z" fill="{PALETTE["edge"]}" />
+  <marker id="arrow" markerWidth="13" markerHeight="13" refX="10.5" refY="6.5" orient="auto" markerUnits="strokeWidth">
+    <path d="M 0 0 L 12 6.5 L 0 13 z" fill="{PALETTE["edge"]}" />
   </marker>
-  <filter id="softShadow" x="-10%" y="-10%" width="120%" height="130%">
-    <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#0f172a" flood-opacity="0.10"/>
+  <filter id="softShadow" x="-12%" y="-12%" width="124%" height="134%">
+    <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.10"/>
   </filter>
   <style>
     .card {{ filter: url(#softShadow); }}
-    .smallcaps {{ font-variant: small-caps; letter-spacing: 1px; }}
   </style>
 </defs>
 '''
@@ -210,24 +260,20 @@ class Svg:
 
 def draw_background(svg: Svg) -> None:
     svg.rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, fill="#fbfcfe")
-    for x in range(60, CANVAS_WIDTH, 120):
-        svg.line(x, 0, x, CANVAS_HEIGHT, stroke=PALETTE["grid"], sw=1, opacity=0.55)
-    for y in range(80, CANVAS_HEIGHT, 120):
-        svg.line(0, y, CANVAS_WIDTH, y, stroke=PALETTE["grid"], sw=1, opacity=0.55)
+    for x in range(80, CANVAS_WIDTH, 160):
+        svg.line(x, 0, x, CANVAS_HEIGHT, stroke=PALETTE["grid"], sw=1, opacity=0.45)
+    for y in range(90, CANVAS_HEIGHT, 160):
+        svg.line(0, y, CANVAS_WIDTH, y, stroke=PALETTE["grid"], sw=1, opacity=0.45)
 
 
-def draw_layer(svg: Svg, x: int, y: int, w: int, h: int, title: str, fill: str, stroke: str) -> None:
-    svg.rect(x, y, w, h, fill=fill, stroke=stroke, sw=1.4, rx=10, opacity=0.86)
-    svg.text(x + 22, y + 27, title.upper(), size=15, weight=700, fill=stroke)
+def draw_layer(svg: Svg, box: Box, title: str, fill: str, stroke: str) -> None:
+    svg.rect(box.x, box.y, box.w, box.h, fill=fill, stroke=stroke, sw=1.9, rx=12, opacity=0.88)
+    svg.text(box.x + 34, box.y + 44, title.upper(), size=22, weight=800, fill=stroke)
 
 
 def draw_card(
     svg: Svg,
-    key: str,
-    x: int,
-    y: int,
-    w: int,
-    h: int,
+    box: Box,
     title: str,
     body: Sequence[str],
     *,
@@ -235,126 +281,247 @@ def draw_card(
     stroke: str,
     label: str | None = None,
     max_body_lines: int | None = None,
-) -> dict[str, float]:
-    svg.add(f'<g id="{escape(key)}" class="card">')
-    svg.rect(x, y, w, h, fill=fill, stroke=stroke, sw=2.0, rx=8)
-    svg.rect(x, y, w, 8, fill=stroke, stroke="none", rx=8)
+) -> None:
+    svg.add(f'<g id="{escape(box.key)}" class="card">')
+    svg.rect(box.x, box.y, box.w, box.h, fill=fill, stroke=stroke, sw=2.3, rx=9)
+    svg.rect(box.x, box.y, box.w, 10, fill=stroke, stroke="none", rx=9)
+
+    title_x = box.x + 26
+    title_width = box.w - 52
     if label:
-        svg.rect(x + 14, y + 20, 48, 27, fill=stroke, stroke="none", rx=6)
-        svg.text(x + 38, y + 39, label, size=14, weight=800, fill="#ffffff", anchor="middle")
-        title_x = x + 74
-        title_width = w - 92
-    else:
-        title_x = x + 18
-        title_width = w - 36
-    title_lines = textwrap.wrap(title, width=max(18, int(title_width / 10)), break_long_words=False)
+        badge_w = max(74, 22 + len(label) * 13)
+        svg.rect(box.x + 28, box.y + 30, badge_w, 42, fill=stroke, stroke="none", rx=8)
+        svg.text(box.x + 28 + badge_w / 2, box.y + 58, label, size=20, weight=850, fill="#ffffff", anchor="middle")
+        title_x = box.x + 52 + badge_w
+        title_width = box.w - (title_x - box.x) - 26
+
+    title_lines = textwrap.wrap(title, width=max(18, int(title_width / 12)), break_long_words=False)
     for i, line in enumerate(title_lines[:2]):
-        svg.text(title_x, y + 34 + i * 18, line, size=18, weight=800, fill=PALETTE["ink"])
-    body_y = y + 65 if len(title_lines[:2]) == 1 else y + 80
+        svg.text(title_x, box.y + 55 + i * 28, line, size=30, weight=850, fill=PALETTE["ink"])
+
+    body_y = box.y + 105 if len(title_lines[:2]) == 1 else box.y + 134
     svg.text_block(
-        x + 18,
+        box.x + 28,
         body_y,
-        w - 36,
+        box.w - 56,
         body,
-        size=14,
+        size=21,
         fill=PALETTE["muted"],
         bullet=True,
         max_lines=max_body_lines,
     )
     svg.add("</g>")
-    return {
-        "x": float(x),
-        "y": float(y),
-        "w": float(w),
-        "h": float(h),
-        "cx": float(x + w / 2),
-        "cy": float(y + h / 2),
-        "top": float(y),
-        "bottom": float(y + h),
-        "left": float(x),
-        "right": float(x + w),
-    }
 
 
-def label_box(svg: Svg, x: float, y: float, label: str, *, width: int = 180) -> None:
-    lines = textwrap.wrap(label, width=max(18, int(width / 8)), break_long_words=False)
-    height = 20 + 16 * len(lines)
-    svg.rect(x - width / 2, y - height / 2, width, height, fill="#ffffff", stroke="#c7d0dd", sw=1.0, rx=6, opacity=0.96)
-    for i, line in enumerate(lines):
-        svg.text(x, y - 5 + i * 16, line, size=12, weight=700, fill=PALETTE["edge"], anchor="middle")
+def flow_marker(svg: Svg, x: float, y: float, number: int, color: str) -> None:
+    svg.circle(x, y, 24, fill="#ffffff", stroke=color, sw=3.4)
+    svg.circle(x, y, 18, fill=color, stroke="none")
+    svg.text(x, y + 7, str(number), size=19, weight=850, fill="#ffffff", anchor="middle")
 
 
 def edge(
     svg: Svg,
     points: Sequence[tuple[float, float]],
-    label: str | None = None,
     *,
-    label_at: tuple[float, float] | None = None,
+    number: int | None = None,
+    marker_at: tuple[float, float] | None = None,
     color: str = PALETTE["edge"],
     dash: str | None = None,
-    width: float = 2.3,
-    opacity: float = 0.92,
+    width: float = 3.2,
+    opacity: float = 0.88,
 ) -> None:
     svg.polyline(points, stroke=color, sw=width, dash=dash, marker=True, opacity=opacity)
-    if label:
-        lx, ly = label_at or points[len(points) // 2]
-        label_box(svg, lx, ly, label)
+    if number is not None:
+        mx, my = marker_at or points[len(points) // 2]
+        flow_marker(svg, mx, my, number, color)
 
 
 def draw_module_flow(svg: Svg) -> None:
     modules = [
-        ("M1", "Task publishing", "escrow lock + accuracy commit"),
-        ("M2", "Registration", "miner proof, PoS, key delivery"),
-        ("M3", "Local training", "DGC + score commit + NDD-FE"),
-        ("M4", "Aggregation", "decrypt, BSGS, update, evaluate"),
-        ("M5", "Verification", "candidate hash + signed votes"),
-        ("M6", "Publication", "verified model metadata on-chain"),
-        ("M7", "Rewards", "accuracy/score reveal + payout"),
+        ("M1", "Task publishing", "Escrow + accuracy commit"),
+        ("M2", "Registration", "Miner proof, PoS, key delivery"),
+        ("M3", "Local training", "DGC + score commit + encryption"),
+        ("M4", "Aggregation", "Decrypt, BSGS, update, evaluate"),
+        ("M5", "Verification", "Signed votes + majority"),
+        ("M6", "Publication", "Verified metadata on-chain"),
+        ("M7", "Rewards", "Reveal + proportional payout"),
     ]
-    x0 = 60
-    y = 90
-    gap = 12
-    w = int((CANVAS_WIDTH - 120 - gap * (len(modules) - 1)) / len(modules))
-    h = 62
+    x0 = 110
+    y = 140
+    gap = 24
+    w = int((CANVAS_WIDTH - 220 - gap * (len(modules) - 1)) / len(modules))
+    h = 105
     for i, (num, title, subtitle) in enumerate(modules):
         x = x0 + i * (w + gap)
-        svg.rect(x, y, w, h, fill="#ffffff", stroke="#b7c3d7", sw=1.4, rx=8)
-        svg.rect(x, y, 47, h, fill=PALETTE["ink"], stroke="none", rx=8)
-        svg.text(x + 23.5, y + 38, num, size=17, weight=850, fill="#ffffff", anchor="middle")
-        svg.text(x + 60, y + 25, title, size=15, weight=800, fill=PALETTE["ink"])
-        svg.text(x + 60, y + 47, subtitle, size=12, weight=500, fill=PALETTE["muted"])
+        svg.rect(x, y, w, h, fill="#ffffff", stroke="#b6c4da", sw=1.7, rx=9)
+        svg.rect(x, y, 78, h, fill=PALETTE["ink"], stroke="none", rx=9)
+        svg.text(x + 39, y + 65, num, size=28, weight=850, fill="#ffffff", anchor="middle")
+        svg.text(x + 98, y + 43, title, size=23, weight=850, fill=PALETTE["ink"])
+        svg.text(x + 98, y + 76, subtitle, size=18, weight=500, fill=PALETTE["muted"])
         if i < len(modules) - 1:
-            svg.line(x + w + 2, y + h / 2, x + w + gap - 4, y + h / 2, stroke=PALETTE["edge"], sw=2.2, marker=True)
+            svg.line(x + w + 4, y + h / 2, x + w + gap - 7, y + h / 2, stroke=PALETTE["edge"], sw=3.0, marker=True)
 
 
-def draw_architecture(svg: Svg) -> None:
-    draw_background(svg)
+def architecture_boxes() -> dict[str, Box]:
+    return {
+        "publisher": Box("publisher", 160, 350, 740, 240),
+        "frontend": Box("frontend", 980, 350, 740, 240),
+        "miners": Box("miners", 1800, 350, 740, 240),
+        "operator": Box("selected_aggregator", 2620, 350, 740, 240),
+        "backend": Box("backend", 160, 775, 900, 265),
+        "db": Box("postgres", 1160, 775, 820, 265),
+        "artifacts": Box("artifacts", 2080, 775, 950, 265),
+        "aggregator": Box("aggregator", 160, 1225, 820, 290),
+        "crypto": Box("secure_aggregation_core", 1040, 1225, 750, 290),
+        "model": Box("model_update", 1850, 1225, 760, 290),
+        "consensus": Box("consensus", 2670, 1225, 690, 290),
+        "evm": Box("evm", 160, 1680, 600, 230),
+        "escrow": Box("escrow", 840, 1680, 560, 230),
+        "stake": Box("stake_registry", 1480, 1680, 470, 230),
+        "block": Box("block_publisher", 2030, 1680, 600, 230),
+        "reward": Box("reward_distribution", 2710, 1680, 650, 230),
+    }
 
-    svg.text(60, 43, "HealChain System Architecture", size=30, weight=850, fill=PALETTE["ink"])
-    svg.text(
-        60,
-        69,
-        "Privacy-preserving federated learning with blockchain escrow, secure aggregation, consensus, and reward distribution",
-        size=17,
-        weight=500,
-        fill=PALETTE["muted"],
-    )
-    draw_module_flow(svg)
 
-    draw_layer(svg, 60, 178, 1680, 225, "Application and participant layer", "#f7faff", PALETTE["client_stroke"])
-    draw_layer(svg, 60, 438, 1680, 265, "Off-chain coordination and storage layer", "#f7fcf9", PALETTE["coord_stroke"])
-    draw_layer(svg, 60, 738, 1680, 290, "Secure aggregation and consensus layer", "#fff9f2", PALETTE["agg_stroke"])
-    draw_layer(svg, 60, 1063, 1680, 210, "Blockchain settlement layer", "#faf8ff", PALETTE["chain_stroke"])
-
-    boxes: dict[str, dict[str, float]] = {}
-
-    boxes["publisher"] = draw_card(
+def draw_edges(svg: Svg, b: dict[str, Box]) -> None:
+    # Top-to-middle orchestration. Routes stay in gutters between cards/layers.
+    edge(
         svg,
-        "publisher",
-        100,
-        224,
-        300,
-        140,
+        [(b["publisher"].right, b["publisher"].cy), (b["frontend"].left, b["frontend"].cy)],
+        number=1,
+        marker_at=((b["publisher"].right + b["frontend"].left) / 2, b["publisher"].cy),
+    )
+    edge(
+        svg,
+        [
+            (b["frontend"].cx, b["frontend"].bottom),
+            (b["frontend"].cx, 670),
+            (b["backend"].cx, 670),
+            (b["backend"].cx, b["backend"].top),
+        ],
+        number=2,
+        marker_at=(b["frontend"].cx, 670),
+    )
+    edge(
+        svg,
+        [
+            (b["miners"].cx, b["miners"].bottom),
+            (b["miners"].cx, 670),
+            (b["backend"].right - 110, 670),
+            (b["backend"].right - 110, b["backend"].top),
+        ],
+        number=3,
+        marker_at=(b["miners"].cx, 670),
+    )
+    edge(
+        svg,
+        [
+            (b["operator"].cx, b["operator"].bottom),
+            (b["operator"].cx, 1155),
+            (b["aggregator"].right - 120, 1155),
+            (b["aggregator"].right - 120, b["aggregator"].top),
+        ],
+        number=4,
+        marker_at=(b["operator"].cx, 1155),
+        color=PALETTE["agg_stroke"],
+    )
+
+    # Coordination layer.
+    edge(svg, [(b["backend"].right, b["backend"].cy - 55), (b["db"].left, b["db"].cy - 55)], number=5, marker_at=(1110, b["backend"].cy - 55), color=PALETTE["coord_stroke"])
+    edge(svg, [(b["backend"].right, b["backend"].cy + 55), (b["artifacts"].left, b["artifacts"].cy + 55)], number=6, marker_at=(2030, b["backend"].cy + 55), color=PALETTE["store_stroke"])
+
+    # Aggregation pipeline.
+    edge(
+        svg,
+        [
+            (b["backend"].cx, b["backend"].bottom),
+            (b["backend"].cx, 1155),
+            (b["aggregator"].cx, 1155),
+            (b["aggregator"].cx, b["aggregator"].top),
+        ],
+        number=7,
+        marker_at=(b["backend"].cx, 1155),
+        color=PALETTE["agg_stroke"],
+    )
+    edge(svg, [(b["aggregator"].right, b["aggregator"].cy), (b["crypto"].left, b["crypto"].cy)], number=8, marker_at=(1010, b["aggregator"].cy), color=PALETTE["agg_stroke"])
+    edge(svg, [(b["crypto"].right, b["crypto"].cy), (b["model"].left, b["model"].cy)], number=9, marker_at=(1820, b["crypto"].cy), color=PALETTE["agg_stroke"])
+    edge(svg, [(b["model"].right, b["model"].cy), (b["consensus"].left, b["consensus"].cy)], number=10, marker_at=(2640, b["model"].cy), color=PALETTE["agg_stroke"])
+    edge(
+        svg,
+        [
+            (b["artifacts"].cx, b["artifacts"].bottom),
+            (b["artifacts"].cx, 1155),
+            (b["model"].cx, 1155),
+            (b["model"].cx, b["model"].top),
+        ],
+        number=11,
+        marker_at=(b["model"].cx, 1155),
+        color=PALETTE["store_stroke"],
+        dash="10 8",
+    )
+    edge(
+        svg,
+        [
+            (b["miners"].right, b["miners"].cy + 55),
+            (3540, b["miners"].cy + 55),
+            (3540, b["consensus"].cy),
+            (b["consensus"].right, b["consensus"].cy),
+        ],
+        number=12,
+        marker_at=(3540, 990),
+        color=PALETTE["agg_stroke"],
+        dash="10 8",
+    )
+
+    # Blockchain settlement. Long routes use side gutters so no line crosses text.
+    edge(
+        svg,
+        [
+            (b["frontend"].left + 60, b["frontend"].bottom),
+            (100, b["frontend"].bottom),
+            (100, b["evm"].cy),
+            (b["evm"].left, b["evm"].cy),
+        ],
+        number=13,
+        marker_at=(100, 1535),
+        color=PALETTE["chain_stroke"],
+    )
+    edge(
+        svg,
+        [
+            (b["backend"].left + 70, b["backend"].bottom),
+            (b["backend"].left + 70, 1590),
+            (b["block"].cx, 1590),
+            (b["block"].cx, b["block"].top),
+        ],
+        number=14,
+        marker_at=(b["block"].cx, 1590),
+        color=PALETTE["chain_stroke"],
+    )
+    edge(svg, [(b["evm"].right, b["evm"].cy), (b["escrow"].left, b["escrow"].cy)], color=PALETTE["chain_stroke"], width=2.7)
+    edge(svg, [(b["escrow"].right, b["escrow"].cy), (b["stake"].left, b["stake"].cy)], color=PALETTE["chain_stroke"], width=2.7)
+    edge(svg, [(b["stake"].right, b["stake"].cy), (b["block"].left, b["block"].cy)], color=PALETTE["chain_stroke"], width=2.7)
+    edge(svg, [(b["block"].right, b["block"].cy), (b["reward"].left, b["reward"].cy)], number=15, marker_at=(2670, b["block"].cy), color=PALETTE["chain_stroke"], width=2.7)
+    edge(
+        svg,
+        [
+            (b["reward"].cx, b["reward"].top),
+            (b["reward"].cx, 1590),
+            (b["miners"].cx, 1590),
+            (b["miners"].cx, b["miners"].bottom),
+        ],
+        number=16,
+        marker_at=(b["reward"].cx, 1590),
+        color=PALETTE["chain_stroke"],
+        dash="10 8",
+        width=2.7,
+    )
+
+
+def draw_architecture_cards(svg: Svg, b: dict[str, Box]) -> None:
+    draw_card(
+        svg,
+        b["publisher"],
         "Task Publisher / Researcher",
         [
             "Defines dataset, initial model, reward, deadline, target accuracy",
@@ -365,16 +532,12 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["client_stroke"],
         label="USER",
     )
-    boxes["frontend"] = draw_card(
+    draw_card(
         svg,
-        "frontend",
-        445,
-        224,
-        335,
-        140,
+        b["frontend"],
         "Frontend UI (Next.js)",
         [
-            "Wallet-based task publishing, miner registration, training trigger",
+            "Wallet-based publishing, miner registration, training trigger",
             "Verification, reveal, and reward screens",
             "Reads backend state and sends contract transactions",
         ],
@@ -382,13 +545,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["client_stroke"],
         label="UI",
     )
-    boxes["miners"] = draw_card(
+    draw_card(
         svg,
-        "miners",
-        830,
-        224,
-        405,
-        140,
+        b["miners"],
         "Miner FL Clients (N participants)",
         [
             "Raw medical data remains local",
@@ -399,13 +558,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["client_stroke"],
         label="M3",
     )
-    boxes["operator"] = draw_card(
+    draw_card(
         svg,
-        "aggregator_operator",
-        1285,
-        224,
-        355,
-        140,
+        b["operator"],
         "Selected Aggregator Endpoint",
         [
             "Chosen through task/miner state and stake-aware orchestration",
@@ -416,14 +571,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["client_stroke"],
         label="M2",
     )
-
-    boxes["backend"] = draw_card(
+    draw_card(
         svg,
-        "backend",
-        100,
-        488,
-        425,
-        170,
+        b["backend"],
         "Backend Coordination API (Express + Prisma)",
         [
             "Task lifecycle, wallet signature checks, proof verification",
@@ -434,13 +584,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["coord_stroke"],
         label="API",
     )
-    boxes["db"] = draw_card(
+    draw_card(
         svg,
-        "postgres",
-        585,
-        488,
-        330,
-        170,
+        b["db"],
         "PostgreSQL State Store",
         [
             "Task, Miner, Gradient, Block, Verification, Reward tables",
@@ -451,13 +597,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["coord_stroke"],
         label="DB",
     )
-    boxes["artifacts"] = draw_card(
+    draw_card(
         svg,
-        "artifacts",
-        970,
-        488,
-        330,
-        170,
+        b["artifacts"],
         "Artifact / IPFS Storage",
         [
             "Initial models and validation datasets",
@@ -468,31 +610,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["store_stroke"],
         label="IPFS",
     )
-    boxes["monitor"] = draw_card(
+    draw_card(
         svg,
-        "monitoring",
-        1355,
-        488,
-        285,
-        170,
-        "Experiment Monitor and Paper Outputs",
-        [
-            "Run-scoped JSONL service metrics",
-            "experiment_summary.json",
-            "round_metrics.csv and client_metrics.csv",
-        ],
-        fill=PALETTE["monitor_fill"],
-        stroke=PALETTE["monitor_stroke"],
-        label="IEEE",
-    )
-
-    boxes["aggregator"] = draw_card(
-        svg,
-        "aggregator",
-        100,
-        795,
-        425,
-        180,
+        b["aggregator"],
         "Aggregator Orchestrator (Python M4-M6)",
         [
             "Polls backend for task metadata, selected miners, keys, submissions",
@@ -503,13 +623,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["agg_stroke"],
         label="M4",
     )
-    boxes["crypto"] = draw_card(
+    draw_card(
         svg,
-        "secure_aggregation_core",
-        585,
-        795,
-        365,
-        180,
+        b["crypto"],
         "Secure Aggregation Core",
         [
             "NDD-FE designated decryption over sparse ciphertext",
@@ -520,13 +636,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["agg_stroke"],
         label="SEC",
     )
-    boxes["model"] = draw_card(
+    draw_card(
         svg,
-        "model_update",
-        1010,
-        795,
-        330,
-        180,
+        b["model"],
         "Model Update and Evaluation",
         [
             "Apply W(t+1) = W(t) + eta * aggregate update",
@@ -537,13 +649,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["agg_stroke"],
         label="EVAL",
     )
-    boxes["consensus"] = draw_card(
+    draw_card(
         svg,
-        "consensus",
-        1400,
-        795,
-        240,
-        180,
+        b["consensus"],
         "Miner Verification Consensus",
         [
             "Candidate hash broadcast",
@@ -554,14 +662,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["agg_stroke"],
         label="M5",
     )
-
-    boxes["evm"] = draw_card(
+    draw_card(
         svg,
-        "evm",
-        100,
-        1114,
-        335,
-        125,
+        b["evm"],
         "EVM Network (Ganache / Testnet)",
         [
             "JSON-RPC provider and wallet-signed transactions",
@@ -571,13 +674,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["chain_stroke"],
         label="RPC",
     )
-    boxes["escrow"] = draw_card(
+    draw_card(
         svg,
-        "escrow",
-        495,
-        1114,
-        270,
-        125,
+        b["escrow"],
         "HealChainEscrow",
         [
             "M1 reward lock and accuracy commit",
@@ -587,13 +686,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["chain_stroke"],
         label="M1",
     )
-    boxes["stake"] = draw_card(
+    draw_card(
         svg,
-        "stake_registry",
-        810,
-        1114,
-        225,
-        125,
+        b["stake"],
         "StakeRegistry",
         [
             "Stake-aware miner support",
@@ -603,13 +698,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["chain_stroke"],
         label="M2",
     )
-    boxes["block"] = draw_card(
+    draw_card(
         svg,
-        "block_publisher",
-        1080,
-        1114,
-        260,
-        125,
+        b["block"],
         "BlockPublisher",
         [
             "M6 model hash, accuracy, score commits",
@@ -619,13 +710,9 @@ def draw_architecture(svg: Svg) -> None:
         stroke=PALETTE["chain_stroke"],
         label="M6",
     )
-    boxes["reward"] = draw_card(
+    draw_card(
         svg,
-        "reward_distribution",
-        1385,
-        1114,
-        255,
-        125,
+        b["reward"],
         "RewardDistribution",
         [
             "M7 accuracy and score reveal",
@@ -636,269 +723,85 @@ def draw_architecture(svg: Svg) -> None:
         label="M7",
     )
 
-    # Main workflow edges.
-    edge(
-        svg,
-        [(boxes["publisher"]["right"], boxes["publisher"]["cy"]), (boxes["frontend"]["left"], boxes["frontend"]["cy"])],
-        "wallet inputs and task intent",
-        label_at=(423, 276),
-        width=2.4,
-    )
-    edge(
-        svg,
-        [
-            (boxes["frontend"]["cx"], boxes["frontend"]["bottom"]),
-            (boxes["frontend"]["cx"], 424),
-            (boxes["backend"]["cx"], 424),
-            (boxes["backend"]["cx"], boxes["backend"]["top"]),
-        ],
-        "REST task, miner, train, reveal APIs",
-        label_at=(540, 423),
-        width=2.4,
-    )
-    edge(
-        svg,
-        [
-            (boxes["miners"]["cx"], boxes["miners"]["bottom"]),
-            (boxes["miners"]["cx"], 428),
-            (boxes["backend"]["right"] - 55, 428),
-            (boxes["backend"]["right"] - 55, boxes["backend"]["top"]),
-        ],
-        "signed sparse ciphertext + score commit",
-        label_at=(760, 423),
-        width=2.4,
-    )
-    edge(
-        svg,
-        [
-            (boxes["backend"]["right"], boxes["backend"]["cy"]),
-            (boxes["db"]["left"], boxes["db"]["cy"]),
-        ],
-        "persist protocol state",
-        label_at=(555, 575),
-        color=PALETTE["coord_stroke"],
-    )
-    edge(
-        svg,
-        [
-            (boxes["backend"]["right"], boxes["backend"]["cy"] + 38),
-            (boxes["artifacts"]["left"], boxes["artifacts"]["cy"] + 38),
-        ],
-        "store and resolve model/proof links",
-        label_at=(748, 632),
-        color=PALETTE["store_stroke"],
-    )
-    edge(
-        svg,
-        [
-            (boxes["operator"]["cx"], boxes["operator"]["bottom"]),
-            (boxes["operator"]["cx"], 744),
-            (boxes["aggregator"]["right"] - 35, 744),
-            (boxes["aggregator"]["right"] - 35, boxes["aggregator"]["top"]),
-        ],
-        "selected aggregator job",
-        label_at=(896, 744),
-        width=2.2,
-    )
-    edge(
-        svg,
-        [
-            (boxes["backend"]["cx"], boxes["backend"]["bottom"]),
-            (boxes["backend"]["cx"], 742),
-            (boxes["aggregator"]["cx"], 742),
-            (boxes["aggregator"]["cx"], boxes["aggregator"]["top"]),
-        ],
-        "task metadata, keys, submissions",
-        label_at=(315, 735),
-        color=PALETTE["agg_stroke"],
-        width=2.4,
-    )
-    edge(
-        svg,
-        [
-            (boxes["aggregator"]["right"], boxes["aggregator"]["cy"]),
-            (boxes["crypto"]["left"], boxes["crypto"]["cy"]),
-        ],
-        "validated payloads",
-        label_at=(555, 885),
-        color=PALETTE["agg_stroke"],
-    )
-    edge(
-        svg,
-        [
-            (boxes["crypto"]["right"], boxes["crypto"]["cy"]),
-            (boxes["model"]["left"], boxes["model"]["cy"]),
-        ],
-        "aggregate update vector",
-        label_at=(981, 885),
-        color=PALETTE["agg_stroke"],
-    )
-    edge(
-        svg,
-        [
-            (boxes["model"]["right"], boxes["model"]["cy"]),
-            (boxes["consensus"]["left"], boxes["consensus"]["cy"]),
-        ],
-        "candidate block hash",
-        label_at=(1368, 885),
-        color=PALETTE["agg_stroke"],
-    )
-    edge(
-        svg,
-        [
-            (boxes["consensus"]["cx"], boxes["consensus"]["bottom"]),
-            (boxes["consensus"]["cx"], 1047),
-            (boxes["backend"]["right"] + 40, 1047),
-            (boxes["backend"]["right"] + 40, boxes["backend"]["bottom"]),
-        ],
-        "majority-valid candidate",
-        label_at=(1035, 1047),
-        color=PALETTE["agg_stroke"],
-        width=2.4,
-    )
-    edge(
-        svg,
-        [
-            (boxes["model"]["cx"], boxes["model"]["top"]),
-            (boxes["model"]["cx"], 716),
-            (boxes["artifacts"]["cx"], 716),
-            (boxes["artifacts"]["cx"], boxes["artifacts"]["bottom"]),
-        ],
-        "read validation data; write modelLink/W_new",
-        label_at=(1086, 716),
-        color=PALETTE["store_stroke"],
-        dash="8 6",
-    )
-    edge(
-        svg,
-        [
-            (boxes["miners"]["right"], boxes["miners"]["cy"] + 12),
-            (boxes["consensus"]["right"] + 35, boxes["miners"]["cy"] + 12),
-            (boxes["consensus"]["right"] + 35, boxes["consensus"]["cy"]),
-            (boxes["consensus"]["right"], boxes["consensus"]["cy"]),
-        ],
-        "M5 signed verification votes",
-        label_at=(1546, 648),
-        color=PALETTE["agg_stroke"],
-        dash="8 6",
-        width=2.2,
-    )
 
-    # Blockchain interactions.
-    edge(
-        svg,
-        [
-            (boxes["frontend"]["left"] + 38, boxes["frontend"]["bottom"]),
-            (boxes["frontend"]["left"] + 38, 1087),
-            (boxes["evm"]["cx"], 1087),
-            (boxes["evm"]["cx"], boxes["evm"]["top"]),
-        ],
-        "publisher/miner wallet transactions",
-        label_at=(270, 1087),
-        color=PALETTE["chain_stroke"],
-        width=2.2,
-    )
-    edge(
-        svg,
-        [
-            (boxes["backend"]["left"] + 55, boxes["backend"]["bottom"]),
-            (boxes["backend"]["left"] + 55, 1048),
-            (boxes["block"]["cx"], 1048),
-            (boxes["block"]["cx"], boxes["block"]["top"]),
-        ],
-        "M6 backend chain bridge",
-        label_at=(687, 1048),
-        color=PALETTE["chain_stroke"],
-        width=2.4,
-    )
-    edge(
-        svg,
-        [(boxes["evm"]["right"], boxes["evm"]["cy"]), (boxes["escrow"]["left"], boxes["escrow"]["cy"])],
-        None,
-        color=PALETTE["chain_stroke"],
-        width=2.0,
-    )
-    edge(
-        svg,
-        [(boxes["escrow"]["right"], boxes["escrow"]["cy"]), (boxes["stake"]["left"], boxes["stake"]["cy"])],
-        None,
-        color=PALETTE["chain_stroke"],
-        width=2.0,
-    )
-    edge(
-        svg,
-        [(boxes["stake"]["right"], boxes["stake"]["cy"]), (boxes["block"]["left"], boxes["block"]["cy"])],
-        None,
-        color=PALETTE["chain_stroke"],
-        width=2.0,
-    )
-    edge(
-        svg,
-        [(boxes["block"]["right"], boxes["block"]["cy"]), (boxes["reward"]["left"], boxes["reward"]["cy"])],
-        "published block enables reveal",
-        label_at=(1360, 1177),
-        color=PALETTE["chain_stroke"],
-        width=2.0,
-    )
-    edge(
-        svg,
-        [
-            (boxes["reward"]["cx"], boxes["reward"]["top"]),
-            (boxes["reward"]["cx"], 1070),
-            (boxes["miners"]["cx"], 1070),
-            (boxes["miners"]["cx"], boxes["miners"]["bottom"]),
-        ],
-        "M7 proportional rewards",
-        label_at=(1215, 1070),
-        color=PALETTE["chain_stroke"],
-        dash="8 6",
-        width=2.0,
-    )
-
-    # Observability edges.
-    edge(
-        svg,
-        [
-            (boxes["backend"]["right"], boxes["backend"]["top"] + 28),
-            (boxes["monitor"]["left"], boxes["monitor"]["top"] + 28),
-        ],
-        "API and DB metrics",
-        label_at=(948, 516),
-        color=PALETTE["monitor_stroke"],
-        dash="5 5",
-        width=1.9,
-        opacity=0.82,
-    )
-    edge(
-        svg,
-        [
-            (boxes["aggregator"]["right"], boxes["aggregator"]["bottom"] - 18),
-            (boxes["monitor"]["cx"], boxes["aggregator"]["bottom"] - 18),
-            (boxes["monitor"]["cx"], boxes["monitor"]["bottom"]),
-        ],
-        "aggregation logs and round metrics",
-        label_at=(1032, 958),
-        color=PALETTE["monitor_stroke"],
-        dash="5 5",
-        width=1.9,
-        opacity=0.82,
-    )
-
-    # Legend and reproducibility note.
-    legend_y = 1293
-    svg.line(72, legend_y, 142, legend_y, stroke=PALETTE["edge"], sw=2.4, marker=True)
-    svg.text(155, legend_y + 5, "solid: API call or blockchain transaction", size=13, weight=650, fill=PALETTE["muted"])
-    svg.line(430, legend_y, 500, legend_y, stroke=PALETTE["monitor_stroke"], sw=2.0, dash="6 5", marker=True)
-    svg.text(512, legend_y + 5, "dashed: artifact, metrics, or verification side flow", size=13, weight=650, fill=PALETTE["muted"])
+def draw_flow_legend(svg: Svg) -> None:
+    legend = Box("legend", 110, 2010, 3380, 430)
+    svg.rect(legend.x, legend.y, legend.w, legend.h, fill="#ffffff", stroke="#c7d0dd", sw=1.8, rx=12)
+    svg.text(legend.x + 34, legend.y + 54, "Numbered Data Flow Legend", size=31, weight=850, fill=PALETTE["ink"])
     svg.text(
-        1738,
-        legend_y + 5,
-        "Generated from repository architecture docs",
-        size=13,
-        weight=650,
+        legend.x + 560,
+        legend.y + 54,
+        "Numbers replace long arrow labels to keep the architecture figure readable after export.",
+        size=23,
+        weight=500,
         fill=PALETTE["muted"],
-        anchor="end",
     )
+
+    entries = [
+        ("1", "Publisher inputs task/reward/accuracy commitment through the UI."),
+        ("2", "Frontend calls backend REST APIs for task, miner, training, reveal, and reward actions."),
+        ("3", "Miner clients submit signed sparse ciphertext, score commit, and encrypted hash."),
+        ("4", "Selected aggregator endpoint starts a task-scoped aggregation job."),
+        ("5", "Backend persists task, miner, gradient, block, verification, and reward state."),
+        ("6", "Backend resolves model, proof, validation, and updated-model artifact links."),
+        ("7", "Aggregator fetches task metadata, keys, selected miners, and submissions."),
+        ("8", "Validated payloads enter NDD-FE decryption and BSGS recovery."),
+        ("9", "Recovered aggregate update is applied to the global model and evaluated."),
+        ("10", "Candidate block hash is sent for miner verification consensus."),
+        ("11", "Model/validation artifacts are read and W_new/modelLink is written for later rounds."),
+        ("12", "Miners return signed VALID/INVALID verification votes."),
+        ("13", "Publisher/miner wallets submit contract transactions to the EVM network."),
+        ("14", "Backend chain bridge publishes verified block metadata on-chain."),
+        ("15", "Published block enables commit-reveal and reward settlement."),
+        ("16", "Reward contract distributes proportional payouts after reveals."),
+    ]
+
+    col_w = 800
+    row_h = 68
+    start_x = [legend.x + 35, legend.x + 865, legend.x + 1695, legend.x + 2525]
+    start_y = legend.y + 112
+    for idx, (num, text) in enumerate(entries):
+        col = idx // 4
+        row = idx % 4
+        x = start_x[col]
+        y = start_y + row * row_h
+        flow_marker(svg, x + 24, y - 9, int(num), PALETTE["edge"])
+        svg.text_block(x + 62, y, col_w - 74, [text], size=20, line_height=1.18, fill=PALETTE["muted"])
+
+    footer_y = 2515
+    svg.line(140, footer_y, 235, footer_y, stroke=PALETTE["edge"], sw=3.7, marker=True)
+    svg.text(260, footer_y + 8, "solid: API call, pipeline handoff, or blockchain transaction", size=20, weight=650, fill=PALETTE["muted"])
+    svg.line(1010, footer_y, 1105, footer_y, stroke=PALETTE["edge_soft"], sw=3.1, dash="10 8", marker=True)
+    svg.text(1130, footer_y + 8, "dashed: artifact, verification, or reward side flow", size=20, weight=650, fill=PALETTE["muted"])
+    svg.text(3460, footer_y + 8, "Generated from repository architecture docs", size=20, weight=650, fill=PALETTE["muted"], anchor="end")
+
+
+def draw_architecture(svg: Svg) -> None:
+    draw_background(svg)
+    svg.text(110, 72, "HealChain System Architecture", size=56, weight=850, fill=PALETTE["ink"])
+    svg.text(
+        110,
+        116,
+        "Privacy-preserving federated learning with blockchain escrow, secure aggregation, consensus, and reward distribution",
+        size=29,
+        weight=500,
+        fill=PALETTE["muted"],
+    )
+    draw_module_flow(svg)
+
+    layers = [
+        (Box("app_layer", 110, 280, 3380, 360), "Application and participant layer", "#f7faff", PALETTE["client_stroke"]),
+        (Box("coord_layer", 110, 700, 3380, 365), "Off-chain coordination and storage layer", "#f7fcf9", PALETTE["coord_stroke"]),
+        (Box("agg_layer", 110, 1125, 3380, 390), "Secure aggregation and consensus layer", "#fff9f2", PALETTE["agg_stroke"]),
+        (Box("chain_layer", 110, 1580, 3380, 380), "Blockchain settlement layer", "#faf8ff", PALETTE["chain_stroke"]),
+    ]
+    for layer_box, title, fill, stroke in layers:
+        draw_layer(svg, layer_box, title, fill, stroke)
+
+    boxes = architecture_boxes()
+    draw_edges(svg, boxes)
+    draw_architecture_cards(svg, boxes)
+    draw_flow_legend(svg)
 
 
 def caption_text() -> str:
@@ -916,8 +819,8 @@ def caption_text() -> str:
         "consensus. Verified metadata is bridged to the EVM contracts for "
         "escrow, block publication, commit-reveal, and proportional reward "
         "distribution. Model, proof, validation, and updated-model artifacts are "
-        "stored as local/IPFS links, and run-scoped logs feed the experiment "
-        "analysis outputs used for reporting."
+        "stored as local/IPFS links used by the backend, miner clients, and "
+        "aggregator during task execution."
     )
 
 
