@@ -1,0 +1,824 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-07-09T16:50:12+00:00" agent="Codex" version="24.7.17" type="device">
+  <diagram id="healchain-system-architecture-editable" name="HealChain System Architecture">
+    <mxGraphModel dx="3600" dy="2600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3600" pageHeight="2600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="background" value="" style="rounded=0;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fbfcfe;strokeColor=none;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="0.0" y="0.0" width="3600.0" height="2600.0" as="geometry" />
+        </mxCell>
+        <mxCell id="page_title" value="HealChain System Architecture" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=56;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="110.0" y="38.0" width="1200.0" height="70.0" as="geometry" />
+        </mxCell>
+        <mxCell id="page_subtitle" value="Privacy-preserving federated learning with blockchain escrow, secure aggregation, consensus, and reward distribution" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=29;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="110.0" y="92.0" width="2200.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M1_box" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#ffffff;strokeColor=#b6c4da;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="110.0" y="140.0" width="462.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M1_badge" value="M1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#172033;strokeColor=#172033;fontColor=#ffffff;fontStyle=1;fontSize=28;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="110.0" y="140.0" width="78.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M1_title" value="Task publishing" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=23;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="208.0" y="164.0" width="347.0" height="34.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M1_subtitle" value="Escrow + accuracy commit" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=18;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="208.0" y="202.0" width="347.0" height="30.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M1_arrow" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="576.0" y="192.5" as="sourcePoint" />
+            <mxPoint x="589.0" y="192.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="module_M2_box" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#ffffff;strokeColor=#b6c4da;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="596.0" y="140.0" width="462.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M2_badge" value="M2" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#172033;strokeColor=#172033;fontColor=#ffffff;fontStyle=1;fontSize=28;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="596.0" y="140.0" width="78.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M2_title" value="Registration" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=23;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="694.0" y="164.0" width="347.0" height="34.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M2_subtitle" value="Miner proof, PoS, key delivery" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=18;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="694.0" y="202.0" width="347.0" height="30.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M2_arrow" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1062.0" y="192.5" as="sourcePoint" />
+            <mxPoint x="1075.0" y="192.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="module_M3_box" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#ffffff;strokeColor=#b6c4da;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1082.0" y="140.0" width="462.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M3_badge" value="M3" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#172033;strokeColor=#172033;fontColor=#ffffff;fontStyle=1;fontSize=28;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1082.0" y="140.0" width="78.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M3_title" value="Local training" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=23;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1180.0" y="164.0" width="347.0" height="34.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M3_subtitle" value="DGC + score commit + encryption" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=18;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1180.0" y="202.0" width="347.0" height="30.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M3_arrow" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1548.0" y="192.5" as="sourcePoint" />
+            <mxPoint x="1561.0" y="192.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="module_M4_box" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#ffffff;strokeColor=#b6c4da;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1568.0" y="140.0" width="462.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M4_badge" value="M4" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#172033;strokeColor=#172033;fontColor=#ffffff;fontStyle=1;fontSize=28;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1568.0" y="140.0" width="78.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M4_title" value="Aggregation" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=23;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1666.0" y="164.0" width="347.0" height="34.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M4_subtitle" value="Decrypt, BSGS, update, evaluate" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=18;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1666.0" y="202.0" width="347.0" height="30.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M4_arrow" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2034.0" y="192.5" as="sourcePoint" />
+            <mxPoint x="2047.0" y="192.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="module_M5_box" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#ffffff;strokeColor=#b6c4da;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="2054.0" y="140.0" width="462.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M5_badge" value="M5" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#172033;strokeColor=#172033;fontColor=#ffffff;fontStyle=1;fontSize=28;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2054.0" y="140.0" width="78.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M5_title" value="Verification" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=23;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2152.0" y="164.0" width="347.0" height="34.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M5_subtitle" value="Signed votes + majority" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=18;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2152.0" y="202.0" width="347.0" height="30.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M5_arrow" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2520.0" y="192.5" as="sourcePoint" />
+            <mxPoint x="2533.0" y="192.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="module_M6_box" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#ffffff;strokeColor=#b6c4da;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="2540.0" y="140.0" width="462.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M6_badge" value="M6" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#172033;strokeColor=#172033;fontColor=#ffffff;fontStyle=1;fontSize=28;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2540.0" y="140.0" width="78.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M6_title" value="Publication" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=23;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2638.0" y="164.0" width="347.0" height="34.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M6_subtitle" value="Verified metadata on-chain" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=18;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2638.0" y="202.0" width="347.0" height="30.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M6_arrow" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3006.0" y="192.5" as="sourcePoint" />
+            <mxPoint x="3019.0" y="192.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="module_M7_box" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#ffffff;strokeColor=#b6c4da;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="3026.0" y="140.0" width="462.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M7_badge" value="M7" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#172033;strokeColor=#172033;fontColor=#ffffff;fontStyle=1;fontSize=28;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="3026.0" y="140.0" width="78.0" height="105.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M7_title" value="Rewards" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=23;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="3124.0" y="164.0" width="347.0" height="34.0" as="geometry" />
+        </mxCell>
+        <mxCell id="module_M7_subtitle" value="Reveal + proportional payout" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=18;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="3124.0" y="202.0" width="347.0" height="30.0" as="geometry" />
+        </mxCell>
+        <mxCell id="app_layer_layer" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f7faff;strokeColor=#2f6fed;strokeWidth=2;opacity=88;" vertex="1" parent="1">
+          <mxGeometry x="110.0" y="280.0" width="3380.0" height="360.0" as="geometry" />
+        </mxCell>
+        <mxCell id="app_layer_title" value="APPLICATION AND PARTICIPANT LAYER" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=22;fontColor=#2f6fed;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="144.0" y="304.0" width="3312.0" height="40.0" as="geometry" />
+        </mxCell>
+        <mxCell id="coord_layer_layer" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f7fcf9;strokeColor=#23875f;strokeWidth=2;opacity=88;" vertex="1" parent="1">
+          <mxGeometry x="110.0" y="700.0" width="3380.0" height="365.0" as="geometry" />
+        </mxCell>
+        <mxCell id="coord_layer_title" value="OFF-CHAIN COORDINATION AND STORAGE LAYER" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=22;fontColor=#23875f;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="144.0" y="724.0" width="3312.0" height="40.0" as="geometry" />
+        </mxCell>
+        <mxCell id="agg_layer_layer" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fff9f2;strokeColor=#d97706;strokeWidth=2;opacity=88;" vertex="1" parent="1">
+          <mxGeometry x="110.0" y="1125.0" width="3380.0" height="390.0" as="geometry" />
+        </mxCell>
+        <mxCell id="agg_layer_title" value="SECURE AGGREGATION AND CONSENSUS LAYER" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=22;fontColor=#d97706;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="144.0" y="1149.0" width="3312.0" height="40.0" as="geometry" />
+        </mxCell>
+        <mxCell id="chain_layer_layer" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#faf8ff;strokeColor=#7357d5;strokeWidth=2;opacity=88;" vertex="1" parent="1">
+          <mxGeometry x="110.0" y="1580.0" width="3380.0" height="380.0" as="geometry" />
+        </mxCell>
+        <mxCell id="chain_layer_title" value="BLOCKCHAIN SETTLEMENT LAYER" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=22;fontColor=#7357d5;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="144.0" y="1604.0" width="3312.0" height="40.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_01" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="900.0" y="470.0" as="sourcePoint" />
+            <mxPoint x="980.0" y="470.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_01_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="916.0" y="446.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_01_marker" value="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="922.0" y="452.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_02" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1350.0" y="590.0" as="sourcePoint" />
+            <mxPoint x="610.0" y="775.0" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1350.0" y="670.0" />
+              <mxPoint x="610.0" y="670.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_02_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1326.0" y="646.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_02_marker" value="2" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1332.0" y="652.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_03" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2170.0" y="590.0" as="sourcePoint" />
+            <mxPoint x="950.0" y="775.0" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="2170.0" y="670.0" />
+              <mxPoint x="950.0" y="670.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_03_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2146.0" y="646.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_03_marker" value="3" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2152.0" y="652.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_04" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2990.0" y="590.0" as="sourcePoint" />
+            <mxPoint x="860.0" y="1225.0" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="2990.0" y="1155.0" />
+              <mxPoint x="860.0" y="1155.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_04_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d97706;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2966.0" y="1131.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_04_marker" value="4" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2972.0" y="1137.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_05" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#23875f;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060.0" y="852.5" as="sourcePoint" />
+            <mxPoint x="1160.0" y="852.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_05_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#23875f;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1086.0" y="828.5" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_05_marker" value="5" style="ellipse;whiteSpace=wrap;html=1;fillColor=#23875f;strokeColor=#23875f;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1092.0" y="834.5" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_06" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#138496;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1060.0" y="962.5" as="sourcePoint" />
+            <mxPoint x="2080.0" y="962.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_06_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#138496;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2006.0" y="938.5" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_06_marker" value="6" style="ellipse;whiteSpace=wrap;html=1;fillColor=#138496;strokeColor=#138496;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2012.0" y="944.5" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_07" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="610.0" y="1040.0" as="sourcePoint" />
+            <mxPoint x="570.0" y="1225.0" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="610.0" y="1155.0" />
+              <mxPoint x="570.0" y="1155.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_07_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d97706;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="586.0" y="1131.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_07_marker" value="7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="592.0" y="1137.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_08" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="980.0" y="1370.0" as="sourcePoint" />
+            <mxPoint x="1040.0" y="1370.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_08_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d97706;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="986.0" y="1346.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_08_marker" value="8" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="992.0" y="1352.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_09" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1790.0" y="1370.0" as="sourcePoint" />
+            <mxPoint x="1850.0" y="1370.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_09_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d97706;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1796.0" y="1346.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_09_marker" value="9" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1802.0" y="1352.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2610.0" y="1370.0" as="sourcePoint" />
+            <mxPoint x="2670.0" y="1370.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_10_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d97706;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2616.0" y="1346.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_10_marker" value="10" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2622.0" y="1352.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#138496;strokeWidth=3.2;dashed=1;dashPattern=10 8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2555.0" y="1040.0" as="sourcePoint" />
+            <mxPoint x="2230.0" y="1225.0" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="2555.0" y="1155.0" />
+              <mxPoint x="2230.0" y="1155.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_11_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#138496;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2206.0" y="1131.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_11_marker" value="11" style="ellipse;whiteSpace=wrap;html=1;fillColor=#138496;strokeColor=#138496;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2212.0" y="1137.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d97706;strokeWidth=3.2;dashed=1;dashPattern=10 8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2540.0" y="525.0" as="sourcePoint" />
+            <mxPoint x="3360.0" y="1370.0" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="3540.0" y="525.0" />
+              <mxPoint x="3540.0" y="1370.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_12_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d97706;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="3516.0" y="966.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_12_marker" value="12" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="3522.0" y="972.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7357d5;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1040.0" y="590.0" as="sourcePoint" />
+            <mxPoint x="160.0" y="1795.0" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="100.0" y="590.0" />
+              <mxPoint x="100.0" y="1795.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_13_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7357d5;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="76.0" y="1511.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_13_marker" value="13" style="ellipse;whiteSpace=wrap;html=1;fillColor=#7357d5;strokeColor=#7357d5;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="82.0" y="1517.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7357d5;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="230.0" y="1040.0" as="sourcePoint" />
+            <mxPoint x="2330.0" y="1680.0" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="230.0" y="1590.0" />
+              <mxPoint x="2330.0" y="1590.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_14_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7357d5;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2306.0" y="1566.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_14_marker" value="14" style="ellipse;whiteSpace=wrap;html=1;fillColor=#7357d5;strokeColor=#7357d5;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2312.0" y="1572.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7357d5;strokeWidth=3.2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="2630.0" y="1795.0" as="sourcePoint" />
+            <mxPoint x="2710.0" y="1795.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_15_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7357d5;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2646.0" y="1771.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_15_marker" value="15" style="ellipse;whiteSpace=wrap;html=1;fillColor=#7357d5;strokeColor=#7357d5;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2652.0" y="1777.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7357d5;strokeWidth=3.2;dashed=1;dashPattern=10 8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="3035.0" y="1680.0" as="sourcePoint" />
+            <mxPoint x="2170.0" y="590.0" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="3035.0" y="1590.0" />
+              <mxPoint x="2170.0" y="1590.0" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="flow_16_marker_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#7357d5;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="3011.0" y="1566.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="flow_16_marker" value="16" style="ellipse;whiteSpace=wrap;html=1;fillColor=#7357d5;strokeColor=#7357d5;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="3017.0" y="1572.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="chain_contract_link_1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7357d5;strokeWidth=2.7;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760.0" y="1795.0" as="sourcePoint" />
+            <mxPoint x="840.0" y="1795.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="chain_contract_link_2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7357d5;strokeWidth=2.7;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1400.0" y="1795.0" as="sourcePoint" />
+            <mxPoint x="1480.0" y="1795.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="chain_contract_link_3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#7357d5;strokeWidth=2.7;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1950.0" y="1795.0" as="sourcePoint" />
+            <mxPoint x="2030.0" y="1795.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="publisher_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f4f8ff;strokeColor=#2f6fed;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="160.0" y="350.0" width="740.0" height="240.0" as="geometry" />
+        </mxCell>
+        <mxCell id="publisher_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#2f6fed;strokeColor=#2f6fed;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="160.0" y="350.0" width="740.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="publisher_badge" value="USER" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#2f6fed;strokeColor=#2f6fed;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="188.0" y="380.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="publisher_heading" value="Task Publisher / Researcher" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="286.0" y="382.0" width="586.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="publisher_body" value="- Defines dataset, initial model, reward, deadline, target accuracy&lt;br&gt;- Commits H(accuracy || nonceTP)&lt;br&gt;- Reveals accuracy after publication" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="188.0" y="460.0" width="684.0" height="120.0" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f4f8ff;strokeColor=#2f6fed;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="980.0" y="350.0" width="740.0" height="240.0" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#2f6fed;strokeColor=#2f6fed;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="980.0" y="350.0" width="740.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend_badge" value="UI" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#2f6fed;strokeColor=#2f6fed;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1008.0" y="380.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend_heading" value="Frontend UI (Next.js)" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1106.0" y="382.0" width="586.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend_body" value="- Wallet-based publishing, miner registration, training trigger&lt;br&gt;- Verification, reveal, and reward screens&lt;br&gt;- Reads backend state and sends contract transactions" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1008.0" y="460.0" width="684.0" height="120.0" as="geometry" />
+        </mxCell>
+        <mxCell id="miners_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f4f8ff;strokeColor=#2f6fed;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1800.0" y="350.0" width="740.0" height="240.0" as="geometry" />
+        </mxCell>
+        <mxCell id="miners_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#2f6fed;strokeColor=#2f6fed;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1800.0" y="350.0" width="740.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="miners_badge" value="M3" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#2f6fed;strokeColor=#2f6fed;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1828.0" y="380.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="miners_heading" value="Miner FL Clients (N participants)" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1926.0" y="382.0" width="586.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="miners_body" value="- Raw medical data remains local&lt;br&gt;- Train model, compute gradients, apply DGC compression&lt;br&gt;- Create score commit, NDD-FE sparse ciphertext, ECDSA signature" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1828.0" y="460.0" width="684.0" height="120.0" as="geometry" />
+        </mxCell>
+        <mxCell id="selected_aggregator_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f4f8ff;strokeColor=#2f6fed;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2620.0" y="350.0" width="740.0" height="240.0" as="geometry" />
+        </mxCell>
+        <mxCell id="selected_aggregator_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#2f6fed;strokeColor=#2f6fed;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="2620.0" y="350.0" width="740.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="selected_aggregator_badge" value="M2" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#2f6fed;strokeColor=#2f6fed;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2648.0" y="380.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="selected_aggregator_heading" value="Selected Aggregator Endpoint" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2746.0" y="382.0" width="586.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="selected_aggregator_body" value="- Chosen through task/miner state and stake-aware orchestration&lt;br&gt;- Runs Python API service for aggregation jobs&lt;br&gt;- Uses task-scoped keys and backend metadata" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2648.0" y="460.0" width="684.0" height="120.0" as="geometry" />
+        </mxCell>
+        <mxCell id="backend_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f6fbf8;strokeColor=#23875f;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="160.0" y="775.0" width="900.0" height="265.0" as="geometry" />
+        </mxCell>
+        <mxCell id="backend_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#23875f;strokeColor=#23875f;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="160.0" y="775.0" width="900.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="backend_badge" value="API" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#23875f;strokeColor=#23875f;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="188.0" y="805.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="backend_heading" value="Backend Coordination API (Express + Prisma)" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="286.0" y="807.0" width="746.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="backend_body" value="- Task lifecycle, wallet signature checks, proof verification&lt;br&gt;- Miner registration, PoS selection, key derivation and delivery&lt;br&gt;- Opaque relay for submissions, verification votes, publish/reward APIs" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="188.0" y="885.0" width="844.0" height="145.0" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f6fbf8;strokeColor=#23875f;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1160.0" y="775.0" width="820.0" height="265.0" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#23875f;strokeColor=#23875f;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1160.0" y="775.0" width="820.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres_badge" value="DB" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#23875f;strokeColor=#23875f;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1188.0" y="805.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres_heading" value="PostgreSQL State Store" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1286.0" y="807.0" width="666.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres_body" value="- Task, Miner, Gradient, Block, Verification, Reward tables&lt;br&gt;- Round status and current model links&lt;br&gt;- Audit trail for protocol progress" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1188.0" y="885.0" width="764.0" height="145.0" as="geometry" />
+        </mxCell>
+        <mxCell id="artifacts_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#eff9fb;strokeColor=#138496;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2080.0" y="775.0" width="950.0" height="265.0" as="geometry" />
+        </mxCell>
+        <mxCell id="artifacts_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#138496;strokeColor=#138496;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="2080.0" y="775.0" width="950.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="artifacts_badge" value="IPFS" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#138496;strokeColor=#138496;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2108.0" y="805.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="artifacts_heading" value="Artifact / IPFS Storage" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2206.0" y="807.0" width="796.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="artifacts_body" value="- Initial models and validation datasets&lt;br&gt;- Miner proofs and model artifact links&lt;br&gt;- Updated W_new artifacts for iterative rounds" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2108.0" y="885.0" width="894.0" height="145.0" as="geometry" />
+        </mxCell>
+        <mxCell id="aggregator_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fff7ee;strokeColor=#d97706;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="160.0" y="1225.0" width="820.0" height="290.0" as="geometry" />
+        </mxCell>
+        <mxCell id="aggregator_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="160.0" y="1225.0" width="820.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="aggregator_badge" value="M4" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#d97706;strokeColor=#d97706;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="188.0" y="1255.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="aggregator_heading" value="Aggregator Orchestrator (Python M4-M6)" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="286.0" y="1257.0" width="666.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="aggregator_body" value="- Polls backend for task metadata, selected miners, keys, submissions&lt;br&gt;- Validates sparse schema, signatures, hashes, and participant limits&lt;br&gt;- Builds candidate block and submits final payload" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="188.0" y="1335.0" width="764.0" height="170.0" as="geometry" />
+        </mxCell>
+        <mxCell id="secure_aggregation_core_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fff7ee;strokeColor=#d97706;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1040.0" y="1225.0" width="750.0" height="290.0" as="geometry" />
+        </mxCell>
+        <mxCell id="secure_aggregation_core_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1040.0" y="1225.0" width="750.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="secure_aggregation_core_badge" value="SEC" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#d97706;strokeColor=#d97706;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1068.0" y="1255.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="secure_aggregation_core_heading" value="Secure Aggregation Core" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1166.0" y="1257.0" width="596.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="secure_aggregation_core_body" value="- NDD-FE designated decryption over sparse ciphertext&lt;br&gt;- BSGS recovery of quantized gradient coordinates&lt;br&gt;- Dense reconstruction only after strict sparse recovery" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1068.0" y="1335.0" width="694.0" height="170.0" as="geometry" />
+        </mxCell>
+        <mxCell id="model_update_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fff7ee;strokeColor=#d97706;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1850.0" y="1225.0" width="760.0" height="290.0" as="geometry" />
+        </mxCell>
+        <mxCell id="model_update_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1850.0" y="1225.0" width="760.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="model_update_badge" value="EVAL" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#d97706;strokeColor=#d97706;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1878.0" y="1255.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="model_update_heading" value="Model Update and Evaluation" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1976.0" y="1257.0" width="606.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="model_update_body" value="- Apply W(t+1) = W(t) + eta * aggregate update&lt;br&gt;- Evaluate accuracy on validation data&lt;br&gt;- Publish modelLink or carry-forward W_new for next round" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1878.0" y="1335.0" width="704.0" height="170.0" as="geometry" />
+        </mxCell>
+        <mxCell id="consensus_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#fff7ee;strokeColor=#d97706;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2670.0" y="1225.0" width="690.0" height="290.0" as="geometry" />
+        </mxCell>
+        <mxCell id="consensus_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#d97706;strokeColor=#d97706;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="2670.0" y="1225.0" width="690.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="consensus_badge" value="M5" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#d97706;strokeColor=#d97706;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2698.0" y="1255.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="consensus_heading" value="Miner Verification Consensus" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2796.0" y="1257.0" width="536.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="consensus_body" value="- Candidate hash broadcast&lt;br&gt;- Signed VALID / INVALID votes&lt;br&gt;- Majority decision before publication" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2698.0" y="1335.0" width="634.0" height="170.0" as="geometry" />
+        </mxCell>
+        <mxCell id="evm_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f7f5ff;strokeColor=#7357d5;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="160.0" y="1680.0" width="600.0" height="230.0" as="geometry" />
+        </mxCell>
+        <mxCell id="evm_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#7357d5;strokeColor=#7357d5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="160.0" y="1680.0" width="600.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="evm_badge" value="RPC" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#7357d5;strokeColor=#7357d5;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="188.0" y="1710.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="evm_heading" value="EVM Network (Ganache / Testnet)" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="286.0" y="1712.0" width="446.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="evm_body" value="- JSON-RPC provider and wallet-signed transactions&lt;br&gt;- Immutable event log for task and reward state" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="188.0" y="1790.0" width="544.0" height="110.0" as="geometry" />
+        </mxCell>
+        <mxCell id="escrow_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f7f5ff;strokeColor=#7357d5;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="840.0" y="1680.0" width="560.0" height="230.0" as="geometry" />
+        </mxCell>
+        <mxCell id="escrow_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#7357d5;strokeColor=#7357d5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="840.0" y="1680.0" width="560.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="escrow_badge" value="M1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#7357d5;strokeColor=#7357d5;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="868.0" y="1710.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="escrow_heading" value="HealChainEscrow" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="966.0" y="1712.0" width="406.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="escrow_body" value="- M1 reward lock and accuracy commit&lt;br&gt;- Task status and refund safety path" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="868.0" y="1790.0" width="504.0" height="110.0" as="geometry" />
+        </mxCell>
+        <mxCell id="stake_registry_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f7f5ff;strokeColor=#7357d5;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="1480.0" y="1680.0" width="470.0" height="230.0" as="geometry" />
+        </mxCell>
+        <mxCell id="stake_registry_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#7357d5;strokeColor=#7357d5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="1480.0" y="1680.0" width="470.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="stake_registry_badge" value="M2" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#7357d5;strokeColor=#7357d5;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1508.0" y="1710.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="stake_registry_heading" value="StakeRegistry" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1606.0" y="1712.0" width="316.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="stake_registry_body" value="- Stake-aware miner support&lt;br&gt;- Selection context for participation" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1508.0" y="1790.0" width="414.0" height="110.0" as="geometry" />
+        </mxCell>
+        <mxCell id="block_publisher_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f7f5ff;strokeColor=#7357d5;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2030.0" y="1680.0" width="600.0" height="230.0" as="geometry" />
+        </mxCell>
+        <mxCell id="block_publisher_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#7357d5;strokeColor=#7357d5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="2030.0" y="1680.0" width="600.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="block_publisher_badge" value="M6" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#7357d5;strokeColor=#7357d5;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2058.0" y="1710.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="block_publisher_heading" value="BlockPublisher" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2156.0" y="1712.0" width="446.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="block_publisher_body" value="- M6 model hash, accuracy, score commits&lt;br&gt;- On-chain training result metadata" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2058.0" y="1790.0" width="544.0" height="110.0" as="geometry" />
+        </mxCell>
+        <mxCell id="reward_distribution_card" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#f7f5ff;strokeColor=#7357d5;strokeWidth=2;shadow=1;" vertex="1" parent="1">
+          <mxGeometry x="2710.0" y="1680.0" width="650.0" height="230.0" as="geometry" />
+        </mxCell>
+        <mxCell id="reward_distribution_bar" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#7357d5;strokeColor=#7357d5;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="2710.0" y="1680.0" width="650.0" height="12.0" as="geometry" />
+        </mxCell>
+        <mxCell id="reward_distribution_badge" value="M7" style="rounded=1;whiteSpace=wrap;html=1;arcSize=20;fillColor=#7357d5;strokeColor=#7357d5;fontColor=#ffffff;fontStyle=1;fontSize=20;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2738.0" y="1710.0" width="74.0" height="42.0" as="geometry" />
+        </mxCell>
+        <mxCell id="reward_distribution_heading" value="RewardDistribution" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=30;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2836.0" y="1712.0" width="496.0" height="74.0" as="geometry" />
+        </mxCell>
+        <mxCell id="reward_distribution_body" value="- M7 accuracy and score reveal&lt;br&gt;- Proportional payout to miners" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=21;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2738.0" y="1790.0" width="594.0" height="110.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_box" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=6;fillColor=#ffffff;strokeColor=#c7d0dd;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="110.0" y="2010.0" width="3380.0" height="430.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_title" value="Numbered Data Flow Legend" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=31;fontColor=#172033;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="144.0" y="2038.0" width="470.0" height="44.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_subtitle" value="Numbers replace long arrow labels to keep the architecture figure readable after export." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=23;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="670.0" y="2041.0" width="1700.0" height="38.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_1_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="145.0" y="2089.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_1" value="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="151.0" y="2095.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_1" value="Publisher inputs task/reward/accuracy commitment through the UI." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="207.0" y="2098.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_2_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="145.0" y="2157.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_2" value="2" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="151.0" y="2163.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_2" value="Frontend calls backend REST APIs for task, miner, training, reveal, and reward actions." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="207.0" y="2166.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_3_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="145.0" y="2225.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_3" value="3" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="151.0" y="2231.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_3" value="Miner clients submit signed sparse ciphertext, score commit, and encrypted hash." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="207.0" y="2234.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_4_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="145.0" y="2293.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_4" value="4" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="151.0" y="2299.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_4" value="Selected aggregator endpoint starts a task-scoped aggregation job." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="207.0" y="2302.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_5_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="975.0" y="2089.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_5" value="5" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="981.0" y="2095.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_5" value="Backend persists task, miner, gradient, block, verification, and reward state." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1037.0" y="2098.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_6_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="975.0" y="2157.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_6" value="6" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="981.0" y="2163.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_6" value="Backend resolves model, proof, validation, and updated-model artifact links." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1037.0" y="2166.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_7_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="975.0" y="2225.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_7" value="7" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="981.0" y="2231.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_7" value="Aggregator fetches task metadata, keys, selected miners, and submissions." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1037.0" y="2234.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_8_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="975.0" y="2293.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_8" value="8" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="981.0" y="2299.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_8" value="Validated payloads enter NDD-FE decryption and BSGS recovery." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1037.0" y="2302.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_9_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1805.0" y="2089.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_9" value="9" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1811.0" y="2095.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_9" value="Recovered aggregate update is applied to the global model and evaluated." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1867.0" y="2098.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_10_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1805.0" y="2157.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_10" value="10" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1811.0" y="2163.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_10" value="Candidate block hash is sent for miner verification consensus." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1867.0" y="2166.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_11_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1805.0" y="2225.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_11" value="11" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1811.0" y="2231.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_11" value="Model/validation artifacts are read and W_new/modelLink is written for later rounds." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1867.0" y="2234.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_12_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="1805.0" y="2293.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_12" value="12" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="1811.0" y="2299.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_12" value="Miners return signed VALID/INVALID verification votes." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1867.0" y="2302.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_13_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2635.0" y="2089.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_13" value="13" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2641.0" y="2095.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_13" value="Publisher/miner wallets submit contract transactions to the EVM network." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2697.0" y="2098.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_14_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2635.0" y="2157.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_14" value="14" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2641.0" y="2163.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_14" value="Backend chain bridge publishes verified block metadata on-chain." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2697.0" y="2166.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_15_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2635.0" y="2225.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_15" value="15" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2641.0" y="2231.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_15" value="Published block enables commit-reveal and reward settlement." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2697.0" y="2234.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_16_outer" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#344256;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="2635.0" y="2293.0" width="48.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_marker_16" value="16" style="ellipse;whiteSpace=wrap;html=1;fillColor=#344256;strokeColor=#344256;strokeWidth=1;fontColor=#ffffff;fontStyle=1;fontSize=19;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="2641.0" y="2299.0" width="36.0" height="36.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_text_16" value="Reward contract distributes proportional payouts after reveals." style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=0;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2697.0" y="2302.0" width="726.0" height="58.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_solid_arrow" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#344256;strokeWidth=3.7;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="140.0" y="2515.0" as="sourcePoint" />
+            <mxPoint x="235.0" y="2515.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_solid_text" value="solid: API call, pipeline handoff, or blockchain transaction" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="260.0" y="2495.0" width="710.0" height="34.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_dashed_arrow" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#667386;strokeWidth=3.1;dashed=1;dashPattern=10 8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1010.0" y="2515.0" as="sourcePoint" />
+            <mxPoint x="1105.0" y="2515.0" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_dashed_text" value="dashed: artifact, verification, or reward side flow" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=left;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1130.0" y="2495.0" width="620.0" height="34.0" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_source" value="Generated from repository architecture docs" style="text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;rounded=0;align=right;verticalAlign=top;fontSize=20;fontColor=#536170;fontStyle=1;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="2830.0" y="2495.0" width="640.0" height="34.0" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
