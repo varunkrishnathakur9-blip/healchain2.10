@@ -1,0 +1,23 @@
+{
+  "split_type": "iid",
+  "task_id": "task_iid_5c_clean_0",
+  "backend_url": "http://localhost:3000",
+  "poll_seconds": 5.0,
+  "metrics_dir": "C:\\repos\\healchain\\experimentation_and_result_Analysis\\monitoring_metrics",
+  "output_dir": "C:\\repos\\healchain\\experimentation_and_result_Analysis\\results\\monitoring",
+  "stop_at_terminal": false,
+  "dataset_name": "ChestXRay",
+  "dataset_path": "C:\\Users\\Lenovo\\Documents\\Sem7_Proj_IEEE_papers\\ESB_FL\\Healchain_Dataset\\chest_xray\\train_iid_5_clients",
+  "num_clients": 5,
+  "dirichlet_alpha": null,
+  "attack_type": "none",
+  "attack_ratio": 0.0,
+  "byzantine_ratio": null,
+  "eth_price_usd": 3500.0,
+  "usd_inr": 83.0,
+  "rpc_url": "http://127.0.0.1:7545",
+  "system_sample_seconds": 2.0,
+  "experiment_id": "task_iid_5c_clean_0_20260705_123053",
+  "started_at": "2026-07-05T07:00:53+00:00",
+  "run_dir": "C:\\repos\\healchain\\experimentation_and_result_Analysis\\results\\monitoring\\iid\\task_iid_5c_clean_0_20260705_123053"
+}

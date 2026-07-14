@@ -95,7 +95,7 @@ contracts/cache/
 contracts/coverage/
 
 # Experimentation Results
-experimentation_and_result_Analysis/results/
+
 experimentation_and_result_Analysis/visualizations/
 experimentation_and_result_Analysis/reports/
 experimentation_results/

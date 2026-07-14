@@ -1,0 +1,61 @@
+{
+  "timestamp": "2026-07-07T12:06:48.806359",
+  "tasks_analyzed": 3,
+  "task_list": [
+    "task_037",
+    "task_038",
+    "task_039"
+  ],
+  "summary_statistics": {
+    "mean_accuracy": 0.9499999999999998,
+    "std_accuracy": 1.1102230246251565e-16,
+    "min_accuracy": 0.95,
+    "max_accuracy": 0.95,
+    "encryption_rate": 1.0,
+    "mean_compression_ratio": 0.15,
+    "mean_bandwidth_reduction": 85.0
+  },
+  "privacy_uniformity": {
+    "unique_configurations": 1,
+    "dominant_config": [
+      true,
+      "NDD-FE",
+      0.15
+    ],
+    "tasks_per_config": {
+      "(True, 'NDD-FE', 0.15)": [
+        "task_037",
+        "task_038",
+        "task_039"
+      ]
+    },
+    "uniformity_score": 1.0
+  },
+  "accuracy_distribution": {
+    "accuracy_privacy_correlation": NaN,
+    "interpretation": "WARNING: Privacy mechanisms negatively correlate with accuracy",
+    "task_breakdown": [
+      {
+        "task": "task_037",
+        "accuracy": 0.95,
+        "privacy_score": 1.0
+      },
+      {
+        "task": "task_038",
+        "accuracy": 0.95,
+        "privacy_score": 1.0
+      },
+      {
+        "task": "task_039",
+        "accuracy": 0.95,
+        "privacy_score": 1.0
+      }
+    ]
+  },
+  "comparative_insights": [
+    "\u2713 Strong Privacy: 100% of tasks use NDD-FE encryption",
+    "\u2713 Efficient: Average 85% bandwidth reduction via DGC compression",
+    "\u2713 High Accuracy: Mean accuracy 95.00% despite encryption overhead",
+    "\u2713 Stable: Low accuracy variance (\u03c3=0.000) across tasks"
+  ]
+}

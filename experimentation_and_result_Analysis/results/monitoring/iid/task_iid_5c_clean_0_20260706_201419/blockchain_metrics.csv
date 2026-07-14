@@ -1,0 +1,3 @@
+round,timestamp,tx_hash,tx_type,transaction_count,success,failed,gas_used,gas_price_wei,eth_cost,usd_cost,inr_cost,confirmation_time_sec,block_inclusion_delay,aggregation_completion_time_sec
+1,2026-07-06T14:51:56+00:00,0x5f3619e5da13798ee648cb47780f6529c0bc2e11f017c339de943ebcbe3d553f,aggregation_publish,1,True,False,435179,1000000007,0.000435179003046253,1.5231265106618854,126.41950038493648,,9,
+1,2026-07-06T14:51:56+00:00,0xee77d99308512d5b0b2b5fcea1a849c355c770cc014622574ec1ec1d555b6c11,reward_distribution,1,True,False,243587,20000000000,0.00487174,17.051090000000002,1415.2404700000002,,0,

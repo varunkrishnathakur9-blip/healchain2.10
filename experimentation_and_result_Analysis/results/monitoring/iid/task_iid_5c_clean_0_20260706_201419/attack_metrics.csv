@@ -1,0 +1,2 @@
+round,timestamp,attack_type,attack_ratio,malicious_clients,detection_tp,detection_tn,detection_fp,detection_fn,detection_tpr,detection_fpr,detection_precision,detection_recall,detection_f1,poisoned_samples,poisoned_target_success,attack_success_rate,clean_accuracy,robust_accuracy,accuracy_drop,malicious_filtered,benign_incorrectly_filtered
+2,2026-07-06T14:51:56+00:00,none,0.0,,,,,,,,,,,,,,0.52,,,,

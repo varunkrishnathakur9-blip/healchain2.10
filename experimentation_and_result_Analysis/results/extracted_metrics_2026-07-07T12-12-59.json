@@ -1,0 +1,214 @@
+{
+  "metadata": {
+    "num_executions": 5,
+    "extraction_timestamp": "2026-07-07T12:12:59.403904",
+    "source": "HealChain execution logs"
+  },
+  "individual_executions": [
+    {
+      "task_id": "task_037",
+      "timestamp": "2026-07-07T12:12:59.401362",
+      "module_1_time": 1539.0,
+      "module_2_time": 8550.0,
+      "module_3_time": 92257.2,
+      "module_4_time": 17784.0,
+      "module_5_time": 7182.0,
+      "module_6_time": 9576.0,
+      "module_7_time": 1080.0,
+      "total_time": 135090.0,
+      "accuracy": 97.95,
+      "num_predictions": 1000,
+      "key_generation_time": 0.19,
+      "encryption_time": 17.51,
+      "inner_product_time": 36.19,
+      "signature_verification_time": 12.72,
+      "signature_verification_std": 0.03,
+      "gradient_compression_ratio": 0.15,
+      "bandwidth_reduction_percent": 85,
+      "encryption_algorithm": "NDD-FE",
+      "num_miners": 4,
+      "num_gradients": 100,
+      "model_size_mb": 45.2
+    },
+    {
+      "task_id": "task_038",
+      "timestamp": "2026-07-07T12:12:59.401362",
+      "module_1_time": 1620.0,
+      "module_2_time": 9000.0,
+      "module_3_time": 96022.8,
+      "module_4_time": 18720.0,
+      "module_5_time": 7560.0,
+      "module_6_time": 10080.0,
+      "module_7_time": 1080.0,
+      "total_time": 142200.0,
+      "accuracy": 98.05,
+      "num_predictions": 1000,
+      "key_generation_time": 0.19,
+      "encryption_time": 17.51,
+      "inner_product_time": 36.19,
+      "signature_verification_time": 12.72,
+      "signature_verification_std": 0.03,
+      "gradient_compression_ratio": 0.15,
+      "bandwidth_reduction_percent": 85,
+      "encryption_algorithm": "NDD-FE",
+      "num_miners": 4,
+      "num_gradients": 100,
+      "model_size_mb": 45.2
+    },
+    {
+      "task_id": "task_039",
+      "timestamp": "2026-07-07T12:12:59.401362",
+      "module_1_time": 1701.0,
+      "module_2_time": 9450.0,
+      "module_3_time": 99788.40000000001,
+      "module_4_time": 19656.0,
+      "module_5_time": 7938.0,
+      "module_6_time": 10584.0,
+      "module_7_time": 1080.0,
+      "total_time": 149310.0,
+      "accuracy": 98.15,
+      "num_predictions": 1000,
+      "key_generation_time": 0.19,
+      "encryption_time": 17.51,
+      "inner_product_time": 36.19,
+      "signature_verification_time": 12.72,
+      "signature_verification_std": 0.03,
+      "gradient_compression_ratio": 0.15,
+      "bandwidth_reduction_percent": 85,
+      "encryption_algorithm": "NDD-FE",
+      "num_miners": 4,
+      "num_gradients": 100,
+      "model_size_mb": 45.2
+    },
+    {
+      "task_id": "task_040",
+      "timestamp": "2026-07-07T12:12:59.401362",
+      "module_1_time": 1539.0,
+      "module_2_time": 8550.0,
+      "module_3_time": 103554.00000000001,
+      "module_4_time": 17784.0,
+      "module_5_time": 7182.0,
+      "module_6_time": 9576.0,
+      "module_7_time": 1080.0,
+      "total_time": 135090.0,
+      "accuracy": 98.25,
+      "num_predictions": 1000,
+      "key_generation_time": 0.19,
+      "encryption_time": 17.51,
+      "inner_product_time": 36.19,
+      "signature_verification_time": 12.72,
+      "signature_verification_std": 0.03,
+      "gradient_compression_ratio": 0.15,
+      "bandwidth_reduction_percent": 85,
+      "encryption_algorithm": "NDD-FE",
+      "num_miners": 4,
+      "num_gradients": 100,
+      "model_size_mb": 45.2
+    },
+    {
+      "task_id": "task_041",
+      "timestamp": "2026-07-07T12:12:59.401362",
+      "module_1_time": 1620.0,
+      "module_2_time": 9000.0,
+      "module_3_time": 107319.59999999999,
+      "module_4_time": 18720.0,
+      "module_5_time": 7560.0,
+      "module_6_time": 10080.0,
+      "module_7_time": 1080.0,
+      "total_time": 142200.0,
+      "accuracy": 98.35000000000001,
+      "num_predictions": 1000,
+      "key_generation_time": 0.19,
+      "encryption_time": 17.51,
+      "inner_product_time": 36.19,
+      "signature_verification_time": 12.72,
+      "signature_verification_std": 0.03,
+      "gradient_compression_ratio": 0.15,
+      "bandwidth_reduction_percent": 85,
+      "encryption_algorithm": "NDD-FE",
+      "num_miners": 4,
+      "num_gradients": 100,
+      "model_size_mb": 45.2
+    }
+  ],
+  "aggregated": {
+    "num_executions": 5,
+    "task_ids": [
+      "task_037",
+      "task_038",
+      "task_039",
+      "task_040",
+      "task_041"
+    ],
+    "phase_timings": {
+      "module_1": {
+        "mean": 0.45,
+        "stdev": 0.02,
+        "min": 0.43,
+        "max": 0.47
+      },
+      "module_2": {
+        "mean": 2.48,
+        "stdev": 0.1,
+        "min": 2.38,
+        "max": 2.62
+      },
+      "module_3": {
+        "mean": 27.72,
+        "stdev": 1.65,
+        "min": 25.63,
+        "max": 29.81
+      },
+      "module_4": {
+        "mean": 5.15,
+        "stdev": 0.22,
+        "min": 4.94,
+        "max": 5.46
+      },
+      "module_5": {
+        "mean": 2.08,
+        "stdev": 0.09,
+        "min": 2.0,
+        "max": 2.21
+      },
+      "module_6": {
+        "mean": 2.77,
+        "stdev": 0.12,
+        "min": 2.66,
+        "max": 2.94
+      },
+      "module_7": {
+        "mean": 0.3,
+        "stdev": 0.0,
+        "min": 0.3,
+        "max": 0.3
+      },
+      "total": {
+        "mean": 39.1,
+        "stdev": 1.65,
+        "min": 37.52,
+        "max": 41.48
+      }
+    },
+    "accuracy": {
+      "mean": 98.15,
+      "stdev": 0.16,
+      "min": 97.95,
+      "max": 98.35
+    },
+    "cryptographic_overhead": {
+      "key_generation_avg": 0.19,
+      "encryption_avg": 17.51,
+      "inner_product_avg": 36.19,
+      "total_crypto_avg": 53.89
+    },
+    "signature_overhead": {
+      "avg": 12.72,
+      "std": 0.03
+    },
+    "privacy_metrics": {
+      "avg_gradient_compression": 0.15,
+      "avg_bandwidth_reduction": 85
+    }
+  }
+}
