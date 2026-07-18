@@ -16,7 +16,7 @@ It does NOT rely on backend, contracts, or BSGS.
 
 import random
 
-from crypto.ec_utils import G, point_mul, serialize_point
+from crypto.ec_utils import G, point_add, point_mul, serialize_hex_point
 from crypto.ndd_fe import ndd_fe_decrypt
 
 
@@ -37,9 +37,10 @@ def _encrypt_update_synthetic(
     This isolates FE correctness from randomness.
     """
     ciphertext = []
+    base_mask = point_mul(G, 1)
     for v in delta_prime:
-        Ui = point_mul(pkA, v)
-        ciphertext.append(serialize_point(Ui))
+        Ui = base_mask if v == 0 else point_add(base_mask, point_mul(pkA, v))
+        ciphertext.append(serialize_hex_point(Ui))
     return ciphertext
 
 
@@ -56,8 +57,7 @@ def test_ndd_fe_single_miner_identity():
     skA = 7
     pkA = point_mul(G, skA)
 
-    pkTP = point_mul(G, 11)   # arbitrary
-    skFE = 0                 # removes FE mask completely
+    pkTP = point_mul(G, 1)
 
     delta_prime = [3, -5, 10]
 
@@ -66,6 +66,7 @@ def test_ndd_fe_single_miner_identity():
     ]
 
     weights = [1]
+    skFE = sum(weights)
 
     recovered_points = ndd_fe_decrypt(
         ciphertexts=ciphertexts,
@@ -89,8 +90,7 @@ def test_ndd_fe_multiple_miners_weighted_sum():
     skA = 13
     pkA = point_mul(G, skA)
 
-    pkTP = point_mul(G, 19)
-    skFE = 0
+    pkTP = point_mul(G, 1)
 
     miner_updates = [
         [5, -2, 7],
@@ -99,6 +99,7 @@ def test_ndd_fe_multiple_miners_weighted_sum():
     ]
 
     weights = [1, 1, 1]
+    skFE = sum(weights)
 
     ciphertexts = [
         _encrypt_update_synthetic(vec, pkA=pkA)
@@ -131,13 +132,13 @@ def test_ndd_fe_weight_scaling():
     skA = 17
     pkA = point_mul(G, skA)
 
-    pkTP = point_mul(G, 23)
-    skFE = 0
+    pkTP = point_mul(G, 1)
 
     delta1 = [2, 3]
     delta2 = [4, -1]
 
     weights = [2, 3]  # non-uniform weights
+    skFE = sum(weights)
 
     ciphertexts = [
         _encrypt_update_synthetic(delta1, pkA=pkA),

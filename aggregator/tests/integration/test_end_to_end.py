@@ -16,13 +16,14 @@ This test simulates the entire pipeline using mocks.
 import sys
 import os
 from typing import List
+from math import isclose
 
 # Add src/ to Python path
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SRC_DIR = os.path.join(ROOT_DIR, "src")
 sys.path.insert(0, SRC_DIR)
 
-from crypto.ec_utils import G, point_mul, serialize_point
+from crypto.ec_utils import G, point_add, point_mul, serialize_hex_point
 from crypto.bsgs import recover_discrete_log
 from aggregation.aggregator import secure_aggregate
 from aggregation.verifier import verify_recovered_aggregate
@@ -30,6 +31,7 @@ from consensus.candidate import build_candidate_block
 from consensus.majority import has_majority
 from model.apply_update import apply_model_update
 from model.evaluate import evaluate_model
+import model.artifact as artifact_module
 from model.artifact import publish_model_artifact
 
 
@@ -57,7 +59,7 @@ class MockKeyManager:
         self.skA = skA
         self.pkA = point_mul(G, skA)
         self.pkTP = point_mul(G, 1)
-        self.skFE = 0
+        self.skFE = 1
 
     def parse_ciphertext_point(self, s):
         from crypto.ec_utils import parse_point
@@ -69,7 +71,12 @@ class MockKeyManager:
 # -------------------------------------------------------------------
 
 def encrypt_synthetic(delta, pkA):
-    return [serialize_point(point_mul(pkA, v)) for v in delta]
+    base_mask = point_mul(G, 1)
+    ciphertext = []
+    for v in delta:
+        Ui = base_mask if v == 0 else point_add(base_mask, point_mul(pkA, v))
+        ciphertext.append(serialize_hex_point(Ui))
+    return ciphertext
 
 
 # -------------------------------------------------------------------
@@ -86,6 +93,7 @@ def test_end_to_end_aggregator_pipeline(tmp_path):
     # ------------------------------------------------------------
     skA = 13
     keys = MockKeyManager(skA)
+    artifact_module.ARTIFACT_DIR = str(tmp_path)
 
     base_model = MockModel(weights=[1.0, 2.0, 3.0])
 
@@ -96,6 +104,7 @@ def test_end_to_end_aggregator_pipeline(tmp_path):
     ]
 
     weights = [1, 1, 1]
+    keys.skFE = sum(weights)
 
     submissions = []
     for i, vec in enumerate(miner_updates):
@@ -116,14 +125,13 @@ def test_end_to_end_aggregator_pipeline(tmp_path):
         weights=weights,
     )
 
-    recovered_ints = [int(x * 1_000_000) for x in aggregate_update]
-
-    expected_sum = [
-        sum(v[j] for v in miner_updates)
+    expected_average = [
+        sum(weights[i] * v[j] for i, v in enumerate(miner_updates)) / sum(weights)
         for j in range(len(miner_updates[0]))
     ]
 
-    assert recovered_ints == expected_sum, "Aggregation mismatch"
+    for got, expected in zip(aggregate_update, expected_average):
+        assert isclose(got * 1_000_000, expected, rel_tol=0, abs_tol=1e-9)
 
     # Note: verify_recovered_aggregate needs EC points, but secure_aggregate returns floats
     # For integration test, we'll skip the verification step since secure_aggregate already

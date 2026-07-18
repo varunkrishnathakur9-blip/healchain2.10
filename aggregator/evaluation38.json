@@ -1,0 +1,87 @@
+{
+  "model_path": "C:\\repos\\healchain\\aggregator\\artifacts\\reconstructed\\task_038_round2_global.h5",
+  "dataset_path": "C:\\Users\\Lenovo\\Documents\\Sem7_Proj_IEEE_papers\\ESB_FL\\Healchain_Dataset\\chest_xray\\val",
+  "samples_used": 16,
+  "input_mode": "image",
+  "input_shape": [
+    null,
+    224,
+    224,
+    3
+  ],
+  "threshold": 0.4,
+  "accuracy": 0.5,
+  "labels": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "predictions": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "positive_scores": [
+    0.44729083776474,
+    0.44488388299942017,
+    0.44698366522789,
+    0.4485831558704376,
+    0.4461209177970886,
+    0.44749388098716736,
+    0.45284557342529297,
+    0.45107752084732056,
+    0.4462909400463104,
+    0.44762372970581055,
+    0.44588395953178406,
+    0.4470641613006592,
+    0.4430018961429596,
+    0.44717779755592346,
+    0.4462725520133972,
+    0.44502466917037964
+  ],
+  "tp": 8,
+  "tn": 0,
+  "fp": 8,
+  "fn": 0,
+  "precision": 0.5,
+  "recall": 1.0,
+  "sensitivity": 1.0,
+  "specificity": 0.0,
+  "f1_score": 0.6666666666666666,
+  "confusion_matrix": [
+    [
+      0,
+      8
+    ],
+    [
+      0,
+      8
+    ]
+  ]
+}

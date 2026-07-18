@@ -54,7 +54,7 @@ def apply_model_update(
             - set_weights(List[float])
 
     aggregate_update : List[float]
-        Dequantized aggregated gradient vector
+        Dequantized, normalized aggregate gradient vector
 
     learning_rate : float
         Update scaling factor (η)

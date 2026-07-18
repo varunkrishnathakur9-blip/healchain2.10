@@ -15,8 +15,9 @@ This test is backend-free and consensus-free.
 """
 
 import random
+from math import isclose
 
-from crypto.ec_utils import G, point_mul, serialize_point
+from crypto.ec_utils import G, point_add, point_mul, serialize_hex_point
 from crypto.ndd_fe import ndd_fe_decrypt
 from crypto.bsgs import recover_discrete_log, dequantize_vector
 from aggregation.aggregator import secure_aggregate
@@ -30,9 +31,14 @@ from state.key_manager import KeyManager
 
 def _encrypt_synthetic(delta, pkA):
     """
-    Deterministic miner-side encryption (r_i = 0).
+    Deterministic miner-side encryption with r_i = 1.
     """
-    return [serialize_point(point_mul(pkA, v)) for v in delta]
+    base_mask = point_mul(G, 1)
+    ciphertext = []
+    for v in delta:
+        Ui = base_mask if v == 0 else point_add(base_mask, point_mul(pkA, v))
+        ciphertext.append(serialize_hex_point(Ui))
+    return ciphertext
 
 
 class _MockKeyManager:
@@ -43,7 +49,7 @@ class _MockKeyManager:
         self.skA = skA
         self.pkA = pkA
         self.pkTP = point_mul(G, 1)
-        self.skFE = 0
+        self.skFE = 1
 
     def parse_ciphertext_point(self, s):
         from crypto.ec_utils import parse_point
@@ -78,6 +84,7 @@ def test_secure_aggregation_pipeline():
     ]
 
     weights = [1, 1, 1]
+    keys.skFE = sum(weights)
 
     submissions = []
 
@@ -99,25 +106,52 @@ def test_secure_aggregation_pipeline():
         weights=weights,
     )
 
-    # Convert back to quantized integers for comparison
-    recovered_ints = [int(x * 1_000_000) for x in aggregate_update]
-
-    expected_sum = [
-        sum(v[j] for v in miner_updates)
+    expected_average = [
+        sum(weights[i] * v[j] for i, v in enumerate(miner_updates)) / sum(weights)
         for j in range(len(miner_updates[0]))
     ]
 
-    assert recovered_ints == expected_sum, "Aggregated integer mismatch"
+    for got, expected in zip(aggregate_update, expected_average):
+        assert isclose(got * 1_000_000, expected, rel_tol=0, abs_tol=1e-9)
 
-    # ------------------------------------------------------------
-    # Verification (Encode–Verify)
-    # ------------------------------------------------------------
-    # Note: verify_recovered_aggregate needs EC points, but secure_aggregate returns floats
-    # For unit test, we'll skip the verification step since secure_aggregate already
-    # includes internal validation
-    # assert verify_recovered_aggregate(
-    #     recovered_points=recovered_points,
-    #     submissions=submissions,
-    #     weights=weights,
-    #     keys=keys,
-    # ), "Aggregate verification failed"
+
+def test_secure_aggregation_normalizes_non_uniform_weights():
+    """
+    secure_aggregate returns sum(alpha_i * g_i) / sum(alpha_i), not the raw sum.
+    """
+    skA = 11
+    pkA = point_mul(G, skA)
+    keys = _MockKeyManager(skA, pkA)
+
+    miner_updates = [
+        [10, -5],
+        [0, 15],
+    ]
+    weights = [2, 3]
+    keys.skFE = sum(weights)
+
+    submissions = [
+        {
+            "miner_pk": f"miner{i}",
+            "ciphertext": _encrypt_synthetic(vec, pkA),
+            "score_commit": f"commit{i}",
+        }
+        for i, vec in enumerate(miner_updates)
+    ]
+
+    aggregate_update = secure_aggregate(
+        submissions=submissions,
+        skFE=keys.skFE,
+        skA=keys.skA,
+        pkTP=keys.pkTP,
+        weights=weights,
+    )
+
+    expected_average = [
+        sum(weights[i] * v[j] for i, v in enumerate(miner_updates)) / sum(weights)
+        for j in range(len(miner_updates[0]))
+    ]
+
+    for got, expected in zip(aggregate_update, expected_average):
+        assert isclose(got * 1_000_000, expected, rel_tol=0, abs_tol=1e-9)
+

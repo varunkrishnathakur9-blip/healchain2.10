@@ -45,7 +45,7 @@ def test_signed_bsgs_recovery(value):
     """
     recover_discrete_log(g^x) == x for signed values
     """
-    P = point_mul(G, value)
+    P = None if value == 0 else point_mul(G, value)
     recovered = recover_discrete_log(P)
 
     assert recovered == value, f"BSGS failed for value {value}"

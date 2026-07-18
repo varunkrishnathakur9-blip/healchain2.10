@@ -71,12 +71,13 @@ def secure_aggregate(
     skFE : functional encryption key
     skA  : aggregator private key
     pkTP : task publisher public key (EC Point)
-    weights : aggregation weights y_i
+    weights : integer aggregation weights y_i. The recovered weighted sum is
+        normalized by sum(y_i) before this function returns.
 
     Returns:
     --------
     aggregate_update : List[float]
-        Dequantized aggregated gradient vector
+        Dequantized, normalized aggregate gradient vector
     """
 
     if not submissions:
@@ -85,7 +86,13 @@ def secure_aggregate(
     if len(submissions) > MAX_MINERS:
         raise ValueError(f"Too many submissions: {len(submissions)} > {MAX_MINERS}")
 
-    logger.info(f"[M4] Starting secure aggregation for {len(submissions)} miners")
+    active_weights = _validate_aggregation_weights(weights, len(submissions))
+    normalization_factor = sum(active_weights)
+
+    logger.info(
+        f"[M4] Starting secure aggregation for {len(submissions)} miners "
+        f"(normalization_weight_sum={normalization_factor})"
+    )
 
     formats = {sub.get("format", "dense") for sub in submissions}
     if len(formats) != 1:
@@ -96,7 +103,7 @@ def secure_aggregate(
         aggregate_update = _secure_aggregate_sparse(
             submissions=submissions,
             skA=skA,
-            weights=weights,
+            weights=active_weights,
             task_id=task_id,
         )
     elif submission_format == "dense":
@@ -105,7 +112,7 @@ def secure_aggregate(
             skFE=skFE,
             skA=skA,
             pkTP=pkTP,
-            weights=weights,
+            weights=active_weights,
             task_id=task_id,
         )
     else:
@@ -118,7 +125,65 @@ def secure_aggregate(
             "(configure MAX_MODEL_DIMENSION in aggregator/.env if this task is expected)"
         )
 
+    aggregate_update = _normalize_aggregate_update(
+        aggregate_update,
+        normalization_factor=normalization_factor,
+    )
+
     return aggregate_update
+
+
+def _validate_aggregation_weights(weights: List[int], expected_count: int) -> List[int]:
+    """
+    Validate integer FE weights and return a normalized int list.
+
+    Fractional normalized weights cannot be used directly as EC exponents, so
+    the crypto layer keeps integer weights and this module normalizes the
+    recovered plaintext update by sum(weights).
+    """
+    if not isinstance(weights, list):
+        raise ValueError("Aggregation weights must be a list")
+    if len(weights) != expected_count:
+        raise ValueError("Submission / weight length mismatch")
+
+    active_weights: List[int] = []
+    for idx, raw in enumerate(weights):
+        if isinstance(raw, bool):
+            raise ValueError(f"Aggregation weight at index {idx} must be an integer, got bool")
+        if isinstance(raw, float) and not raw.is_integer():
+            raise ValueError(
+                f"Aggregation weight at index {idx} must be an integer FE exponent, got {raw}"
+            )
+        try:
+            weight = int(raw)
+        except Exception as e:
+            raise ValueError(f"Aggregation weight at index {idx} is not an integer: {raw!r}") from e
+        if weight < 0:
+            raise ValueError(f"Aggregation weight at index {idx} must be non-negative")
+        active_weights.append(weight)
+
+    if sum(active_weights) <= 0:
+        raise ValueError("Aggregation weight sum must be positive")
+
+    return active_weights
+
+
+def _normalize_aggregate_update(
+    aggregate_update: List[float],
+    *,
+    normalization_factor: int,
+) -> List[float]:
+    if normalization_factor <= 0:
+        raise ValueError("Normalization factor must be positive")
+    if normalization_factor == 1:
+        return aggregate_update
+
+    normalized_update = [delta / normalization_factor for delta in aggregate_update]
+    logger.info(
+        f"[M4] Normalized aggregate update by active weight sum "
+        f"(normalization_weight_sum={normalization_factor})"
+    )
+    return normalized_update
 
 
 def _secure_aggregate_dense(
